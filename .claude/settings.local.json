@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(claude remote-control:*)",
+      "Bash(npm run:*)"
+    ]
+  }
+}

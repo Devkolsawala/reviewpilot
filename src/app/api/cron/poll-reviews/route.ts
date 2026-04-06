@@ -1,0 +1,273 @@
+import { NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
+import { fetchPlayStoreReviews } from "@/lib/google/playstore";
+import { processAutoReplyForReview } from "@/lib/reviews/auto-reply";
+import type { AppContext } from "@/types/database";
+
+function getAdminClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
+
+function isScheduleWindowActive(appContext: AppContext): boolean {
+  if (!appContext.schedule_enabled) return false;
+
+  try {
+    const tz = appContext.schedule_timezone || "UTC";
+    const nowInTz = new Date(
+      new Date().toLocaleString("en-US", { timeZone: tz })
+    );
+    const dayOfWeek = nowInTz.getDay();
+    const dayMap = [1, 2, 3, 4, 5, 6, 0];
+    const days =
+      appContext.schedule_days ?? [true, true, true, true, true, true, true];
+    const todayEnabled = days[dayMap.indexOf(dayOfWeek)];
+    if (!todayEnabled) return false;
+
+    const [schedHour, schedMin] = (appContext.schedule_time || "08:00")
+      .split(":")
+      .map(Number);
+    const nowMinutes = nowInTz.getHours() * 60 + nowInTz.getMinutes();
+    const schedMinutes = schedHour * 60 + schedMin;
+    return Math.abs(nowMinutes - schedMinutes) <= 30;
+  } catch {
+    return false;
+  }
+}
+
+function isWithinAgeWindow(
+  reviewCreatedAt: string,
+  maxAgeHours: number
+): boolean {
+  const reviewDate = new Date(reviewCreatedAt).getTime();
+  const cutoff = Date.now() - maxAgeHours * 60 * 60 * 1000;
+  return reviewDate >= cutoff;
+}
+
+export async function GET(request: Request) {
+  const authHeader = request.headers.get("authorization");
+  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const supabase = getAdminClient();
+  const results: Array<{
+    connectionId: string;
+    name: string;
+    type: string;
+    reviewsFetched: number;
+    newReviews: number;
+    autoReplied: number;
+    drafted: number;
+    pendingProcessed: number;
+    errors: string[];
+  }> = [];
+
+  try {
+    const { data: connections, error: connError } = await supabase
+      .from("connections")
+      .select("*, app_contexts(*)")
+      .eq("is_active", true);
+
+    if (connError || !connections || connections.length === 0) {
+      return NextResponse.json({
+        message: "No active connections",
+        results: [],
+      });
+    }
+
+    for (const connection of connections) {
+      const connResult = {
+        connectionId: connection.id,
+        name: connection.name,
+        type: connection.type,
+        reviewsFetched: 0,
+        newReviews: 0,
+        autoReplied: 0,
+        drafted: 0,
+        pendingProcessed: 0,
+        errors: [] as string[],
+      };
+
+      const appContext: AppContext | null =
+        connection.app_contexts?.[0] ?? null;
+      const runScheduled = appContext
+        ? isScheduleWindowActive(appContext)
+        : false;
+
+      try {
+        if (
+          connection.type === "play_store" &&
+          connection.credentials &&
+          connection.external_id
+        ) {
+          const fetchedReviews = await fetchPlayStoreReviews(
+            connection.credentials,
+            connection.external_id
+          );
+          connResult.reviewsFetched = fetchedReviews.length;
+          console.log(
+            "[cron] Play fetch",
+            connection.id,
+            "count",
+            fetchedReviews.length
+          );
+
+          for (const review of fetchedReviews) {
+            const { data: existing } = await supabase
+              .from("reviews")
+              .select("id")
+              .eq("connection_id", connection.id)
+              .eq("external_review_id", review.external_review_id)
+              .maybeSingle();
+
+            if (existing) continue;
+
+            const { data: inserted, error: insertErr } = await supabase
+              .from("reviews")
+              .insert({
+                connection_id: connection.id,
+                source: review.source,
+                external_review_id: review.external_review_id,
+                author_name: review.author_name,
+                rating: review.rating,
+                review_text: review.review_text,
+                review_language: review.review_language,
+                device_info: review.device_info,
+                sentiment: review.sentiment,
+                keywords: review.keywords,
+                review_created_at: review.review_created_at,
+              })
+              .select(
+                "id, source, external_review_id, author_name, rating, review_text, review_language, sentiment, keywords, review_created_at"
+              )
+              .single();
+
+            if (insertErr || !inserted) {
+              if (insertErr)
+                connResult.errors.push(`Insert error: ${insertErr.message}`);
+              continue;
+            }
+
+            connResult.newReviews++;
+
+            if (!appContext) continue;
+
+            const immediateAuto =
+              appContext.auto_reply_enabled &&
+              (appContext.auto_reply_mode ?? "draft_for_review") !== "manual";
+
+            const scheduledAuto =
+              appContext.schedule_enabled &&
+              runScheduled &&
+              inserted.rating >= (appContext.auto_reply_min_rating ?? 1) &&
+              inserted.rating <= (appContext.auto_reply_max_rating ?? 5) &&
+              isWithinAgeWindow(
+                review.review_created_at,
+                appContext.schedule_review_age_hours || 24
+              );
+
+            if (!immediateAuto && !scheduledAuto) continue;
+
+            try {
+              const outcome = await processAutoReplyForReview(
+                supabase,
+                {
+                  id: connection.id,
+                  type: connection.type,
+                  credentials: connection.credentials as Record<
+                    string,
+                    unknown
+                  > | null,
+                  external_id: connection.external_id,
+                },
+                inserted,
+                appContext,
+                {
+                  fromScheduledCron: !immediateAuto && scheduledAuto,
+                }
+              );
+              if (outcome === "drafted") connResult.drafted++;
+              if (outcome === "published") connResult.autoReplied++;
+            } catch (replyError: unknown) {
+              const e = replyError as { message?: string };
+              connResult.errors.push(`Reply error: ${e.message}`);
+            }
+          }
+        }
+
+        if (appContext?.auto_reply_enabled) {
+          const { data: pendingRows, error: pendErr } = await supabase
+            .from("reviews")
+            .select(
+              "id, source, external_review_id, author_name, rating, review_text, review_language, sentiment, keywords, review_created_at, reply_text"
+            )
+            .eq("connection_id", connection.id)
+            .eq("reply_status", "pending")
+            .limit(80);
+
+          if (pendErr) {
+            connResult.errors.push(`Pending query: ${pendErr.message}`);
+          } else {
+            for (const row of pendingRows || []) {
+              if (row.reply_text && String(row.reply_text).trim() !== "")
+                continue;
+
+              try {
+                const outcome = await processAutoReplyForReview(
+                  supabase,
+                  {
+                    id: connection.id,
+                    type: connection.type,
+                    credentials: connection.credentials as Record<
+                      string,
+                      unknown
+                    > | null,
+                    external_id: connection.external_id,
+                  },
+                  row,
+                  appContext
+                );
+                if (outcome === "skipped") continue;
+                connResult.pendingProcessed++;
+                if (outcome === "drafted") connResult.drafted++;
+                if (outcome === "published") connResult.autoReplied++;
+              } catch (e: unknown) {
+                const err = e as { message?: string };
+                connResult.errors.push(`Pending auto-reply: ${err.message}`);
+              }
+            }
+          }
+        }
+
+        await supabase
+          .from("connections")
+          .update({ last_synced_at: new Date().toISOString() })
+          .eq("id", connection.id);
+      } catch (connProcessError: unknown) {
+        const e = connProcessError as { message?: string };
+        connResult.errors.push(e.message || "Unknown error");
+      }
+
+      results.push(connResult);
+    }
+
+    console.log("[cron] poll-reviews done", JSON.stringify(results));
+
+    return NextResponse.json({
+      success: true,
+      processedAt: new Date().toISOString(),
+      connectionsProcessed: results.length,
+      results,
+    });
+  } catch (error: unknown) {
+    const e = error as { message?: string };
+    console.error("Cron error:", e);
+    return NextResponse.json(
+      { error: e.message || "Unknown error" },
+      { status: 500 }
+    );
+  }
+}
