@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { sendSMS } from "@/lib/twilio";
 import { createClient } from "@/lib/supabase/server";
+import { checkUsageLimit, incrementUsage } from "@/lib/usage";
 
 export async function POST(request: Request) {
   const supabase = createClient();
@@ -16,6 +17,23 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "No recipients" }, { status: 400 });
   }
 
+  const recipientCount: number = recipients.length;
+
+  // Check SMS usage limit before sending
+  const usageCheck = await checkUsageLimit(user.id, "sms", supabase);
+  if (usageCheck.remaining < recipientCount) {
+    return NextResponse.json(
+      {
+        error: "limit_exceeded",
+        message: `Cannot send ${recipientCount} SMS. You have ${usageCheck.remaining} SMS remaining this ${usageCheck.periodLabel} (${usageCheck.current}/${usageCheck.limit} used).`,
+        upgradeNeeded: usageCheck.remaining === 0,
+        remaining: usageCheck.remaining,
+        limit: usageCheck.limit,
+      },
+      { status: 429 }
+    );
+  }
+
   const results = [];
   for (const recipient of recipients) {
     const personalizedMessage = message
@@ -26,17 +44,13 @@ export async function POST(request: Request) {
     results.push({ recipient: recipient.contact, ...result });
   }
 
-  // Track usage
-  const month = new Date().toISOString().slice(0, 7);
-  await supabase.rpc("increment_usage", {
-    p_user_id: user.id,
-    p_month: month,
-    p_field: "sms_sent",
-    p_amount: results.filter((r) => r.success).length,
-  });
+  const successCount = results.filter((r) => r.success).length;
+  if (successCount > 0) {
+    await incrementUsage(user.id, "sms_sent", successCount, supabase);
+  }
 
   return NextResponse.json({
-    sent: results.filter((r) => r.success).length,
+    sent: successCount,
     failed: results.filter((r) => !r.success).length,
     results,
   });

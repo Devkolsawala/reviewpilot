@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { verifyConnection } from "@/lib/google/playstore";
+import { checkUsageLimit } from "@/lib/usage";
 
 export async function POST(request: Request) {
   try {
@@ -74,13 +75,30 @@ export async function POST(request: Request) {
       });
     }
 
-    // Check if this connection already exists
-    const { data: existing } = await supabase
+    // Check connection limit (only for new connections, not updates to existing ones)
+    const { data: existingCheck } = await supabase
       .from("connections")
       .select("id")
       .eq("user_id", user.id)
       .eq("external_id", packageName)
       .single();
+
+    if (!existingCheck) {
+      const connCheck = await checkUsageLimit(user.id, "connections", supabase);
+      if (!connCheck.allowed) {
+        return NextResponse.json(
+          {
+            valid: false,
+            error: `Your ${connCheck.planName} plan allows ${connCheck.limit} active connection(s). Upgrade to add more.`,
+            upgradeNeeded: true,
+          },
+          { status: 429 }
+        );
+      }
+    }
+
+    // Check if this connection already exists
+    const existing = existingCheck;
 
     let connectionId: string;
 

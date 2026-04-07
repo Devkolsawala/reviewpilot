@@ -40,15 +40,13 @@ export interface AppContext {
 export interface Usage {
   id: string;
   user_id: string;
-  month: string;
+  period_key: string; // e.g. '2026-W14' (weekly) or 'test-12345' (test mode)
   ai_replies_used: number;
+  auto_replies_used: number;
   sms_sent: number;
-  reviews_processed: number;
+  reviews_fetched: number;
+  last_updated: string;
+  created_at: string;
 }
 
-export const PLAN_LIMITS = {
-  free: { connections: 1, ai_replies: 10, sms: 5, team_seats: 1 },
-  starter: { connections: 1, ai_replies: 100, sms: 50, team_seats: 1 },
-  growth: { connections: 3, ai_replies: Infinity, sms: 200, team_seats: 3 },
-  agency: { connections: 20, ai_replies: Infinity, sms: Infinity, team_seats: 5 },
-} as const;
+// Plan limits are defined in src/lib/plans.ts — that is the single source of truth.

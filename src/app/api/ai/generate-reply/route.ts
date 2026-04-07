@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { generateReply } from "@/lib/ai/reply-generator";
+import { checkUsageLimit, incrementUsage } from "@/lib/usage";
 import type { AppContext } from "@/types/database";
 import type { Review } from "@/types/review";
 
@@ -34,6 +35,25 @@ export async function POST(request: Request) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  // Enforce usage limit for authenticated users
+  if (user) {
+    const usageCheck = await checkUsageLimit(user.id, "ai_replies", supabase);
+    if (!usageCheck.allowed) {
+      return NextResponse.json(
+        {
+          error: "limit_exceeded",
+          message: `You've used all ${usageCheck.limit} AI replies for this ${usageCheck.periodLabel}. Resets on ${usageCheck.resetDate.toLocaleDateString()}.`,
+          current: usageCheck.current,
+          limit: usageCheck.limit,
+          resetDate: usageCheck.resetDate.toISOString(),
+          upgradeNeeded: true,
+          planName: usageCheck.planName,
+        },
+        { status: 429 }
+      );
+    }
+  }
 
   let context: AppContext = bodyContext
     ? { ...EMPTY_CONTEXT(tone || "friendly"), ...bodyContext, tone: bodyContext.tone || tone || "friendly" }
@@ -104,6 +124,11 @@ export async function POST(request: Request) {
       source: source || "play_store",
       tone: tone || context.tone,
     });
+
+    // Increment usage counter after successful generation
+    if (user) {
+      await incrementUsage(user.id, "ai_replies_used", 1, supabase);
+    }
 
     return NextResponse.json({ reply });
   } catch (error) {

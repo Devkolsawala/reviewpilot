@@ -20,6 +20,8 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { useUsage } from "@/hooks/useUsage";
+import { USAGE_PERIOD } from "@/lib/plans";
 
 const MOCK_OVERRIDES_KEY = "reviewpilot_mock_overrides";
 const IS_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === "true";
@@ -106,6 +108,7 @@ const SETTINGS_NAV = [
 export function Sidebar({ collapsed }: { collapsed?: boolean }) {
   const pathname = usePathname();
   const pendingCount = usePendingReviewCount();
+  const { plan, totalAiUsed, aiLimit, isAiUnlimited, aiPercent, isLoading: usageLoading } = useUsage();
   const [settingsOpen, setSettingsOpen] = useState(
     pathname.startsWith("/dashboard/settings")
   );
@@ -274,19 +277,38 @@ export function Sidebar({ collapsed }: { collapsed?: boolean }) {
           <div className="rounded-xl bg-gradient-to-r from-teal-50 to-emerald-50 dark:from-teal-950/30 dark:to-emerald-950/30 p-3.5">
             <div className="flex items-center gap-2 mb-1">
               <Sparkles className="h-3.5 w-3.5 text-teal-600 dark:text-teal-400" />
-              <span className="text-xs font-semibold text-teal-800 dark:text-teal-300">Free Plan</span>
+              <span className="text-xs font-semibold text-teal-800 dark:text-teal-300">
+                {usageLoading ? "…" : `${plan.name} Plan`}
+              </span>
             </div>
-            <div className="w-full bg-teal-200/50 dark:bg-teal-900/50 rounded-full h-1.5 mb-2">
-              <div className="bg-teal-500 h-1.5 rounded-full" style={{ width: "100%" }} />
-            </div>
-            <p className="text-[10px] text-teal-700/70 dark:text-teal-400/70 mb-2">
-              10/10 AI replies used this month
-            </p>
+            {!usageLoading && (
+              <>
+                <div className="w-full bg-teal-200/50 dark:bg-teal-900/50 rounded-full h-1.5 mb-2">
+                  <div
+                    className={cn(
+                      "h-1.5 rounded-full transition-all",
+                      aiPercent > 90 ? "bg-red-500" : aiPercent > 70 ? "bg-amber-500" : "bg-teal-500"
+                    )}
+                    style={{ width: isAiUnlimited ? "5%" : `${aiPercent}%` }}
+                  />
+                </div>
+                <p className="text-[10px] text-teal-700/70 dark:text-teal-400/70 mb-1">
+                  {isAiUnlimited
+                    ? "Unlimited AI replies"
+                    : `${totalAiUsed}/${aiLimit} AI replies this ${USAGE_PERIOD.label}`}
+                </p>
+                {!isAiUnlimited && (
+                  <p className="text-[10px] text-teal-700/50 dark:text-teal-400/50 mb-2">
+                    Resets {USAGE_PERIOD.getResetDate().toLocaleDateString("en-IN", { month: "short", day: "numeric" })}
+                  </p>
+                )}
+              </>
+            )}
             <Link
               href="/dashboard/settings/billing"
               className="block text-center text-xs font-semibold text-white bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 rounded-lg py-1.5 transition-all shadow-sm"
             >
-              Upgrade Plan
+              {plan.name === "Free" ? "Upgrade Plan" : "Manage Plan"}
             </Link>
           </div>
         )}

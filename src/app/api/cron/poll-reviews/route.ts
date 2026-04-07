@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { fetchPlayStoreReviews } from "@/lib/google/playstore";
 import { processAutoReplyForReview } from "@/lib/reviews/auto-reply";
+import { checkUsageLimitAdmin, incrementUsageAdmin } from "@/lib/usage";
 import type { AppContext } from "@/types/database";
 
 function getAdminClient() {
@@ -172,6 +173,12 @@ export async function GET(request: Request) {
             if (!immediateAuto && !scheduledAuto) continue;
 
             try {
+              const usageCheck = await checkUsageLimitAdmin(connection.user_id, "ai_replies");
+              if (!usageCheck.allowed) {
+                connResult.errors.push(`User limit reached: ${usageCheck.current}/${usageCheck.limit} AI replies used this ${usageCheck.periodLabel}`);
+                continue;
+              }
+
               const outcome = await processAutoReplyForReview(
                 supabase,
                 {
@@ -189,8 +196,10 @@ export async function GET(request: Request) {
                   fromScheduledCron: !immediateAuto && scheduledAuto,
                 }
               );
-              if (outcome === "drafted") connResult.drafted++;
-              if (outcome === "published") connResult.autoReplied++;
+              if (outcome === "drafted") { connResult.drafted++; await incrementUsageAdmin(connection.user_id, "auto_replies_used", 1); }
+              if (outcome === "published") { connResult.autoReplied++; await incrementUsageAdmin(connection.user_id, "auto_replies_used", 1); }
+              // Small delay to avoid Groq rate limits during batch processing
+              await new Promise((resolve) => setTimeout(resolve, 2500));
             } catch (replyError: unknown) {
               const e = replyError as { message?: string };
               connResult.errors.push(`Reply error: ${e.message}`);
@@ -216,6 +225,12 @@ export async function GET(request: Request) {
                 continue;
 
               try {
+                const usageCheck = await checkUsageLimitAdmin(connection.user_id, "ai_replies");
+                if (!usageCheck.allowed) {
+                  connResult.errors.push(`User limit reached at ${usageCheck.current}/${usageCheck.limit} — stopping pending batch`);
+                  break;
+                }
+
                 const outcome = await processAutoReplyForReview(
                   supabase,
                   {
@@ -232,8 +247,9 @@ export async function GET(request: Request) {
                 );
                 if (outcome === "skipped") continue;
                 connResult.pendingProcessed++;
-                if (outcome === "drafted") connResult.drafted++;
-                if (outcome === "published") connResult.autoReplied++;
+                if (outcome === "drafted") { connResult.drafted++; await incrementUsageAdmin(connection.user_id, "auto_replies_used", 1); }
+                if (outcome === "published") { connResult.autoReplied++; await incrementUsageAdmin(connection.user_id, "auto_replies_used", 1); }
+                await new Promise((resolve) => setTimeout(resolve, 2500));
               } catch (e: unknown) {
                 const err = e as { message?: string };
                 connResult.errors.push(`Pending auto-reply: ${err.message}`);

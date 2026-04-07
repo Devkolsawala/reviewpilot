@@ -1,5 +1,6 @@
 import Groq from "groq-sdk";
 import { buildReplyPrompt } from "./prompts";
+import { waitForRateLimit } from "./rate-limiter";
 import type { AppContext } from "@/types/database";
 import type { Review } from "@/types/review";
 
@@ -76,6 +77,9 @@ export async function generateReply(params: GenerateReplyParams): Promise<string
 
     const model = process.env.GROQ_MODEL || "openai/gpt-oss-120b";
     const gptOss = isGptOssModel(model);
+
+    // Respect Groq rate limits before calling the API
+    await waitForRateLimit();
 
     // GPT-OSS is a reasoning model: without reasoning_format / enough output budget, `content` can be empty.
     const completion = await client.chat.completions.create({

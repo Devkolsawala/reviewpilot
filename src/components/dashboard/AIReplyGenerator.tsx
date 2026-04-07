@@ -13,6 +13,7 @@ import { timeAgo } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
 import type { Review } from "@/types/review";
 import { postPlayReply, postGBPReply } from "@/lib/adapters/reviews-adapter";
+import { UsageLimitModal } from "./UsageLimitModal";
 
 interface AIReplyGeneratorProps {
   review: Review;
@@ -80,6 +81,13 @@ export function AIReplyGenerator({
   const [reply, setReply] = useState(review.reply_text || "");
   const [tone, setTone] = useState("friendly");
   const [copied, setCopied] = useState(false);
+  const [limitModal, setLimitModal] = useState<{
+    open: boolean;
+    planName?: string;
+    limit?: number;
+    resetDate?: string;
+    periodLabel?: string;
+  }>({ open: false });
 
   useEffect(() => {
     setReply(review.reply_text || "");
@@ -123,6 +131,18 @@ export function AIReplyGenerator({
         signal: controller.signal,
       });
       clearTimeout(timeout);
+      if (res.status === 429) {
+        const data = await res.json().catch(() => ({}));
+        setState("idle");
+        setLimitModal({
+          open: true,
+          planName: data.planName,
+          limit: data.limit,
+          resetDate: data.resetDate,
+          periodLabel: data.periodLabel,
+        });
+        return;
+      }
       if (!res.ok) throw new Error("API error");
       const data = await res.json();
       setReply(data.reply || fallbackReply(review));
@@ -504,6 +524,16 @@ export function AIReplyGenerator({
           </div>
         </div>
       )}
+
+      <UsageLimitModal
+        open={limitModal.open}
+        onClose={() => setLimitModal({ open: false })}
+        limitType="ai_replies"
+        planName={limitModal.planName}
+        limit={limitModal.limit}
+        resetDate={limitModal.resetDate}
+        periodLabel={limitModal.periodLabel}
+      />
     </div>
   );
 }

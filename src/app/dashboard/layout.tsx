@@ -7,6 +7,7 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { ProductTour } from "@/components/dashboard/ProductTour";
 import { KeyboardShortcutsModal } from "@/components/dashboard/KeyboardShortcutsModal";
 import { OnboardingModal } from "@/components/dashboard/OnboardingModal";
+import { TestModeBadge } from "@/components/dashboard/TestModeBadge";
 
 export default function DashboardLayout({
   children,
@@ -35,6 +36,7 @@ export default function DashboardLayout({
       <OnboardingModal />
       <ProductTour />
       <KeyboardShortcutsModal />
+      <TestModeBadge />
     </div>
   );
 }

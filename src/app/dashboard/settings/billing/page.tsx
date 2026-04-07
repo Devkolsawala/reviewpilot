@@ -4,8 +4,9 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Check, CreditCard, Zap } from "lucide-react";
+import { Check, CreditCard, Zap, RefreshCw, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useUsage } from "@/hooks/useUsage";
 
 declare global {
   interface Window {
@@ -13,31 +14,38 @@ declare global {
   }
 }
 
-const PLANS = [
+const PLAN_CARDS = [
   {
     key: "starter",
     name: "Starter",
     price: 1500,
-    features: ["1 location or app", "100 AI replies/mo", "50 SMS/mo", "Basic analytics"],
+    features: ["1 location or app", "100 AI replies/week", "50 SMS/week", "Auto-reply", "Basic analytics"],
   },
   {
     key: "growth",
     name: "Growth",
     price: 3000,
     popular: true,
-    features: ["3 locations or apps", "Unlimited AI replies", "200 SMS/mo", "Full analytics", "Weekly digest"],
+    features: ["3 locations or apps", "500 AI replies/week", "200 SMS/week", "Bulk reply", "Full analytics", "Data export"],
   },
   {
     key: "agency",
     name: "Agency",
     price: 8000,
-    features: ["10 locations + 10 apps", "Unlimited everything", "White-label", "5 team seats", "Priority support"],
+    features: ["10 locations + apps", "Unlimited AI replies", "1000 SMS/week", "White-label", "5 team seats", "Priority support"],
   },
 ];
 
 export default function BillingPage() {
-  const [currentPlan] = useState("free");
   const [loading, setLoading] = useState<string | null>(null);
+  const {
+    plan, planId, usage, isLoading,
+    totalAiUsed, aiLimit, isAiUnlimited, aiPercent,
+    smsUsed, smsLimit, isSmsUnlimited, smsPercent,
+    resetDate, periodLabel,
+  } = useUsage();
+
+  const isTestMode = process.env.NEXT_PUBLIC_TEST_MODE === "true";
 
   async function handleSubscribe(planKey: string) {
     setLoading(planKey);
@@ -67,20 +75,34 @@ export default function BillingPage() {
         rzp.open();
       }
     } catch {
-      // Error handling
+      // handle error
     } finally {
       setLoading(null);
     }
   }
 
+  const resetLabel = resetDate.toLocaleDateString("en-IN", {
+    weekday: "long", year: "numeric", month: "long", day: "numeric",
+  });
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="font-heading text-2xl font-bold">Billing</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Manage your subscription and billing.
-        </p>
+        <p className="text-sm text-muted-foreground mt-1">Manage your subscription and billing.</p>
       </div>
+
+      {/* Test mode notice */}
+      {isTestMode && (
+        <div className="flex items-start gap-2 rounded-lg border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/20 px-4 py-3 text-sm">
+          <AlertTriangle className="h-4 w-4 text-purple-500 shrink-0 mt-0.5" />
+          <p className="text-purple-800 dark:text-purple-300">
+            <strong>Test mode active</strong> — limits reset every minute. Remove{" "}
+            <code className="bg-black/10 dark:bg-white/10 px-1 py-0.5 rounded font-mono text-[11px]">USAGE_PERIOD_MINUTES</code>{" "}
+            from <code className="bg-black/10 dark:bg-white/10 px-1 py-0.5 rounded font-mono text-[11px]">.env.local</code> for production weekly reset.
+          </p>
+        </div>
+      )}
 
       {/* Current plan */}
       <Card>
@@ -93,16 +115,14 @@ export default function BillingPage() {
         <CardContent>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-lg font-bold font-heading capitalize">{currentPlan} Plan</p>
+              <p className="text-lg font-bold font-heading">{plan.name} Plan</p>
               <p className="text-sm text-muted-foreground">
-                {currentPlan === "free"
-                  ? "Limited to 10 AI replies and 5 SMS per month"
+                {planId === "free"
+                  ? `Limited to ${aiLimit} AI replies and ${smsLimit} SMS per ${periodLabel}`
                   : "Your subscription is active"}
               </p>
             </div>
-            <Badge variant="secondary" className="text-xs">
-              {currentPlan === "free" ? "Free" : "Active"}
-            </Badge>
+            <Badge variant="secondary" className="text-xs capitalize">{planId}</Badge>
           </div>
         </CardContent>
       </Card>
@@ -110,13 +130,44 @@ export default function BillingPage() {
       {/* Usage */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Monthly Usage</CardTitle>
-          <CardDescription>Resets on the 1st of every month.</CardDescription>
+          <CardTitle className="text-base flex items-center justify-between">
+            <span>Usage This {periodLabel.charAt(0).toUpperCase() + periodLabel.slice(1)}</span>
+            {isTestMode && (
+              <Badge className="text-[10px] bg-purple-100 text-purple-700 dark:bg-purple-950/40 dark:text-purple-400">
+                Test Mode
+              </Badge>
+            )}
+          </CardTitle>
+          <CardDescription className="flex items-center gap-1.5">
+            <RefreshCw className="h-3 w-3" />
+            Resets on {resetLabel}
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <UsageBar label="AI Replies" used={7} total={10} />
-          <UsageBar label="SMS Sent" used={2} total={5} />
-          <UsageBar label="Reviews Processed" used={20} total={50} />
+          {isLoading ? (
+            <p className="text-sm text-muted-foreground">Loading usage data…</p>
+          ) : (
+            <>
+              <UsageBar
+                label="AI Replies"
+                used={totalAiUsed}
+                total={isAiUnlimited ? null : aiLimit}
+                percent={aiPercent}
+              />
+              <UsageBar
+                label="SMS Sent"
+                used={smsUsed}
+                total={isSmsUnlimited ? null : smsLimit}
+                percent={smsPercent}
+              />
+              <UsageBar
+                label="Reviews Fetched"
+                used={usage?.reviews_fetched ?? 0}
+                total={null}
+                percent={0}
+              />
+            </>
+          )}
         </CardContent>
       </Card>
 
@@ -127,29 +178,26 @@ export default function BillingPage() {
           Upgrade Your Plan
         </h2>
         <div className="grid gap-4 md:grid-cols-3">
-          {PLANS.map((plan) => (
+          {PLAN_CARDS.map((p) => (
             <Card
-              key={plan.key}
-              className={cn(
-                "relative",
-                plan.popular && "border-teal-500 shadow-lg"
-              )}
+              key={p.key}
+              className={cn("relative", p.popular && "border-teal-500 shadow-lg")}
             >
-              {plan.popular && (
+              {p.popular && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-teal-500 px-3 py-0.5 text-[10px] font-medium text-white">
                   Most Popular
                 </div>
               )}
               <CardContent className="p-6">
-                <h3 className="font-heading text-lg font-bold">{plan.name}</h3>
+                <h3 className="font-heading text-lg font-bold">{p.name}</h3>
                 <p className="mt-2">
                   <span className="text-3xl font-bold font-heading">
-                    ₹{plan.price.toLocaleString("en-IN")}
+                    ₹{p.price.toLocaleString("en-IN")}
                   </span>
                   <span className="text-sm text-muted-foreground">/mo</span>
                 </p>
                 <ul className="mt-4 space-y-2">
-                  {plan.features.map((f) => (
+                  {p.features.map((f) => (
                     <li key={f} className="flex items-center gap-2 text-sm">
                       <Check className="h-4 w-4 text-teal-500 shrink-0" />
                       {f}
@@ -158,15 +206,11 @@ export default function BillingPage() {
                 </ul>
                 <Button
                   className="w-full mt-6"
-                  variant={plan.popular ? "default" : "outline"}
-                  onClick={() => handleSubscribe(plan.key)}
-                  disabled={loading === plan.key || currentPlan === plan.key}
+                  variant={p.popular ? "default" : "outline"}
+                  onClick={() => handleSubscribe(p.key)}
+                  disabled={loading === p.key || planId === p.key}
                 >
-                  {loading === plan.key
-                    ? "Processing..."
-                    : currentPlan === plan.key
-                      ? "Current Plan"
-                      : "Subscribe"}
+                  {loading === p.key ? "Processing…" : planId === p.key ? "Current Plan" : "Subscribe"}
                 </Button>
               </CardContent>
             </Card>
@@ -177,25 +221,33 @@ export default function BillingPage() {
   );
 }
 
-function UsageBar({ label, used, total }: { label: string; used: number; total: number }) {
-  const pct = Math.min((used / total) * 100, 100);
+function UsageBar({
+  label, used, total, percent,
+}: {
+  label: string;
+  used: number;
+  total: number | null;
+  percent: number;
+}) {
   return (
     <div>
       <div className="flex items-center justify-between text-sm mb-1">
         <span>{label}</span>
         <span className="text-muted-foreground">
-          {used}/{total}
+          {total === null ? `${used} used` : `${used} / ${total}`}
         </span>
       </div>
-      <div className="h-2 rounded-full bg-secondary overflow-hidden">
-        <div
-          className={cn(
-            "h-full rounded-full transition-all",
-            pct > 90 ? "bg-destructive" : pct > 70 ? "bg-amber-500" : "bg-teal-500"
-          )}
-          style={{ width: `${pct}%` }}
-        />
-      </div>
+      {total !== null && (
+        <div className="h-2 rounded-full bg-secondary overflow-hidden">
+          <div
+            className={cn(
+              "h-full rounded-full transition-all",
+              percent > 90 ? "bg-destructive" : percent > 70 ? "bg-amber-500" : "bg-teal-500"
+            )}
+            style={{ width: `${percent}%` }}
+          />
+        </div>
+      )}
     </div>
   );
 }
