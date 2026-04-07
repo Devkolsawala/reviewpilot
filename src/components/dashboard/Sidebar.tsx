@@ -23,20 +23,29 @@ import { createClient } from "@/lib/supabase/client";
 import { useUsage } from "@/hooks/useUsage";
 import { USAGE_PERIOD } from "@/lib/plans";
 
-const MOCK_OVERRIDES_KEY = "reviewpilot_mock_overrides";
+const MOCK_OVERRIDES_PREFIX = "reviewpilot_mock_overrides";
 const IS_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === "true";
 
 type ReviewOverride = { reply_status?: string };
 
 async function computePendingCount(): Promise<number> {
   if (IS_MOCK) {
+    // Get user ID so we read the correct per-user overrides key
+    let userId = "anon";
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      userId = user?.id ?? "anon";
+    } catch { /* stay anonymous */ }
+    const mockKey = `${MOCK_OVERRIDES_PREFIX}_${userId}`;
+
     const [{ mockPlayReviews }, { mockGBPReviews }] = await Promise.all([
       import("@/lib/mock/mock-reviews"),
       import("@/lib/mock/mock-gbp-reviews"),
     ]);
     let overrides: Record<string, ReviewOverride> = {};
     try {
-      const s = typeof window !== "undefined" && window.localStorage.getItem(MOCK_OVERRIDES_KEY);
+      const s = typeof window !== "undefined" && window.localStorage.getItem(mockKey);
       overrides = s ? JSON.parse(s) : {};
     } catch { /* ignore */ }
 

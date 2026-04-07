@@ -8,26 +8,29 @@ import { createClient } from "@/lib/supabase/client";
 const STAR_MAP = { ONE: 1, TWO: 2, THREE: 3, FOUR: 4, FIVE: 5 } as const;
 
 // ── Mock state persistence via localStorage ──────────────────────────────────
-// Keeps reply_status, reply_text, etc. across refetches and page refreshes
-// when NEXT_PUBLIC_USE_MOCK=true. Real mode persists via Supabase instead.
-const MOCK_OVERRIDES_KEY = "reviewpilot_mock_overrides";
+// Keyed by user ID so different accounts don't share published state.
+const MOCK_OVERRIDES_PREFIX = "reviewpilot_mock_overrides";
 
-function loadMockOverrides(): Record<string, Partial<Review>> {
+function getMockKey(userId: string): string {
+  return `${MOCK_OVERRIDES_PREFIX}_${userId}`;
+}
+
+function loadMockOverrides(key: string): Record<string, Partial<Review>> {
   if (typeof window === "undefined") return {};
   try {
-    const s = window.localStorage.getItem(MOCK_OVERRIDES_KEY);
+    const s = window.localStorage.getItem(key);
     return s ? (JSON.parse(s) as Record<string, Partial<Review>>) : {};
   } catch {
     return {};
   }
 }
 
-function saveMockOverride(reviewId: string, updates: Partial<Review>): void {
+function saveMockOverride(key: string, reviewId: string, updates: Partial<Review>): void {
   if (typeof window === "undefined") return;
   try {
-    const overrides = loadMockOverrides();
+    const overrides = loadMockOverrides(key);
     overrides[reviewId] = { ...overrides[reviewId], ...updates };
-    window.localStorage.setItem(MOCK_OVERRIDES_KEY, JSON.stringify(overrides));
+    window.localStorage.setItem(key, JSON.stringify(overrides));
   } catch {
     // ignore (e.g. private-browsing quota exceeded)
   }
@@ -45,15 +48,14 @@ function gbpToReview(gbp: GBPReview, idx: number): Review {
     review_language: "en",
     reply_status: gbp.reviewReply ? "published" : "pending",
     reply_text: gbp.reviewReply?.comment ?? undefined,
-    sentiment:
-      rating >= 4 ? "positive" : rating <= 2 ? "negative" : "mixed",
+    sentiment: rating >= 4 ? "positive" : rating <= 2 ? "negative" : "mixed",
     keywords: [],
     is_read: gbp.reviewReply !== null,
     review_created_at: gbp.createTime,
   };
 }
 
-async function buildMockReviews(): Promise<Review[]> {
+async function buildMockReviews(overridesKey: string): Promise<Review[]> {
   const [{ mockPlayReviews }, { mockGBPReviews }] = await Promise.all([
     import("@/lib/mock/mock-reviews"),
     import("@/lib/mock/mock-gbp-reviews"),
@@ -65,9 +67,8 @@ async function buildMockReviews(): Promise<Review[]> {
       new Date(b.review_created_at).getTime() -
       new Date(a.review_created_at).getTime()
   );
-  // Apply persisted overrides (reply_status, reply_text, etc.) so that
-  // user actions (publish, draft) survive refetches and full page refreshes.
-  const overrides = loadMockOverrides();
+  // Apply per-user persisted overrides so actions survive refetches and page refreshes.
+  const overrides = loadMockOverrides(overridesKey);
   const hasOverrides = Object.keys(overrides).length > 0;
   if (!hasOverrides) return combined;
   return combined.map((r) => (overrides[r.id] ? { ...r, ...overrides[r.id] } : r));
@@ -77,25 +78,29 @@ export function useReviews() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [isMock, setIsMock] = useState(false);
-  const [activeConnectionId, setActiveConnectionId] = useState<string | null>(
-    null
-  );
+  const [activeConnectionId, setActiveConnectionId] = useState<string | null>(null);
+  const [mockKey, setMockKey] = useState<string>(getMockKey("anon"));
 
   const fetchReviews = useCallback(async () => {
     setLoading(true);
     try {
       // Fast-path: env var forces mock mode (no Supabase round-trip)
       if (process.env.NEXT_PUBLIC_USE_MOCK === "true") {
-        const mock = await buildMockReviews();
+        // Get user ID to namespace localStorage so accounts don't share state
+        let userId = "anon";
+        try {
+          const supabase = createClient();
+          const { data: { user } } = await supabase.auth.getUser();
+          userId = user?.id ?? "anon";
+        } catch { /* stay anonymous */ }
+        const key = getMockKey(userId);
+        setMockKey(key);
+
+        const mock = await buildMockReviews(key);
         setReviews(mock);
         setIsMock(true);
         setActiveConnectionId(null);
-        console.log(
-          "[HOOK] Fetched reviews from Supabase:",
-          mock.length,
-          "isMock:",
-          true
-        );
+        console.log("[HOOK] Fetched reviews from Supabase:", mock.length, "isMock:", true);
         return;
       }
 
@@ -108,16 +113,10 @@ export function useReviews() {
         .limit(1);
 
       if (!connections || connections.length === 0) {
-        // No connections — fall back to original 20-review mock
         setReviews(MOCK_REVIEWS);
         setIsMock(true);
         setActiveConnectionId(null);
-        console.log(
-          "[HOOK] Fetched reviews from Supabase:",
-          MOCK_REVIEWS.length,
-          "isMock:",
-          true
-        );
+        console.log("[HOOK] Fetched reviews from Supabase:", MOCK_REVIEWS.length, "isMock:", true);
         return;
       }
 
@@ -139,12 +138,7 @@ export function useReviews() {
       } else {
         setReviews(data as Review[]);
         setIsMock(false);
-        console.log(
-          "[HOOK] Fetched reviews from Supabase:",
-          data.length,
-          "isMock:",
-          false
-        );
+        console.log("[HOOK] Fetched reviews from Supabase:", data.length, "isMock:", false);
       }
     } catch (error) {
       console.error("[useReviews] Error:", error);
@@ -186,8 +180,8 @@ export function useReviews() {
         console.log("[HOOK] Supabase review updated:", data?.id, payload);
       }
     } else {
-      // Mock mode: persist to localStorage so status survives refetches and page refreshes
-      saveMockOverride(reviewId, updates);
+      // Mock mode: persist to per-user localStorage key
+      saveMockOverride(mockKey, reviewId, updates);
       console.log("[HOOK] Mock review override saved to localStorage:", reviewId, updates);
     }
   }

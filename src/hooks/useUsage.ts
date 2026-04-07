@@ -52,6 +52,11 @@ export function useUsage() {
 
   useEffect(() => {
     refresh();
+
+    // Re-fetch whenever an AI reply is generated anywhere in the app
+    function handleUsageUpdated() { refresh(); }
+    window.addEventListener("reviewpilot:usage-updated", handleUsageUpdated);
+    return () => window.removeEventListener("reviewpilot:usage-updated", handleUsageUpdated);
   }, [refresh]);
 
   const plan = getPlan(planId as PlanId);

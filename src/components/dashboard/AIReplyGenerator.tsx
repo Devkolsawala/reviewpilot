@@ -146,6 +146,8 @@ export function AIReplyGenerator({
       if (!res.ok) throw new Error("API error");
       const data = await res.json();
       setReply(data.reply || fallbackReply(review));
+      // Notify sidebar + billing page to refresh usage counters
+      window.dispatchEvent(new CustomEvent("reviewpilot:usage-updated"));
     } catch (err: unknown) {
       clearTimeout(timeout);
       const e = err as { name?: string };
