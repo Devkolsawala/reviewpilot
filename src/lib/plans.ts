@@ -85,16 +85,16 @@ export type PlanId = keyof typeof PLANS;
 
 export const USAGE_PERIOD = {
   get duration(): 'week' | 'test' {
-    if (process.env.USAGE_PERIOD_MINUTES) return 'test';
+    if (process.env.NEXT_PUBLIC_USAGE_PERIOD_MINUTES) return 'test';
     return 'week';
   },
   get label(): string {
-    if (process.env.USAGE_PERIOD_MINUTES) return 'minute (test mode)';
+    if (process.env.NEXT_PUBLIC_USAGE_PERIOD_MINUTES) return 'minute (test mode)';
     return 'week';
   },
   getCurrentPeriodKey(): string {
-    if (process.env.USAGE_PERIOD_MINUTES) {
-      const minutes = parseInt(process.env.USAGE_PERIOD_MINUTES) || 1;
+    if (process.env.NEXT_PUBLIC_USAGE_PERIOD_MINUTES) {
+      const minutes = parseInt(process.env.NEXT_PUBLIC_USAGE_PERIOD_MINUTES) || 1;
       const now = new Date();
       const periodNumber = Math.floor(now.getTime() / (minutes * 60 * 1000));
       return `test-${periodNumber}`;
@@ -107,8 +107,8 @@ export const USAGE_PERIOD = {
     return `${now.getFullYear()}-W${String(weekNumber).padStart(2, '0')}`;
   },
   getResetDate(): Date {
-    if (process.env.USAGE_PERIOD_MINUTES) {
-      const minutes = parseInt(process.env.USAGE_PERIOD_MINUTES) || 1;
+    if (process.env.NEXT_PUBLIC_USAGE_PERIOD_MINUTES) {
+      const minutes = parseInt(process.env.NEXT_PUBLIC_USAGE_PERIOD_MINUTES) || 1;
       const now = new Date();
       const currentPeriodStart = Math.floor(now.getTime() / (minutes * 60 * 1000)) * (minutes * 60 * 1000);
       return new Date(currentPeriodStart + minutes * 60 * 1000);

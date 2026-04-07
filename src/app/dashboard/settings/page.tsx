@@ -14,6 +14,8 @@ export default function SettingsPage() {
   const [companyName, setCompanyName] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
     async function loadProfile() {
@@ -33,6 +35,31 @@ export default function SettingsPage() {
     }
     loadProfile();
   }, []);
+
+  async function handleDeleteAccount() {
+    if (!confirmDelete) {
+      setConfirmDelete(true);
+      return;
+    }
+    setDeletingAccount(true);
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Delete profile data (cascades to related records via DB foreign keys)
+      await supabase.from("profiles").delete().eq("id", user.id);
+
+      // Sign out
+      await supabase.auth.signOut();
+      window.location.href = "/";
+    } catch (err) {
+      console.error("[Settings] delete account error:", err);
+      toast({ title: "Error", description: "Could not delete account. Please contact support.", variant: "destructive" });
+      setDeletingAccount(false);
+      setConfirmDelete(false);
+    }
+  }
 
   async function handleSave() {
     setSaving(true);
@@ -113,15 +140,37 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="border-destructive/40">
         <CardHeader>
           <CardTitle className="text-base text-destructive">Danger Zone</CardTitle>
-          <CardDescription>Irreversible actions.</CardDescription>
+          <CardDescription>Irreversible actions. Proceed with caution.</CardDescription>
         </CardHeader>
-        <CardContent>
-          <Button variant="destructive" size="sm">
-            Delete Account
-          </Button>
+        <CardContent className="space-y-3">
+          {confirmDelete && (
+            <p className="text-sm text-destructive font-medium">
+              Are you sure? This will permanently delete your account and all data. This cannot be undone.
+            </p>
+          )}
+          <div className="flex gap-2">
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleDeleteAccount}
+              disabled={deletingAccount}
+            >
+              {deletingAccount ? "Deleting..." : confirmDelete ? "Yes, Delete My Account" : "Delete Account"}
+            </Button>
+            {confirmDelete && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setConfirmDelete(false)}
+                disabled={deletingAccount}
+              >
+                Cancel
+              </Button>
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>

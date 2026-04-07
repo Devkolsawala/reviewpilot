@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
 import { createClient } from "@/lib/supabase/client";
 
-const MOCK_OVERRIDES_KEY = "reviewpilot_mock_overrides";
+const MOCK_OVERRIDES_PREFIX = "reviewpilot_mock_overrides";
 const STAR_MAP: Record<string, number> = { ONE: 1, TWO: 2, THREE: 3, FOUR: 4, FIVE: 5 };
 
 const TONES = [
@@ -51,6 +51,7 @@ function detectTimezone() {
 export function AppContextForm() {
   const [connectionId, setConnectionId] = useState<string | null>(null);
   const [contextId, setContextId] = useState<string | null>(null);
+  const [mockUserId, setMockUserId] = useState<string>("anon");
   const [loadingData, setLoadingData] = useState(true);
 
   const [description, setDescription] = useState("");
@@ -88,6 +89,11 @@ export function AppContextForm() {
     async function loadContext() {
       try {
         const supabase = createClient();
+
+        // Fetch user ID for per-user localStorage namespacing (mock mode)
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) setMockUserId(user.id);
+
         const { data: connections } = await supabase
           .from("connections")
           .select("id")
@@ -207,11 +213,12 @@ export function AppContextForm() {
     currentRatingRange: number[],
   ) {
     setApplyingAutoReply(true);
+    const mockKey = `${MOCK_OVERRIDES_PREFIX}_${mockUserId}`;
     try {
-      // Load current overrides
+      // Load current overrides (per-user key)
       let overrides: Record<string, Record<string, unknown>> = {};
       try {
-        const s = localStorage.getItem(MOCK_OVERRIDES_KEY);
+        const s = localStorage.getItem(mockKey);
         if (s) overrides = JSON.parse(s) as Record<string, Record<string, unknown>>;
       } catch { /* ignore */ }
 
@@ -261,6 +268,7 @@ export function AppContextForm() {
 
       let drafted = 0;
       let published = 0;
+      let limitHit = false;
       const updatedOverrides = { ...overrides };
 
       for (let i = 0; i < pending.length; i++) {
@@ -290,6 +298,14 @@ export function AppContextForm() {
               },
             }),
           });
+
+          // Hit usage limit — stop processing and notify
+          if (res.status === 429) {
+            limitHit = true;
+            window.dispatchEvent(new CustomEvent("reviewpilot:usage-updated"));
+            break;
+          }
+
           if (!res.ok) continue;
           const data = await res.json() as { reply?: string };
           if (!data.reply) continue;
@@ -309,8 +325,11 @@ export function AppContextForm() {
           if (newStatus === "drafted") drafted++;
           else published++;
 
-          // Save incrementally so partial progress survives errors
-          localStorage.setItem(MOCK_OVERRIDES_KEY, JSON.stringify(updatedOverrides));
+          // Save incrementally so partial progress survives errors (per-user key)
+          localStorage.setItem(mockKey, JSON.stringify(updatedOverrides));
+
+          // Update usage counter in sidebar after each successful reply
+          window.dispatchEvent(new CustomEvent("reviewpilot:usage-updated"));
         } catch (e) {
           console.error("[mock auto-reply] error for review", review.id, e);
         }
@@ -319,10 +338,24 @@ export function AppContextForm() {
       // Mark complete
       setAutoReplyProgress({ current: pending.length, total: pending.length });
 
-      toast({
-        title: "Auto-reply complete!",
-        description: `${published} published · ${drafted} drafted for review. Go to Review Inbox to see them.`,
-      });
+      const processed = drafted + published;
+      if (limitHit && processed === 0) {
+        toast({
+          title: "AI reply limit reached",
+          description: "You've used all your AI replies for this period. Upgrade your plan or wait for the limit to reset.",
+          variant: "destructive",
+        });
+      } else if (limitHit) {
+        toast({
+          title: `Replied to ${processed} review${processed !== 1 ? "s" : ""} — limit reached`,
+          description: `${published} published · ${drafted} drafted. You've hit your AI reply limit. Upgrade or wait for the reset to process the rest.`,
+        });
+      } else {
+        toast({
+          title: "Auto-reply complete!",
+          description: `${published} published · ${drafted} drafted for review. Go to Review Inbox to see them.`,
+        });
+      }
 
       // Signal inbox + sidebar to refresh
       window.dispatchEvent(new CustomEvent("reviewpilot:auto-reply-complete", {
