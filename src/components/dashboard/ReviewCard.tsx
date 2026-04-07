@@ -106,7 +106,9 @@ export function ReviewCard({ review, selected, onClick, compact }: ReviewCardPro
             <div className="flex items-center gap-1.5 shrink-0">
               <span className={cn("h-2 w-2 rounded-full", statusDot[review.reply_status])} />
               <span className="text-[10px] text-muted-foreground whitespace-nowrap">
-                {timeAgo(review.review_created_at)}
+                {review.reply_status === "published" && review.reply_published_at
+                  ? `Replied ${timeAgo(review.reply_published_at)}`
+                  : timeAgo(review.review_created_at)}
               </span>
             </div>
           </div>

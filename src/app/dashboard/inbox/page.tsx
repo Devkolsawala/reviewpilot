@@ -8,7 +8,7 @@ import { PageTransition } from "@/components/dashboard/PageTransition";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, CheckCheck, Inbox, Zap, Info, BookOpen, ChevronDown, Copy, Check, Bot, Loader2 } from "lucide-react";
+import { Search, CheckCheck, Inbox, Zap, Info, BookOpen, ChevronDown, Bot, Loader2 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { useReviews } from "@/hooks/useReviews";
 import { createClient } from "@/lib/supabase/client";
@@ -92,7 +92,12 @@ export default function InboxPage() {
   }, [handleKeyNav]);
 
   function handlePublish(reviewId: string, replyText: string) {
-    const updates = { reply_text: replyText, reply_status: "published" as const, is_read: true };
+    const updates = {
+      reply_text: replyText,
+      reply_status: "published" as const,
+      is_read: true,
+      reply_published_at: new Date().toISOString(),
+    };
     setLocalReviews((prev) => prev.map((r) => (r.id === reviewId ? { ...r, ...updates } : r)));
     if (isMock) {
       updateReview(reviewId, updates);
@@ -271,8 +276,8 @@ export default function InboxPage() {
           </div>
         )}
 
-        {/* AI workflow test guide — collapsible, amber accent */}
-        <TestGuide />
+        {/* Getting started guide — only shown when viewing sample data */}
+        {isMock && <GettingStartedGuide />}
 
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
@@ -439,31 +444,16 @@ function FilterChip({ label, active, onClick }: { label: string; active: boolean
   );
 }
 
-const ENV_SNIPPET =
-  "NEXT_PUBLIC_USE_MOCK=true\nGROQ_API_KEY=your_groq_key\nGROQ_MODEL=openai/gpt-oss-120b";
-
-const TEST_STEPS = [
-  <>Make sure your <code className="rounded bg-black/10 dark:bg-white/10 px-1 py-0.5 font-mono text-[11px]">.env.local</code> contains the two keys shown above.</>,
-  <>Start the dev server: <code className="rounded bg-black/10 dark:bg-white/10 px-1 py-0.5 font-mono text-[11px]">npm run dev</code></>,
-  <>Go to <strong>/dashboard/inbox</strong> in your browser.</>,
-  <>You will see <strong>40 mock reviews</strong> (25 Play Store + 15 GBP). Pick any 1★ review to test the full recovery flow.</>,
-  <>Click <strong>&quot;Generate AI Reply&quot;</strong> — this calls Groq (real API call when <code className="rounded bg-black/10 dark:bg-white/10 px-1 py-0.5 font-mono text-[11px]">GROQ_API_KEY</code> is set) with the mock review text as input. Wait 2–5 seconds.</>,
-  <>The generated reply appears in an editable textarea. Check the character count stays under <strong>350</strong>.</>,
-  <>Edit the reply if you want, then click <strong>&quot;Post Reply&quot;</strong>. In mock mode the reply is logged to the browser console and terminal — it does NOT actually post to Google.</>,
-  <>The card shows a <strong>Replied ✓</strong> badge. Filter by &quot;Published&quot; to confirm it moves to the correct tab.</>,
-  <>Test the <strong>&quot;Regenerate&quot;</strong> button — it calls the AI again and replaces the previous draft.</>,
-  <>To test the live posting path later, set <code className="rounded bg-black/10 dark:bg-white/10 px-1 py-0.5 font-mono text-[11px]">NEXT_PUBLIC_USE_MOCK=false</code> and add real Google credentials. The same UI flow will post the reply to the actual listing.</>,
+const GUIDE_STEPS = [
+  { title: "You're viewing sample reviews", body: "These 40 reviews are for demonstration purposes. They look and work just like real reviews so you can explore every feature before going live." },
+  { title: "Try generating an AI reply", body: "Click any review on the left, then hit \"Generate AI Reply\". Our AI will write a professional reply tailored to that review in seconds." },
+  { title: "Edit and post the reply", body: "Once the reply is generated, you can edit it freely. Click \"Post Reply\" to publish it, or \"Save Draft\" to review it later." },
+  { title: "Use \"Let AI Reply All\" for bulk replies", body: "The teal button at the top replies to all pending reviews at once using your AI settings. Perfect for catching up on a backlog." },
+  { title: "Connect your real accounts to go live", body: "Head to Settings → Connections to link your Google Business Profile or Play Store. Your real customer reviews will appear here and replies will post directly to Google." },
 ];
 
-function TestGuide() {
+function GettingStartedGuide() {
   const [open, setOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
-
-  function copyEnv() {
-    navigator.clipboard.writeText(ENV_SNIPPET);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }
 
   return (
     <div className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50/40 dark:bg-amber-950/10 mb-3 overflow-hidden">
@@ -473,7 +463,7 @@ function TestGuide() {
       >
         <span className="text-sm font-medium text-amber-800 dark:text-amber-400 flex items-center gap-2">
           <BookOpen className="h-4 w-4 shrink-0" />
-          How to test the AI reply workflow →
+          How to get started with ReviewPilot →
         </span>
         <ChevronDown
           className={`h-4 w-4 text-amber-600 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
@@ -481,40 +471,18 @@ function TestGuide() {
       </button>
 
       {open && (
-        <div className="px-4 pb-5 space-y-4">
-          {/* .env.local snippet */}
-          <div>
-            <p className="text-[11px] font-medium text-amber-700 dark:text-amber-400 mb-1.5">
-              Step 1 — Add to <code className="font-mono">.env.local</code>:
-            </p>
-            <div className="relative rounded-md bg-gray-900 text-green-400 p-3 font-mono text-[11px] leading-relaxed">
-              <pre className="whitespace-pre-wrap pr-8">{ENV_SNIPPET}</pre>
-              <button
-                onClick={copyEnv}
-                title="Copy to clipboard"
-                className="absolute top-2 right-2 text-gray-500 hover:text-white transition-colors"
-              >
-                {copied ? (
-                  <Check className="h-3.5 w-3.5 text-green-400" />
-                ) : (
-                  <Copy className="h-3.5 w-3.5" />
-                )}
-              </button>
-            </div>
-          </div>
-
-          {/* Steps 2–10 */}
-          <ol className="space-y-2.5 list-none m-0 p-0">
-            {TEST_STEPS.slice(1).map((step, i) => (
-              <li key={i} className="flex items-start gap-3 text-xs text-muted-foreground leading-relaxed">
-                <span className="mt-0.5 flex-shrink-0 h-5 w-5 rounded-full bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400 flex items-center justify-center font-bold text-[10px]">
-                  {i + 2}
-                </span>
-                <span>{step}</span>
-              </li>
-            ))}
-          </ol>
-        </div>
+        <ol className="px-4 pb-5 pt-1 space-y-3 list-none m-0 p-0">
+          {GUIDE_STEPS.map((step, i) => (
+            <li key={i} className="flex items-start gap-3 text-xs text-muted-foreground leading-relaxed">
+              <span className="mt-0.5 flex-shrink-0 h-5 w-5 rounded-full bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400 flex items-center justify-center font-bold text-[10px]">
+                {i + 1}
+              </span>
+              <span>
+                <strong className="text-foreground">{step.title}.</strong>{" "}{step.body}
+              </span>
+            </li>
+          ))}
+        </ol>
       )}
     </div>
   );

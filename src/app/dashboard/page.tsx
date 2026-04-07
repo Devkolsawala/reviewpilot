@@ -87,7 +87,9 @@ export default function DashboardPage() {
   const pendingReviews = reviews.filter((r) => r.reply_status === "pending");
 
   const hasConnections = connections.length > 0;
-  const hasReplied = reviews.some((r) => r.reply_status === "published");
+  // Only count as "replied" if the user explicitly published a reply (has reply_published_at).
+  // Pre-existing mock GBP reviews that already have replies are excluded this way.
+  const hasReplied = reviews.some((r) => r.reply_status === "published" && !!r.reply_published_at);
 
   const CHECKLIST = [
     { label: "Create account", href: "#", icon: CheckCircle2, done: true },

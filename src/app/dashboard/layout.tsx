@@ -22,8 +22,8 @@ export default function DashboardLayout({
 
       {/* Mobile sidebar */}
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-        <SheetContent side="left" className="p-0 w-64">
-          <Sidebar />
+        <SheetContent side="left" className="p-0 w-64 overflow-y-auto">
+          <Sidebar mobile />
         </SheetContent>
       </Sheet>
 

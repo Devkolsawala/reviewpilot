@@ -114,7 +114,7 @@ const SETTINGS_NAV = [
   { label: "Billing", href: "/dashboard/settings/billing", icon: CreditCard },
 ];
 
-export function Sidebar({ collapsed }: { collapsed?: boolean }) {
+export function Sidebar({ collapsed, mobile }: { collapsed?: boolean; mobile?: boolean }) {
   const pathname = usePathname();
   const pendingCount = usePendingReviewCount();
   const { plan, totalAiUsed, aiLimit, isAiUnlimited, aiPercent, isLoading: usageLoading } = useUsage();
@@ -130,7 +130,8 @@ export function Sidebar({ collapsed }: { collapsed?: boolean }) {
   return (
     <aside
       className={cn(
-        "hidden lg:flex flex-col border-r bg-card h-screen sticky top-0 transition-all duration-200 ease-out",
+        "flex flex-col border-r bg-card h-full transition-all duration-200 ease-out",
+        !mobile && "hidden lg:flex h-screen sticky top-0",
         collapsed ? "w-[68px]" : "w-64"
       )}
     >
