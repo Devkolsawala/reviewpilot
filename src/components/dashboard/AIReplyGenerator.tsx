@@ -257,7 +257,7 @@ export function AIReplyGenerator({
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col flex-1 min-h-0">
       <div className="p-6 border-b">
         <div className="flex items-start gap-3">
           <div className={cn(
@@ -327,7 +327,7 @@ export function AIReplyGenerator({
       </div>
 
       {state === "done" && (
-        <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+        <div className="flex-1 flex flex-col items-center justify-center p-6 text-center overflow-y-auto min-h-0">
           <div className="rounded-full bg-green-100 dark:bg-green-950/30 p-4 mb-4">
             <CheckCircle2 className="h-8 w-8 text-green-600 dark:text-green-400" />
           </div>
@@ -351,7 +351,7 @@ export function AIReplyGenerator({
       )}
 
       {state === "idle" && (
-        <div className="flex-1 flex flex-col items-center justify-center p-8 text-center gap-4">
+        <div className="flex-1 flex flex-col items-center justify-center p-8 text-center gap-4 overflow-y-auto min-h-0">
           <div className="rounded-2xl bg-teal-50 dark:bg-teal-950/20 p-5">
             <Bot className="h-10 w-10 text-teal-500 mx-auto" />
           </div>
@@ -386,7 +386,7 @@ export function AIReplyGenerator({
       )}
 
       {state === "generating" && (
-        <div className="flex-1 flex flex-col items-center justify-center p-8 text-center gap-4">
+        <div className="flex-1 flex flex-col items-center justify-center p-8 text-center gap-4 overflow-y-auto min-h-0">
           <div className="rounded-2xl bg-teal-50 dark:bg-teal-950/20 p-5">
             <Loader2 className="h-10 w-10 text-teal-500 animate-spin mx-auto" />
           </div>
@@ -514,7 +514,7 @@ export function AIReplyGenerator({
       )}
 
       {state === "posting" && (
-        <div className="flex-1 flex flex-col items-center justify-center p-8 text-center gap-4">
+        <div className="flex-1 flex flex-col items-center justify-center p-8 text-center gap-4 overflow-y-auto min-h-0">
           <div className="rounded-2xl bg-teal-50 dark:bg-teal-950/20 p-5">
             <Loader2 className="h-10 w-10 text-teal-500 animate-spin mx-auto" />
           </div>

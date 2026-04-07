@@ -8,10 +8,11 @@ import { PageTransition } from "@/components/dashboard/PageTransition";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, CheckCheck, Inbox, Zap, Info, BookOpen, ChevronDown, Bot, Loader2 } from "lucide-react";
+import { Search, CheckCheck, Inbox, Zap, Info, BookOpen, ChevronDown, Bot, Loader2, ArrowLeft } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { useReviews } from "@/hooks/useReviews";
 import { createClient } from "@/lib/supabase/client";
+import { cn } from "@/lib/utils";
 import type { Review } from "@/types/review";
 
 const MOCK_OVERRIDES_PREFIX = "reviewpilot_mock_overrides";
@@ -258,10 +259,10 @@ export default function InboxPage() {
 
   return (
     <PageTransition>
-      <div className="h-[calc(100vh-7rem)]">
+      <div className="flex flex-col h-[calc(100vh-7rem)]">
         {/* Sample data banner */}
         {isMock && (
-          <div className="flex items-center gap-2 rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/20 px-4 py-2.5 mb-3">
+          <div className="flex items-center gap-2 rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/20 px-4 py-2.5 mb-3 shrink-0">
             <Info className="h-4 w-4 text-amber-500 shrink-0" />
             <p className="text-xs text-amber-800 dark:text-amber-400">
               Showing <strong>sample data</strong> (40 mock reviews) —{" "}
@@ -277,9 +278,9 @@ export default function InboxPage() {
         )}
 
         {/* Getting started guide — only shown when viewing sample data */}
-        {isMock && <GettingStartedGuide />}
+        {isMock && <div className="shrink-0"><GettingStartedGuide /></div>}
 
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-4 shrink-0">
           <div className="flex items-center gap-3">
             <h1 className="font-heading text-2xl font-bold">Review Inbox</h1>
             <Badge variant="secondary" className="font-semibold">
@@ -324,9 +325,12 @@ export default function InboxPage() {
           </div>
         </div>
 
-        <div className="flex h-[calc(100%-5.5rem)] rounded-xl border bg-card overflow-hidden shadow-sm">
-          {/* Left panel — review list */}
-          <div className="w-full md:w-96 flex flex-col border-r shrink-0">
+        <div className="flex flex-1 min-h-0 rounded-xl border bg-card overflow-hidden shadow-sm">
+          {/* Left panel — review list. On mobile: hidden when a review is open. */}
+          <div className={cn(
+            "flex flex-col border-r shrink-0 w-full md:w-96",
+            selectedId ? "hidden md:flex" : "flex"
+          )}>
             {/* Search and filters */}
             <div className="p-3 border-b space-y-2">
               <div className="relative">
@@ -361,7 +365,7 @@ export default function InboxPage() {
                 <button onClick={selectAll} className="text-[11px] text-muted-foreground hover:text-foreground transition-colors">
                   {selectedIds.size === filteredReviews.length && filteredReviews.length > 0 ? "Deselect all" : "Select all"}
                 </button>
-                <span className="text-[10px] text-muted-foreground">
+                <span className="text-[10px] text-muted-foreground hidden sm:inline">
                   <kbd className="px-1 py-0.5 rounded bg-secondary font-mono text-[9px]">J</kbd>/<kbd className="px-1 py-0.5 rounded bg-secondary font-mono text-[9px]">K</kbd> to navigate
                 </span>
               </div>
@@ -388,8 +392,25 @@ export default function InboxPage() {
             </div>
           </div>
 
-          {/* Right panel — review detail + AI reply */}
-          <div className="hidden md:flex flex-1 flex-col">
+          {/* Right panel — review detail + AI reply.
+              Mobile: full-screen when a review is selected, hidden otherwise.
+              Desktop: always visible alongside the list. */}
+          <div className={cn(
+            "flex-1 flex-col min-w-0 overflow-hidden",
+            selectedId ? "flex" : "hidden md:flex"
+          )}>
+            {/* Mobile back button */}
+            {selectedReview && (
+              <div className="md:hidden flex items-center gap-2 px-3 py-2.5 border-b bg-card shrink-0">
+                <button
+                  onClick={() => setSelectedId(null)}
+                  className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Back to reviews
+                </button>
+              </div>
+            )}
             {selectedReview ? (
               <AIReplyGenerator
                 key={selectedReview.id}
