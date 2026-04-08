@@ -197,6 +197,22 @@ export function AIReplyGenerator({
     await onRefetch?.();
   }
 
+  async function persistDiscard() {
+    const res = await fetch("/api/reviews/reply", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        reviewId: review.id,
+        action: "discard_reply",
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error((data as { error?: string }).error || "Could not discard reply");
+    }
+    await onRefetch?.();
+  }
+
   async function handlePost() {
     if (!reply || overLimit) return;
     setState("posting");
@@ -482,9 +498,20 @@ export function AIReplyGenerator({
             {reply && (
               <Button
                 variant="ghost"
-                onClick={() => { setReply(""); setState("idle"); }}
+                onClick={async () => {
+                  setReply("");
+                  setState("idle");
+                  if (!isMock) {
+                    try {
+                      await persistDiscard();
+                    } catch (e: unknown) {
+                      const msg = e instanceof Error ? e.message : "Could not reset reply status.";
+                      toast({ title: "Reset failed", description: msg, variant: "destructive" });
+                    }
+                  }
+                }}
                 className="px-3 text-muted-foreground hover:text-destructive"
-                title="Discard"
+                title="Discard reply"
               >
                 <Trash2 className="h-4 w-4" />
               </Button>

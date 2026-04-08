@@ -74,7 +74,7 @@ export async function verifyConnection(
 ): Promise<{ valid: boolean; reviewCount?: number; error?: string }> {
   try {
     const client = await getPlayStoreClient(userCredentials);
-    const response = await client.reviews.list({ packageName });
+    const response = await client.reviews.list({ packageName, maxResults: 100 });
     return {
       valid: true,
       reviewCount: response.data.reviews?.length || 0,
@@ -125,12 +125,19 @@ export async function fetchPlayStoreReviews(
   const client = await getPlayStoreClient(userCredentials);
   const allRawReviews: unknown[] = [];
   let nextPageToken: string | undefined;
+  let pageNum = 0;
+
+  console.log(`[FETCH] Starting Play Store fetch for package: ${packageName}`);
 
   do {
+    pageNum++;
     const response = await client.reviews.list({
       packageName,
+      maxResults: 100,      // request maximum per page
       token: nextPageToken,
     });
+    const pageCount = response.data.reviews?.length || 0;
+    console.log(`[FETCH] Page ${pageNum}: got ${pageCount} reviews (token: ${nextPageToken || "first"})`);
     if (response.data.reviews) {
       allRawReviews.push(...response.data.reviews);
     }
@@ -138,9 +145,14 @@ export async function fetchPlayStoreReviews(
       response.data.tokenPagination?.nextPageToken || undefined;
   } while (nextPageToken);
 
-  return allRawReviews
+  console.log(`[FETCH] Total raw reviews from Play Store: ${allRawReviews.length}`);
+
+  const transformed = allRawReviews
     .map((raw) => transformPlayStoreReview(raw as RawReviewData))
     .filter((r): r is Review => r !== null);
+
+  console.log(`[FETCH] After transform: ${transformed.length} valid reviews (${allRawReviews.length - transformed.length} skipped)`);
+  return transformed;
 }
 
 export async function replyToPlayStoreReview(
@@ -196,8 +208,12 @@ interface RawReviewData {
       text?: string;
       starRating?: number;
       reviewerLanguage?: string;
-      lastModified?: { seconds?: string };
+      lastModified?: { seconds?: string; nanos?: number };
       deviceMetadata?: Record<string, unknown>;
+    };
+    developerComment?: {
+      text?: string;
+      lastModified?: { seconds?: string; nanos?: number };
     };
   }>;
 }
@@ -207,10 +223,31 @@ export function transformPlayStoreReview(
   connectionId?: string
 ): Review | null {
   const userComment = review.comments?.[0]?.userComment;
-  if (!userComment) return null;
+  if (!userComment) {
+    console.log(`[TRANSFORM] Skipping review ${review.reviewId} — no user comment`);
+    return null;
+  }
 
   const text = userComment.text || "";
   const rating = userComment.starRating || 0;
+
+  // Parse timestamp — Play Store uses seconds since epoch
+  let reviewDate: string;
+  if (userComment.lastModified?.seconds) {
+    reviewDate = new Date(parseInt(userComment.lastModified.seconds) * 1000).toISOString();
+  } else {
+    reviewDate = new Date().toISOString();
+  }
+
+  // Detect existing developer reply across all comments
+  const devReplyComment = review.comments?.find((c) => c.developerComment);
+  const hasExistingReply = !!devReplyComment?.developerComment?.text;
+  let replyPublishedAt: string | undefined;
+  if (hasExistingReply && devReplyComment?.developerComment?.lastModified?.seconds) {
+    replyPublishedAt = new Date(
+      parseInt(devReplyComment.developerComment.lastModified.seconds) * 1000
+    ).toISOString();
+  }
 
   return {
     id: "",
@@ -222,15 +259,13 @@ export function transformPlayStoreReview(
     review_text: text,
     review_language: userComment.reviewerLanguage || "en",
     device_info: userComment.deviceMetadata || {},
-    reply_status: "pending" as const,
+    reply_status: hasExistingReply ? "published" as const : "pending" as const,
+    reply_text: devReplyComment?.developerComment?.text || undefined,
+    reply_published_at: replyPublishedAt,
     sentiment: analyzeSentiment(text, rating),
     keywords: extractKeywords(text),
-    is_read: false,
-    review_created_at: userComment.lastModified?.seconds
-      ? new Date(
-          parseInt(userComment.lastModified.seconds) * 1000
-        ).toISOString()
-      : new Date().toISOString(),
+    is_read: hasExistingReply,
+    review_created_at: reviewDate,
   };
 }
 

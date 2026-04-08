@@ -106,39 +106,60 @@ export function useReviews() {
 
       const supabase = createClient();
 
-      const { data: connections } = await supabase
-        .from("connections")
-        .select("id")
-        .eq("is_active", true)
-        .limit(1);
-
-      if (!connections || connections.length === 0) {
+      // Check auth first
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        console.log("[useReviews] No authenticated user — showing mock data");
         setReviews(MOCK_REVIEWS);
         setIsMock(true);
         setActiveConnectionId(null);
-        console.log("[HOOK] Fetched reviews from Supabase:", MOCK_REVIEWS.length, "isMock:", true);
+        return;
+      }
+      console.log("[useReviews] User:", user.id);
+
+      const { data: connections, error: connError } = await supabase
+        .from("connections")
+        .select("id")
+        .eq("is_active", true);
+
+      console.log("[useReviews] Active connections found:", connections?.length ?? 0, connError ? `(error: ${connError.message})` : "");
+
+      if (connError || !connections || connections.length === 0) {
+        setReviews(MOCK_REVIEWS);
+        setIsMock(true);
+        setActiveConnectionId(null);
+        console.log("[useReviews] No connections — showing mock data");
         return;
       }
 
       const connId = connections[0].id;
       setActiveConnectionId(connId);
 
+      const connectionIds = connections.map((c) => c.id);
+      console.log("[useReviews] Fetching reviews for connection IDs:", connectionIds);
+
       const { data, error } = await supabase
         .from("reviews")
         .select("*")
+        .in("connection_id", connectionIds)
         .order("review_created_at", { ascending: false })
         .limit(200);
 
-      if (error) throw error;
+      if (error) {
+        console.error("[useReviews] Reviews query error:", error.message);
+        throw error;
+      }
+
+      console.log("[useReviews] Reviews from Supabase:", data?.length ?? 0);
 
       if (!data || data.length === 0) {
         setReviews([]);
         setIsMock(false);
-        console.log("[HOOK] Fetched reviews from Supabase: 0 isMock:", false);
+        console.log("[useReviews] Connections exist but 0 reviews — showing empty state (isMock: false)");
       } else {
         setReviews(data as Review[]);
         setIsMock(false);
-        console.log("[HOOK] Fetched reviews from Supabase:", data.length, "isMock:", false);
+        console.log("[useReviews] Showing REAL data:", data.length, "reviews (isMock: false)");
       }
     } catch (error) {
       console.error("[useReviews] Error:", error);

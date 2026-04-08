@@ -55,9 +55,13 @@ export async function POST(request: Request) {
   let fetchedReviews: Awaited<ReturnType<typeof fetchPlayStoreReviews>> = [];
   let syncError: string | null = null;
 
+  console.log(`[FETCH] Starting sync for connection ${connectionId}`);
+  console.log(`[FETCH] Connection type: ${connection.type}, package: ${connection.external_id || "MISSING"}`);
+  console.log(`[FETCH] Credentials: ${connection.credentials ? "user-provided" : "shared env fallback"}`);
+
   if (!connection.external_id) {
     syncError = "Connection is missing a package name. Re-connect to enable syncing.";
-    console.log("[sync] No package name — skipping Play Store fetch, will still process pending reviews.");
+    console.log("[FETCH] No package name — skipping Play Store fetch, will still process pending reviews.");
   } else {
     try {
       // connection.credentials is null for Invite Email method → lib falls back to shared env credentials
@@ -65,9 +69,10 @@ export async function POST(request: Request) {
         connection.external_id,
         connection.credentials as Record<string, unknown> | null
       );
+      console.log(`[FETCH] Received ${fetchedReviews.length} reviews from Play Store`);
     } catch (err: unknown) {
       const e = err as { code?: number; message?: string };
-      console.error("[sync] Play Store fetch error:", e);
+      console.error("[FETCH] Play Store fetch error:", e);
       if (e.code === 403) {
         syncError =
           "Permission denied. Make sure the service account is invited in Play Console with 'Reply to reviews' permission.";
@@ -109,6 +114,7 @@ export async function POST(request: Request) {
           })
           .eq("id", existing.id);
         updatedCount++;
+        console.log(`[FETCH] Updated review ${review.external_review_id} (text changed)`);
       }
       continue;
     }
@@ -134,10 +140,11 @@ export async function POST(request: Request) {
       .single();
 
     if (insertError || !inserted) {
-      if (insertError) console.error("[sync] Insert error:", insertError.message);
+      if (insertError) console.error(`[FETCH] Insert error for ${review.external_review_id}:`, insertError.message);
       continue;
     }
 
+    console.log(`[FETCH] Inserted review by ${review.author_name} (${review.rating}★, id: ${review.external_review_id})`);
     newCount++;
 
     if (appContextRow) {
@@ -210,6 +217,8 @@ export async function POST(request: Request) {
       review_count: (connection.review_count ?? 0) + newCount,
     })
     .eq("id", connectionId);
+
+  console.log(`[FETCH] Sync complete: ${fetchedReviews.length} fetched from API, ${newCount} new, ${updatedCount} updated, ${autoDrafted} auto-drafted, ${autoPublished} auto-published`);
 
   // Return sync error only if nothing was processed at all
   if (syncError && newCount === 0 && autoDrafted === 0 && autoPublished === 0) {

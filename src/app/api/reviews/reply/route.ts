@@ -51,6 +51,28 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true, status: "drafted", message: "Draft saved" });
   }
 
+  // Discard a draft or un-publish a locally-published reply.
+  // Note: if the reply was already sent to Play Store/GBP it remains live there
+  // until a new reply is posted. This only resets the state in our database.
+  if (action === "discard_reply") {
+    console.log("[API] discard_reply review:", reviewId);
+    const { error: discardErr } = await supabase
+      .from("reviews")
+      .update({
+        reply_text: null,
+        reply_status: "pending",
+        reply_published_at: null,
+        is_read: false,
+      })
+      .eq("id", reviewId);
+    if (discardErr) {
+      console.error("[API] discard_reply error:", discardErr.message);
+      return NextResponse.json({ error: discardErr.message }, { status: 500 });
+    }
+    console.log("[API] discard_reply success for review:", reviewId);
+    return NextResponse.json({ success: true, status: "pending", message: "Reply discarded" });
+  }
+
   const connection = review.connections;
 
   const { data: appContext } = await supabase
