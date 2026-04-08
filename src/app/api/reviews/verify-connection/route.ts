@@ -16,8 +16,10 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { type, credentials, packageName, appName } = body;
+    const { type, packageName, appName, connectionMethod, credentials } = body;
+    // connectionMethod: 'invite_email' | 'own_service_account'
 
+    // ── Google Business Profile stub ─────────────────────────────────────────
     if (type === "google_business") {
       return NextResponse.json({
         valid: true,
@@ -28,25 +30,14 @@ export async function POST(request: Request) {
       });
     }
 
-    if (type !== "play_store") {
+    if (type !== "play_store" && !connectionMethod) {
       return NextResponse.json(
         { valid: false, error: "Only Play Store connections supported currently" },
         { status: 400 }
       );
     }
 
-    if (
-      !credentials?.client_email ||
-      !credentials?.private_key ||
-      !credentials?.project_id
-    ) {
-      return NextResponse.json({
-        valid: false,
-        error:
-          "Invalid service account JSON. Must contain client_email, private_key, and project_id.",
-      });
-    }
-
+    // ── Package name validation ───────────────────────────────────────────────
     if (!packageName || !packageName.includes(".")) {
       return NextResponse.json({
         valid: false,
@@ -54,13 +45,31 @@ export async function POST(request: Request) {
       });
     }
 
-    const result = await verifyConnection(credentials, packageName);
+    // ── Own service account: validate JSON fields ─────────────────────────────
+    if (connectionMethod === "own_service_account") {
+      if (
+        !credentials?.client_email ||
+        !credentials?.private_key ||
+        !credentials?.project_id
+      ) {
+        return NextResponse.json({
+          valid: false,
+          error:
+            "Invalid service account JSON. Must contain client_email, private_key, and project_id.",
+        });
+      }
+    }
+
+    // ── Verify connection (null creds = use shared env key) ───────────────────
+    const userCreds =
+      connectionMethod === "own_service_account" ? credentials : null;
+    const result = await verifyConnection(packageName, userCreds);
 
     if (!result.valid) {
       return NextResponse.json({ valid: false, error: result.error });
     }
 
-    // Ensure profile exists (handles race if trigger didn't fire)
+    // ── Ensure profile exists ─────────────────────────────────────────────────
     const { data: profile } = await supabase
       .from("profiles")
       .select("id")
@@ -75,7 +84,7 @@ export async function POST(request: Request) {
       });
     }
 
-    // Check connection limit (only for new connections, not updates to existing ones)
+    // ── Connection limit check (new connections only) ─────────────────────────
     const { data: existingCheck } = await supabase
       .from("connections")
       .select("id")
@@ -97,31 +106,32 @@ export async function POST(request: Request) {
       }
     }
 
-    // Check if this connection already exists
-    const existing = existingCheck;
-
+    // ── Upsert connection ─────────────────────────────────────────────────────
     let connectionId: string;
 
-    if (existing) {
+    const connectionData = {
+      user_id: user.id,
+      type: "play_store" as const,
+      name: appName || packageName,
+      external_id: packageName,
+      // Store credentials ONLY if user brought their own.
+      // NULL means the shared ReviewPilot service account is used.
+      credentials:
+        connectionMethod === "own_service_account" ? credentials : null,
+      is_active: true,
+    };
+
+    if (existingCheck) {
       await supabase
         .from("connections")
-        .update({
-          name: appName || packageName,
-          credentials: credentials,
-          is_active: true,
-        })
-        .eq("id", existing.id);
-      connectionId = existing.id;
+        .update(connectionData)
+        .eq("id", existingCheck.id);
+      connectionId = existingCheck.id;
     } else {
       const { data: newConn, error: insertError } = await supabase
         .from("connections")
         .insert({
-          user_id: user.id,
-          type: "play_store",
-          name: appName || packageName,
-          external_id: packageName,
-          credentials: credentials,
-          is_active: true,
+          ...connectionData,
           review_count: result.reviewCount ?? 0,
         })
         .select("id")
@@ -140,7 +150,7 @@ export async function POST(request: Request) {
       connectionId = newConn!.id;
     }
 
-    // Create default app context for this connection if missing
+    // ── Create default app context if missing ─────────────────────────────────
     const { data: existingContext } = await supabase
       .from("app_contexts")
       .select("id")

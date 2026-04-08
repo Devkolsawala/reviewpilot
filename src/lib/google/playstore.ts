@@ -2,15 +2,61 @@ import { google } from "googleapis";
 import { analyzeSentiment, extractKeywords } from "@/lib/ai/sentiment";
 import type { Review } from "@/types/review";
 
-export async function getPlayStoreClient(credentials: Record<string, unknown>) {
+// ---------------------------------------------------------------------------
+// Credential resolution
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns credentials to use for Play Store API calls.
+ * If the user uploaded their own service account JSON it is used directly.
+ * Otherwise we fall back to ReviewPilot's shared service account stored in
+ * the GOOGLE_PLAY_SERVICE_ACCOUNT_KEY environment variable.
+ */
+function getCredentials(
+  userCredentials?: Record<string, unknown> | null
+): Record<string, unknown> {
+  if (
+    userCredentials &&
+    userCredentials.client_email &&
+    userCredentials.private_key
+  ) {
+    return userCredentials;
+  }
+
+  const keyString = process.env.GOOGLE_PLAY_SERVICE_ACCOUNT_KEY;
+  if (!keyString) {
+    throw new Error(
+      "Play Store not configured. Set GOOGLE_PLAY_SERVICE_ACCOUNT_KEY in environment variables."
+    );
+  }
+
+  try {
+    return JSON.parse(keyString) as Record<string, unknown>;
+  } catch {
+    throw new Error(
+      "Invalid GOOGLE_PLAY_SERVICE_ACCOUNT_KEY — must be valid JSON."
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Authenticated client
+// ---------------------------------------------------------------------------
+
+async function getPlayStoreClient(
+  userCredentials?: Record<string, unknown> | null
+) {
+  const credentials = getCredentials(userCredentials);
+
   const auth = new google.auth.GoogleAuth({
     credentials: {
       client_email: credentials.client_email as string,
       private_key: credentials.private_key as string,
-      project_id: credentials.project_id as string,
+      project_id: credentials.project_id as string | undefined,
     },
     scopes: ["https://www.googleapis.com/auth/androidpublisher"],
   });
+
   const authClient = await auth.getClient();
   return google.androidpublisher({
     version: "v3",
@@ -18,32 +64,42 @@ export async function getPlayStoreClient(credentials: Record<string, unknown>) {
   });
 }
 
+// ---------------------------------------------------------------------------
+// Public API — packageName first, optional userCredentials last
+// ---------------------------------------------------------------------------
+
 export async function verifyConnection(
-  credentials: Record<string, unknown>,
-  packageName: string
+  packageName: string,
+  userCredentials?: Record<string, unknown> | null
 ): Promise<{ valid: boolean; reviewCount?: number; error?: string }> {
   try {
-    const client = await getPlayStoreClient(credentials);
+    const client = await getPlayStoreClient(userCredentials);
     const response = await client.reviews.list({ packageName });
     return {
       valid: true,
       reviewCount: response.data.reviews?.length || 0,
     };
   } catch (error: unknown) {
-    const err = error as { code?: number; response?: { status?: number }; message?: string };
+    const err = error as {
+      code?: number;
+      response?: { status?: number };
+      message?: string;
+    };
     const code = err.code || err.response?.status;
+
     if (code === 403) {
       return {
         valid: false,
-        error:
-          "Permission denied. Make sure the service account has 'View app information' and 'Reply to reviews' permissions in Google Play Console → Users & Permissions.",
+        error: userCredentials
+          ? "Permission denied. Make sure the service account has 'View app information' and 'Reply to reviews' permissions in Play Console."
+          : "Permission denied. Make sure you invited the ReviewPilot email in Play Console → Users & Permissions and granted both 'View app information' and 'Reply to reviews' permissions. It can take a few minutes for permissions to activate — try again shortly.",
       };
     }
     if (code === 404) {
       return {
         valid: false,
         error:
-          "App not found. Check that the package name is correct (e.g., com.example.myapp). The app must be published on Play Store.",
+          "App not found. Double-check the package name (e.g., com.example.myapp). The app must be published on Play Store.",
       };
     }
     if (
@@ -52,8 +108,7 @@ export async function verifyConnection(
     ) {
       return {
         valid: false,
-        error:
-          "Invalid service account credentials. Make sure you uploaded the correct JSON key file.",
+        error: "Invalid credentials. Please check your service account configuration.",
       };
     }
     return {
@@ -64,10 +119,10 @@ export async function verifyConnection(
 }
 
 export async function fetchPlayStoreReviews(
-  credentials: Record<string, unknown>,
-  packageName: string
+  packageName: string,
+  userCredentials?: Record<string, unknown> | null
 ): Promise<Review[]> {
-  const client = await getPlayStoreClient(credentials);
+  const client = await getPlayStoreClient(userCredentials);
   const allRawReviews: unknown[] = [];
   let nextPageToken: string | undefined;
 
@@ -89,10 +144,10 @@ export async function fetchPlayStoreReviews(
 }
 
 export async function replyToPlayStoreReview(
-  credentials: Record<string, unknown>,
   packageName: string,
   reviewId: string,
-  replyText: string
+  replyText: string,
+  userCredentials?: Record<string, unknown> | null
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const truncatedReply =
@@ -100,7 +155,7 @@ export async function replyToPlayStoreReview(
         ? replyText.substring(0, 347) + "..."
         : replyText;
 
-    const client = await getPlayStoreClient(credentials);
+    const client = await getPlayStoreClient(userCredentials);
     await client.reviews.reply({
       packageName,
       reviewId,
@@ -113,21 +168,25 @@ export async function replyToPlayStoreReview(
   }
 }
 
-// Keep the old export name for backward compat with existing cron/reply routes
+// Backward-compat alias (not used externally, kept for safety)
 export const publishPlayStoreReply = async (
-  credentials: Record<string, unknown>,
   packageName: string,
   reviewId: string,
-  replyText: string
+  replyText: string,
+  userCredentials?: Record<string, unknown> | null
 ): Promise<boolean> => {
   const result = await replyToPlayStoreReview(
-    credentials,
     packageName,
     reviewId,
-    replyText
+    replyText,
+    userCredentials
   );
   return result.success;
 };
+
+// ---------------------------------------------------------------------------
+// Transform helper
+// ---------------------------------------------------------------------------
 
 interface RawReviewData {
   reviewId?: string;
@@ -173,4 +232,14 @@ export function transformPlayStoreReview(
         ).toISOString()
       : new Date().toISOString(),
   };
+}
+
+// ---------------------------------------------------------------------------
+// Helper — shared service account email for display in wizard
+// ---------------------------------------------------------------------------
+
+export function getSharedServiceAccountEmail(): string {
+  return (
+    process.env.NEXT_PUBLIC_PLAY_SERVICE_ACCOUNT_EMAIL || "Not configured"
+  );
 }

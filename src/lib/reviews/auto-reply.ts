@@ -143,12 +143,13 @@ export async function processAutoReplyForReview(
   }
 
   let publishedOk = false;
-  if (row.source === "play_store" && connection.credentials && connection.external_id) {
+  // connection.credentials is null for Invite Email method → lib falls back to shared env credentials
+  if (row.source === "play_store" && connection.external_id) {
     const result = await replyToPlayStoreReview(
-      connection.credentials,
       connection.external_id,
       row.external_review_id,
-      replyText
+      replyText,
+      connection.credentials
     );
     publishedOk = result.success;
     if (!publishedOk) {

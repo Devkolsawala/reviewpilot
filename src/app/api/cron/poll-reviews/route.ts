@@ -101,12 +101,12 @@ export async function GET(request: Request) {
       try {
         if (
           connection.type === "play_store" &&
-          connection.credentials &&
           connection.external_id
         ) {
+          // connection.credentials is null for Invite Email method → lib falls back to shared env credentials
           const fetchedReviews = await fetchPlayStoreReviews(
-            connection.credentials,
-            connection.external_id
+            connection.external_id,
+            connection.credentials as Record<string, unknown> | null
           );
           connResult.reviewsFetched = fetchedReviews.length;
           console.log(

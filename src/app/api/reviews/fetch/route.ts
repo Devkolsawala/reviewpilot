@@ -51,18 +51,19 @@ export async function POST(request: Request) {
     .eq("connection_id", connectionId)
     .maybeSingle();
 
-  // ── Step 1: Sync new reviews from Play Store (non-fatal if credentials missing) ──
+  // ── Step 1: Sync new reviews from Play Store (non-fatal if package name missing) ──
   let fetchedReviews: Awaited<ReturnType<typeof fetchPlayStoreReviews>> = [];
   let syncError: string | null = null;
 
-  if (!connection.credentials || !connection.external_id) {
-    syncError = "Connection is missing credentials or package name. Re-connect to enable syncing.";
-    console.log("[sync] No credentials — skipping Play Store fetch, will still process pending reviews.");
+  if (!connection.external_id) {
+    syncError = "Connection is missing a package name. Re-connect to enable syncing.";
+    console.log("[sync] No package name — skipping Play Store fetch, will still process pending reviews.");
   } else {
     try {
+      // connection.credentials is null for Invite Email method → lib falls back to shared env credentials
       fetchedReviews = await fetchPlayStoreReviews(
-        connection.credentials,
-        connection.external_id
+        connection.external_id,
+        connection.credentials as Record<string, unknown> | null
       );
     } catch (err: unknown) {
       const e = err as { code?: number; message?: string };

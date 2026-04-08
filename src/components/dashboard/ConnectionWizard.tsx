@@ -4,7 +4,13 @@ import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   Globe,
@@ -17,23 +23,29 @@ import {
   Loader2,
   XCircle,
   AlertTriangle,
+  Copy,
+  Check,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import type { Connection } from "@/types/connection";
 
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
 type Mode = "choose" | "playstore" | "gbp";
-
-// ------------- Play Store Wizard -------------
-
-type PSStep = 1 | 2 | 3 | 4;
+type PSMethod = "invite_email" | "own_service_account";
 
 interface VerifyState {
   status: "idle" | "loading" | "success" | "error";
   message: string;
   reviewCount?: number;
-  step?: string;
 }
+
+// ---------------------------------------------------------------------------
+// Root wizard — choose a source
+// ---------------------------------------------------------------------------
 
 export function ConnectionWizard({
   onComplete,
@@ -57,9 +69,15 @@ export function ConnectionWizard({
             className="text-left rounded-xl border-2 border-transparent hover:border-teal-500 hover:bg-teal-50/50 dark:hover:bg-teal-950/20 bg-card p-6 transition-all"
           >
             <Smartphone className="h-10 w-10 text-teal-500 mb-4" />
-            <h3 className="font-heading text-base font-semibold mb-1">Google Play Store</h3>
-            <p className="text-sm text-muted-foreground">Manage Android app reviews with a service account.</p>
-            <Badge variant="secondary" className="mt-3 text-xs">Service Account JSON</Badge>
+            <h3 className="font-heading text-base font-semibold mb-1">
+              Google Play Store
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Manage Android app reviews from Play Console.
+            </p>
+            <Badge variant="secondary" className="mt-3 text-xs">
+              Quick setup
+            </Badge>
           </button>
 
           <button
@@ -67,9 +85,15 @@ export function ConnectionWizard({
             className="text-left rounded-xl border-2 border-transparent hover:border-teal-500 hover:bg-teal-50/50 dark:hover:bg-teal-950/20 bg-card p-6 transition-all"
           >
             <Globe className="h-10 w-10 text-teal-500 mb-4" />
-            <h3 className="font-heading text-base font-semibold mb-1">Google Business Profile</h3>
-            <p className="text-sm text-muted-foreground">Manage local business reviews via Google OAuth.</p>
-            <Badge variant="secondary" className="mt-3 text-xs">OAuth Connection</Badge>
+            <h3 className="font-heading text-base font-semibold mb-1">
+              Google Business Profile
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Manage local business reviews via Google OAuth.
+            </p>
+            <Badge variant="secondary" className="mt-3 text-xs">
+              OAuth Connection
+            </Badge>
           </button>
         </div>
       </div>
@@ -80,10 +104,14 @@ export function ConnectionWizard({
     return <GBPWizard onBack={() => setMode("choose")} onComplete={onComplete} />;
   }
 
-  return <PlayStoreWizard onBack={() => setMode("choose")} onComplete={onComplete} />;
+  return (
+    <PlayStoreWizard onBack={() => setMode("choose")} onComplete={onComplete} />
+  );
 }
 
-// ─── Play Store Wizard ───────────────────────────────────────────────────────
+// ---------------------------------------------------------------------------
+// Play Store Wizard — two-tab approach
+// ---------------------------------------------------------------------------
 
 function PlayStoreWizard({
   onBack,
@@ -92,15 +120,458 @@ function PlayStoreWizard({
   onBack: () => void;
   onComplete?: (connection: Connection) => void;
 }) {
-  const [step, setStep] = useState<PSStep>(1);
+  const [method, setMethod] = useState<PSMethod>("invite_email");
+
+  return (
+    <div className="space-y-4">
+      {/* Method tabs */}
+      <div className="grid grid-cols-2 gap-2">
+        <button
+          onClick={() => setMethod("invite_email")}
+          className={cn(
+            "rounded-xl border-2 p-4 text-left transition-all",
+            method === "invite_email"
+              ? "border-teal-500 bg-teal-50/60 dark:bg-teal-950/20"
+              : "border-border hover:border-teal-300 bg-card"
+          )}
+        >
+          <div className="flex items-center gap-2 mb-1">
+            <span
+              className={cn(
+                "h-3 w-3 rounded-full border-2",
+                method === "invite_email"
+                  ? "border-teal-500 bg-teal-500"
+                  : "border-muted-foreground"
+              )}
+            />
+            <span className="text-sm font-semibold">Invite Email</span>
+            <Badge
+              variant="secondary"
+              className="text-[10px] bg-teal-100 text-teal-700 dark:bg-teal-950/40 dark:text-teal-400"
+            >
+              Recommended
+            </Badge>
+          </div>
+          <p className="text-xs text-muted-foreground pl-5">
+            Quick &amp; easy — no service account setup
+          </p>
+        </button>
+
+        <button
+          onClick={() => setMethod("own_service_account")}
+          className={cn(
+            "rounded-xl border-2 p-4 text-left transition-all",
+            method === "own_service_account"
+              ? "border-blue-500 bg-blue-50/60 dark:bg-blue-950/20"
+              : "border-border hover:border-blue-300 bg-card"
+          )}
+        >
+          <div className="flex items-center gap-2 mb-1">
+            <span
+              className={cn(
+                "h-3 w-3 rounded-full border-2",
+                method === "own_service_account"
+                  ? "border-blue-500 bg-blue-500"
+                  : "border-muted-foreground"
+              )}
+            />
+            <span className="text-sm font-semibold">Own Service Account</span>
+            <Badge variant="secondary" className="text-[10px]">
+              Advanced
+            </Badge>
+          </div>
+          <p className="text-xs text-muted-foreground pl-5">
+            Use your own Google Cloud credentials
+          </p>
+        </button>
+      </div>
+
+      {/* Wizard body */}
+      {method === "invite_email" ? (
+        <InviteEmailWizard onBack={onBack} onComplete={onComplete} />
+      ) : (
+        <OwnServiceAccountWizard onBack={onBack} onComplete={onComplete} />
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Method 1 — Invite Email (3 steps)
+// ---------------------------------------------------------------------------
+
+function InviteEmailWizard({
+  onBack,
+  onComplete,
+}: {
+  onBack: () => void;
+  onComplete?: (connection: Connection) => void;
+}) {
+  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [inviteChecked, setInviteChecked] = useState(false);
+  const [packageName, setPackageName] = useState("");
+  const [appName, setAppName] = useState("");
+  const [verify, setVerify] = useState<VerifyState>({
+    status: "idle",
+    message: "",
+  });
+  const [savedConnection, setSavedConnection] = useState<Connection | null>(
+    null
+  );
+  const [copied, setCopied] = useState(false);
+
+  const serviceAccountEmail =
+    process.env.NEXT_PUBLIC_PLAY_SERVICE_ACCOUNT_EMAIL || "Not configured yet";
+
+  function handleCopy() {
+    navigator.clipboard.writeText(serviceAccountEmail).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
+
+  async function handleVerify() {
+    if (!packageName || !appName) return;
+    setVerify({ status: "loading", message: "Checking credentials..." });
+
+    await new Promise((r) => setTimeout(r, 800));
+    setVerify({ status: "loading", message: "Connecting to Play Store..." });
+
+    try {
+      const res = await fetch("/api/reviews/verify-connection", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "play_store",
+          packageName,
+          appName,
+          connectionMethod: "invite_email",
+        }),
+      });
+      const data = await res.json();
+
+      if (!data.valid) {
+        setVerify({ status: "error", message: data.error });
+        return;
+      }
+
+      setVerify({
+        status: "success",
+        message: data.message,
+        reviewCount: data.reviewCount,
+      });
+
+      const supabase = createClient();
+      const { data: conn } = await supabase
+        .from("connections")
+        .select("*")
+        .eq("id", data.connectionId)
+        .single();
+
+      setSavedConnection(
+        (conn as Connection) || {
+          id: data.connectionId,
+          user_id: "",
+          type: "play_store" as const,
+          name: appName,
+          external_id: packageName,
+          is_active: true,
+          created_at: new Date().toISOString(),
+        }
+      );
+      setStep(3);
+    } catch (err) {
+      console.error("[ConnectionWizard] Verification error:", err);
+      setVerify({
+        status: "error",
+        message: "Unexpected error. Please try again.",
+      });
+    }
+  }
+
+  // ── Step 1: Invite the email ──────────────────────────────────────────────
+  if (step === 1) {
+    return (
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2 mb-1">
+            <StepBadge current={1} total={3} />
+            <CardTitle className="text-base">
+              Invite ReviewPilot to your Play Console
+            </CardTitle>
+          </div>
+          <CardDescription>
+            Copy our service account email and invite it in Play Console
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Email copy box */}
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">
+              ReviewPilot service account email
+            </Label>
+            <div className="flex items-center gap-2 rounded-lg border bg-secondary/40 px-3 py-2.5">
+              <code className="flex-1 text-sm font-mono text-foreground break-all">
+                {serviceAccountEmail}
+              </code>
+              <button
+                onClick={handleCopy}
+                className="shrink-0 rounded-md p-1.5 hover:bg-secondary transition-colors"
+                title="Copy email"
+              >
+                {copied ? (
+                  <Check className="h-4 w-4 text-teal-500" />
+                ) : (
+                  <Copy className="h-4 w-4 text-muted-foreground" />
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Instructions */}
+          <ol className="space-y-3 text-sm">
+            {[
+              <>
+                Open{" "}
+                <a
+                  href="https://play.google.com/console"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-teal-600 hover:underline inline-flex items-center gap-0.5"
+                >
+                  Google Play Console <ExternalLink className="h-3 w-3" />
+                </a>
+              </>,
+              <>
+                Click <strong>Users and permissions</strong> in the left sidebar
+              </>,
+              <>
+                Click <strong>Invite new users</strong>
+              </>,
+              <>
+                Paste the email above into the email field
+              </>,
+              <>
+                Under <strong>Account permissions</strong>, enable both:
+                <ul className="mt-1.5 space-y-1 pl-2">
+                  <li className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-teal-500 shrink-0" />
+                    View app information and download bulk reports (read-only)
+                  </li>
+                  <li className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-teal-500 shrink-0" />
+                    Reply to reviews
+                  </li>
+                </ul>
+              </>,
+              <>
+                Click <strong>Invite user</strong> then{" "}
+                <strong>Send invitation</strong>
+              </>,
+            ].map((item, i) => (
+              <li key={i} className="flex gap-3">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-secondary text-[10px] font-bold mt-0.5">
+                  {i + 1}
+                </span>
+                <span className="text-muted-foreground leading-snug">
+                  {item}
+                </span>
+              </li>
+            ))}
+          </ol>
+
+          {/* Privacy callout */}
+          <div className="rounded-lg bg-teal-50 dark:bg-teal-950/30 border border-teal-200 dark:border-teal-800 p-3.5">
+            <p className="text-xs text-teal-800 dark:text-teal-300">
+              This gives ReviewPilot read-only access to your reviews and the
+              ability to post replies. We cannot access your app code, financial
+              data, or publishing settings. You can revoke access anytime by
+              removing the invited user.
+            </p>
+          </div>
+
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={inviteChecked}
+              onChange={(e) => setInviteChecked(e.target.checked)}
+              className="rounded border-border"
+            />
+            <span className="text-sm">
+              I&apos;ve invited the email and granted both permissions
+            </span>
+          </label>
+
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={onBack}>
+              <ArrowLeft className="mr-2 h-4 w-4" /> Back
+            </Button>
+            <Button onClick={() => setStep(2)} disabled={!inviteChecked}>
+              Next <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // ── Step 2: Enter app details & verify ───────────────────────────────────
+  if (step === 2) {
+    return (
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2 mb-1">
+            <StepBadge current={2} total={3} />
+            <CardTitle className="text-base">Enter your app details</CardTitle>
+          </div>
+          <CardDescription>
+            Enter your package name and we&apos;ll verify the connection
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>App package name</Label>
+            <Input
+              placeholder="com.example.myapp"
+              value={packageName}
+              onChange={(e) => setPackageName(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              Find this in Play Console → All apps → select your app. The
+              package name is shown at the top (e.g.,{" "}
+              <code>com.whatsapp</code>)
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label>App name (for your reference)</Label>
+            <Input
+              placeholder="My Awesome App"
+              value={appName}
+              onChange={(e) => setAppName(e.target.value)}
+            />
+          </div>
+
+          {/* Verification status */}
+          {verify.status !== "idle" && (
+            <div
+              className={cn(
+                "rounded-lg border p-3 flex items-start gap-2.5 text-sm",
+                verify.status === "loading" &&
+                  "border-blue-200 bg-blue-50 dark:bg-blue-950/20 dark:border-blue-800",
+                verify.status === "success" &&
+                  "border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-800",
+                verify.status === "error" &&
+                  "border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-800"
+              )}
+            >
+              {verify.status === "loading" && (
+                <Loader2 className="h-4 w-4 animate-spin text-blue-500 mt-0.5 shrink-0" />
+              )}
+              {verify.status === "success" && (
+                <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
+              )}
+              {verify.status === "error" && (
+                <AlertTriangle className="h-4 w-4 text-red-500 mt-0.5 shrink-0" />
+              )}
+              <div className="flex-1">
+                <p
+                  className={cn(
+                    verify.status === "loading" &&
+                      "text-blue-700 dark:text-blue-400",
+                    verify.status === "success" &&
+                      "text-green-700 dark:text-green-400",
+                    verify.status === "error" &&
+                      "text-red-700 dark:text-red-400"
+                  )}
+                >
+                  {verify.message}
+                </p>
+                {verify.status === "error" && (
+                  <button
+                    onClick={() =>
+                      setVerify({ status: "idle", message: "" })
+                    }
+                    className="mt-1.5 text-xs underline text-red-600 dark:text-red-400"
+                  >
+                    Try Again
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setStep(1)}
+              disabled={verify.status === "loading"}
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" /> Back
+            </Button>
+            <Button
+              onClick={handleVerify}
+              disabled={
+                !packageName || !appName || verify.status === "loading"
+              }
+              className="flex-1 bg-teal-600 hover:bg-teal-700 text-white"
+            >
+              {verify.status === "loading" ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />{" "}
+                  {verify.message}
+                </>
+              ) : (
+                <>
+                  Verify Connection <ArrowRight className="ml-2 h-4 w-4" />
+                </>
+              )}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // ── Step 3: Success ───────────────────────────────────────────────────────
+  return (
+    <SuccessScreen
+      appName={appName}
+      reviewCount={verify.reviewCount}
+      savedConnection={savedConnection}
+      onComplete={onComplete}
+    />
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Method 2 — Own Service Account (4 steps)
+// ---------------------------------------------------------------------------
+
+function OwnServiceAccountWizard({
+  onBack,
+  onComplete,
+}: {
+  onBack: () => void;
+  onComplete?: (connection: Connection) => void;
+}) {
+  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [step1Checked, setStep1Checked] = useState(false);
   const [step2Checked, setStep2Checked] = useState(false);
-  const [credentials, setCredentials] = useState<Record<string, unknown> | null>(null);
+  const [credentials, setCredentials] = useState<Record<
+    string,
+    unknown
+  > | null>(null);
   const [credError, setCredError] = useState("");
   const [packageName, setPackageName] = useState("");
   const [appName, setAppName] = useState("");
-  const [verify, setVerify] = useState<VerifyState>({ status: "idle", message: "" });
-  const [savedConnection, setSavedConnection] = useState<Connection | null>(null);
+  const [verify, setVerify] = useState<VerifyState>({
+    status: "idle",
+    message: "",
+  });
+  const [savedConnection, setSavedConnection] = useState<Connection | null>(
+    null
+  );
   const fileRef = useRef<HTMLInputElement>(null);
 
   function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -112,14 +583,19 @@ function PlayStoreWizard({
       try {
         const json = JSON.parse(ev.target?.result as string);
         if (!json.client_email || !json.private_key) {
-          setCredError("This doesn't look like a valid service account JSON. Make sure you downloaded the JSON key (not a .p12 file).");
+          setCredError(
+            "This doesn't look like a valid service account JSON. Make sure you downloaded the JSON key (not a .p12 file)."
+          );
           setCredentials(null);
           return;
         }
         setCredentials(json);
-        if (!appName) setAppName(file.name.replace(".json", "").replace(/-/g, " "));
+        if (!appName)
+          setAppName(file.name.replace(".json", "").replace(/-/g, " "));
       } catch {
-        setCredError("Could not parse this file. Make sure it's a valid JSON file.");
+        setCredError(
+          "Could not parse this file. Make sure it's a valid JSON file."
+        );
         setCredentials(null);
       }
     };
@@ -128,16 +604,22 @@ function PlayStoreWizard({
 
   async function handleVerify() {
     if (!credentials || !packageName || !appName) return;
-    setVerify({ status: "loading", message: "Validating credentials...", step: "credentials" });
+    setVerify({ status: "loading", message: "Validating credentials..." });
 
     await new Promise((r) => setTimeout(r, 400));
-    setVerify({ status: "loading", message: "Checking API access...", step: "api" });
+    setVerify({ status: "loading", message: "Connecting to Play Store..." });
 
     try {
       const res = await fetch("/api/reviews/verify-connection", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "play_store", credentials, packageName, appName }),
+        body: JSON.stringify({
+          type: "play_store",
+          packageName,
+          appName,
+          connectionMethod: "own_service_account",
+          credentials,
+        }),
       });
       const data = await res.json();
 
@@ -146,8 +628,12 @@ function PlayStoreWizard({
         return;
       }
 
-      // The API route now saves the connection server-side.
-      // Fetch the saved connection so we can pass it to onComplete.
+      setVerify({
+        status: "success",
+        message: data.message,
+        reviewCount: data.reviewCount,
+      });
+
       const supabase = createClient();
       const { data: conn } = await supabase
         .from("connections")
@@ -155,28 +641,28 @@ function PlayStoreWizard({
         .eq("id", data.connectionId)
         .single();
 
-      setVerify({
-        status: "success",
-        message: data.message,
-        reviewCount: data.reviewCount,
-      });
-      setSavedConnection((conn as Connection) || {
-        id: data.connectionId,
-        user_id: "",
-        type: "play_store" as const,
-        name: appName,
-        external_id: packageName,
-        is_active: true,
-        created_at: new Date().toISOString(),
-      });
+      setSavedConnection(
+        (conn as Connection) || {
+          id: data.connectionId,
+          user_id: "",
+          type: "play_store" as const,
+          name: appName,
+          external_id: packageName,
+          is_active: true,
+          created_at: new Date().toISOString(),
+        }
+      );
       setStep(4);
     } catch (err) {
       console.error("[ConnectionWizard] Verification error:", err);
-      setVerify({ status: "error", message: "Unexpected error during verification. Please try again." });
+      setVerify({
+        status: "error",
+        message: "Unexpected error. Please try again.",
+      });
     }
   }
 
-  // Step 1
+  // ── Step 1: Create service account ───────────────────────────────────────
   if (step === 1) {
     return (
       <Card>
@@ -185,29 +671,56 @@ function PlayStoreWizard({
             <StepBadge current={1} total={4} />
             <CardTitle className="text-base">Create a Service Account</CardTitle>
           </div>
-          <CardDescription>First, set up a service account in Google Cloud (takes ~2 minutes)</CardDescription>
+          <CardDescription>
+            Set up a service account in Google Cloud (~2 minutes)
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="rounded-lg bg-teal-50 dark:bg-teal-950/30 border border-teal-200 dark:border-teal-800 p-3.5">
-            <p className="text-xs font-medium text-teal-800 dark:text-teal-300 mb-1">💡 What is a service account?</p>
-            <p className="text-xs text-teal-700/80 dark:text-teal-400/70">
-              It&apos;s like a robot assistant that ReviewPilot uses to read your reviews and post replies. You control exactly what it can access.
+          <div className="rounded-lg bg-secondary/50 border p-3.5">
+            <p className="text-xs text-muted-foreground">
+              This takes about 2 minutes. Keep the downloaded JSON file safe —
+              you&apos;ll upload it in Step 3.
             </p>
           </div>
 
           <ol className="space-y-3 text-sm">
             {[
-              <>Go to <a href="https://console.cloud.google.com" target="_blank" rel="noopener noreferrer" className="text-teal-600 hover:underline inline-flex items-center gap-0.5">Google Cloud Console <ExternalLink className="h-3 w-3" /></a></>,
-              <>Go to <strong>IAM &amp; Admin</strong> → <strong>Service Accounts</strong> → <strong>Create Service Account</strong></>,
-              <>Name it <strong>&quot;ReviewPilot&quot;</strong>, skip the role step, click <strong>Done</strong></>,
-              <>Click on the service account → <strong>Keys</strong> tab → <strong>Add Key</strong> → <strong>Create new key</strong> → <strong>JSON</strong></>,
-              <>A JSON file will download to your computer — you&apos;ll upload it in Step 3</>,
+              <>
+                Go to{" "}
+                <a
+                  href="https://console.cloud.google.com/iam-admin/serviceaccounts"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-teal-600 hover:underline inline-flex items-center gap-0.5"
+                >
+                  Google Cloud Console → IAM &amp; Admin → Service Accounts{" "}
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+              </>,
+              <>
+                Click <strong>Create Service Account</strong>
+              </>,
+              <>
+                Name it anything (e.g., <strong>&quot;ReviewPilot&quot;</strong>
+                ), click <strong>Create and Continue</strong> → skip role →{" "}
+                <strong>Done</strong>
+              </>,
+              <>
+                Click on the new service account → <strong>Keys</strong> tab
+              </>,
+              <>
+                <strong>Add Key</strong> → <strong>Create new key</strong> →{" "}
+                <strong>JSON</strong> → <strong>Create</strong>
+              </>,
+              <>A JSON file will download — you&apos;ll upload it in Step 3</>,
             ].map((item, i) => (
               <li key={i} className="flex gap-3">
                 <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-secondary text-[10px] font-bold mt-0.5">
                   {i + 1}
                 </span>
-                <span className="text-muted-foreground leading-snug">{item}</span>
+                <span className="text-muted-foreground leading-snug">
+                  {item}
+                </span>
               </li>
             ))}
           </ol>
@@ -219,7 +732,9 @@ function PlayStoreWizard({
               onChange={(e) => setStep1Checked(e.target.checked)}
               className="rounded border-border"
             />
-            <span className="text-sm">I&apos;ve downloaded the JSON key file</span>
+            <span className="text-sm">
+              I&apos;ve downloaded my JSON key file
+            </span>
           </label>
 
           <div className="flex items-center gap-2">
@@ -229,46 +744,73 @@ function PlayStoreWizard({
             <Button onClick={() => setStep(2)} disabled={!step1Checked}>
               Next <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
-            <a href="https://cloud.google.com/iam/docs/service-accounts-create" target="_blank" rel="noopener noreferrer" className="ml-auto text-xs text-muted-foreground hover:text-teal-600 underline underline-offset-2">Need help?</a>
           </div>
         </CardContent>
       </Card>
     );
   }
 
-  // Step 2
+  // ── Step 2: Grant permissions ─────────────────────────────────────────────
   if (step === 2) {
     return (
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2 mb-1">
             <StepBadge current={2} total={4} />
-            <CardTitle className="text-base">Grant Review Permissions</CardTitle>
+            <CardTitle className="text-base">Grant Permissions in Play Console</CardTitle>
           </div>
-          <CardDescription>Give ReviewPilot permission to read and reply to your reviews</CardDescription>
+          <CardDescription>
+            Invite your service account email to your Play Console
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 p-3.5">
-            <p className="text-xs font-medium text-amber-800 dark:text-amber-300 mb-1">🔒 Permission scope</p>
+            <p className="text-xs font-medium text-amber-800 dark:text-amber-300 mb-1">
+              🔒 Permission scope
+            </p>
             <p className="text-xs text-amber-700/80 dark:text-amber-400/70">
-              We only request read access to reviews + ability to post replies. We cannot access your app code, finances, or account settings.
+              We only request read access to reviews + the ability to post
+              replies. We cannot access your app code, finances, or account
+              settings.
             </p>
           </div>
 
           <ol className="space-y-3 text-sm">
             {[
-              <>Go to <a href="https://play.google.com/console" target="_blank" rel="noopener noreferrer" className="text-teal-600 hover:underline inline-flex items-center gap-0.5">Google Play Console <ExternalLink className="h-3 w-3" /></a></>,
-              <>Click <strong>Users and Permissions</strong> in the left sidebar</>,
-              <>Click <strong>Invite new users</strong></>,
-              <>In the email field, paste the <strong>client_email</strong> from your downloaded JSON file</>,
-              <>Enable only: <strong>View app information (read-only)</strong> and <strong>Reply to reviews</strong></>,
-              <>Click <strong>Invite user</strong> → <strong>Send invitation</strong></>,
+              <>
+                Open{" "}
+                <a
+                  href="https://play.google.com/console"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-teal-600 hover:underline inline-flex items-center gap-0.5"
+                >
+                  Google Play Console <ExternalLink className="h-3 w-3" />
+                </a>{" "}
+                → <strong>Users and permissions</strong>
+              </>,
+              <>
+                Click <strong>Invite new users</strong>
+              </>,
+              <>
+                Paste the <strong>client_email</strong> from your JSON file
+                into the email field
+              </>,
+              <>
+                Enable: <strong>View app information</strong> and{" "}
+                <strong>Reply to reviews</strong>
+              </>,
+              <>
+                Click <strong>Invite user</strong> → <strong>Send invitation</strong>
+              </>,
             ].map((item, i) => (
               <li key={i} className="flex gap-3">
                 <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-secondary text-[10px] font-bold mt-0.5">
                   {i + 1}
                 </span>
-                <span className="text-muted-foreground leading-snug">{item}</span>
+                <span className="text-muted-foreground leading-snug">
+                  {item}
+                </span>
               </li>
             ))}
           </ol>
@@ -280,7 +822,9 @@ function PlayStoreWizard({
               onChange={(e) => setStep2Checked(e.target.checked)}
               className="rounded border-border"
             />
-            <span className="text-sm">I&apos;ve invited the service account and granted permissions</span>
+            <span className="text-sm">
+              I&apos;ve invited the service account and granted permissions
+            </span>
           </label>
 
           <div className="flex items-center gap-2">
@@ -290,14 +834,13 @@ function PlayStoreWizard({
             <Button onClick={() => setStep(3)} disabled={!step2Checked}>
               Next <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
-            <a href="https://support.google.com/googleplay/android-developer/answer/9844686" target="_blank" rel="noopener noreferrer" className="ml-auto text-xs text-muted-foreground hover:text-teal-600 underline underline-offset-2">Need help?</a>
           </div>
         </CardContent>
       </Card>
     );
   }
 
-  // Step 3: Upload & Verify
+  // ── Step 3: Upload & Verify ───────────────────────────────────────────────
   if (step === 3) {
     return (
       <Card>
@@ -306,7 +849,9 @@ function PlayStoreWizard({
             <StepBadge current={3} total={4} />
             <CardTitle className="text-base">Upload &amp; Verify</CardTitle>
           </div>
-          <CardDescription>Upload your service account key and enter your app details</CardDescription>
+          <CardDescription>
+            Upload your JSON key and enter your app details
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* File upload */}
@@ -333,14 +878,20 @@ function PlayStoreWizard({
                   <CheckCircle2 className="h-5 w-5" />
                   <div className="text-left">
                     <p className="text-sm font-medium">Service account loaded</p>
-                    <p className="text-xs text-muted-foreground">{credentials.client_email as string}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {credentials.client_email as string}
+                    </p>
                   </div>
                 </div>
               ) : (
                 <>
                   <Upload className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-sm font-medium">Drop your service-account.json here</p>
-                  <p className="text-xs text-muted-foreground mt-1">or click to browse</p>
+                  <p className="text-sm font-medium">
+                    Drop your service-account.json here
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    or click to browse
+                  </p>
                 </>
               )}
             </div>
@@ -352,7 +903,19 @@ function PlayStoreWizard({
           </div>
 
           <div className="space-y-2">
-            <Label>App Name</Label>
+            <Label>App package name</Label>
+            <Input
+              placeholder="com.example.myapp"
+              value={packageName}
+              onChange={(e) => setPackageName(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              Find this in Play Console → All apps → select your app
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label>App name (for your reference)</Label>
             <Input
               placeholder="My Awesome App"
               value={appName}
@@ -360,52 +923,79 @@ function PlayStoreWizard({
             />
           </div>
 
-          <div className="space-y-2">
-            <Label>Package Name</Label>
-            <Input
-              placeholder="com.yourcompany.appname"
-              value={packageName}
-              onChange={(e) => setPackageName(e.target.value)}
-            />
-            <p className="text-xs text-muted-foreground">
-              Find this in Play Console → Your App → Dashboard. Example: <code>com.example.myapp</code>
-            </p>
-          </div>
-
           {/* Verification status */}
           {verify.status !== "idle" && (
-            <div className={cn(
-              "rounded-lg border p-3 flex items-start gap-2.5 text-sm",
-              verify.status === "loading" && "border-blue-200 bg-blue-50 dark:bg-blue-950/20 dark:border-blue-800",
-              verify.status === "success" && "border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-800",
-              verify.status === "error" && "border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-800",
-            )}>
-              {verify.status === "loading" && <Loader2 className="h-4 w-4 animate-spin text-blue-500 mt-0.5 shrink-0" />}
-              {verify.status === "success" && <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />}
-              {verify.status === "error" && <AlertTriangle className="h-4 w-4 text-red-500 mt-0.5 shrink-0" />}
-              <p className={cn(
-                verify.status === "loading" && "text-blue-700 dark:text-blue-400",
-                verify.status === "success" && "text-green-700 dark:text-green-400",
-                verify.status === "error" && "text-red-700 dark:text-red-400",
-              )}>
-                {verify.message}
-              </p>
+            <div
+              className={cn(
+                "rounded-lg border p-3 flex items-start gap-2.5 text-sm",
+                verify.status === "loading" &&
+                  "border-blue-200 bg-blue-50 dark:bg-blue-950/20 dark:border-blue-800",
+                verify.status === "success" &&
+                  "border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-800",
+                verify.status === "error" &&
+                  "border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-800"
+              )}
+            >
+              {verify.status === "loading" && (
+                <Loader2 className="h-4 w-4 animate-spin text-blue-500 mt-0.5 shrink-0" />
+              )}
+              {verify.status === "success" && (
+                <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
+              )}
+              {verify.status === "error" && (
+                <AlertTriangle className="h-4 w-4 text-red-500 mt-0.5 shrink-0" />
+              )}
+              <div className="flex-1">
+                <p
+                  className={cn(
+                    verify.status === "loading" &&
+                      "text-blue-700 dark:text-blue-400",
+                    verify.status === "success" &&
+                      "text-green-700 dark:text-green-400",
+                    verify.status === "error" &&
+                      "text-red-700 dark:text-red-400"
+                  )}
+                >
+                  {verify.message}
+                </p>
+                {verify.status === "error" && (
+                  <button
+                    onClick={() =>
+                      setVerify({ status: "idle", message: "" })
+                    }
+                    className="mt-1.5 text-xs underline text-red-600 dark:text-red-400"
+                  >
+                    Try Again
+                  </button>
+                )}
+              </div>
             </div>
           )}
 
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setStep(2)} disabled={verify.status === "loading"}>
+            <Button
+              variant="outline"
+              onClick={() => setStep(2)}
+              disabled={verify.status === "loading"}
+            >
               <ArrowLeft className="mr-2 h-4 w-4" /> Back
             </Button>
             <Button
               onClick={handleVerify}
-              disabled={!credentials || !packageName || !appName || verify.status === "loading"}
+              disabled={
+                !credentials || !packageName || !appName || verify.status === "loading"
+              }
               className="flex-1"
             >
               {verify.status === "loading" ? (
-                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {verify.message}</>
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />{" "}
+                  {verify.message}
+                </>
               ) : (
-                <>Verify &amp; Connect <ArrowRight className="ml-2 h-4 w-4" /></>
+                <>
+                  Verify &amp; Connect <ArrowRight className="ml-2 h-4 w-4" />
+                </>
               )}
             </Button>
           </div>
@@ -414,27 +1004,65 @@ function PlayStoreWizard({
     );
   }
 
-  // Step 4: Success
+  // ── Step 4: Success ───────────────────────────────────────────────────────
+  return (
+    <SuccessScreen
+      appName={appName}
+      reviewCount={verify.reviewCount}
+      savedConnection={savedConnection}
+      onComplete={onComplete}
+    />
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Shared success screen
+// ---------------------------------------------------------------------------
+
+function SuccessScreen({
+  appName,
+  reviewCount,
+  savedConnection,
+  onComplete,
+}: {
+  appName: string;
+  reviewCount?: number;
+  savedConnection: Connection | null;
+  onComplete?: (connection: Connection) => void;
+}) {
   return (
     <Card>
       <CardContent className="p-8 text-center">
         <div className="rounded-2xl bg-green-50 dark:bg-green-950/30 p-5 w-fit mx-auto mb-5">
           <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto" />
         </div>
-        <h3 className="font-heading text-xl font-bold mb-2">Connected!</h3>
+        <h3 className="font-heading text-xl font-bold mb-2">
+          You&apos;re all set!
+        </h3>
         <p className="text-sm text-muted-foreground mb-1">
-          <strong>{appName}</strong> on Play Store
+          ReviewPilot is now connected to <strong>{appName}</strong> on Play
+          Store
         </p>
-        {typeof verify.reviewCount === "number" && (
+        {typeof reviewCount === "number" && (
           <p className="text-xs text-muted-foreground mb-6">
-            {verify.reviewCount > 0 ? `${verify.reviewCount} reviews found and ready to manage.` : "Ready to fetch reviews. Click 'Sync Now' to load them."}
+            {reviewCount > 0
+              ? `${reviewCount} reviews found and ready to manage.`
+              : "Ready to fetch reviews — click 'Sync Now' to load them."}
           </p>
         )}
-        <div className="flex gap-2 justify-center">
-          <Button onClick={() => onComplete?.(savedConnection!)}>
+        <div className="flex gap-2 justify-center flex-wrap">
+          <Button
+            className="bg-teal-600 hover:bg-teal-700 text-white"
+            onClick={() => savedConnection && onComplete?.(savedConnection)}
+          >
             Go to Review Inbox <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
-          <Button variant="outline" onClick={() => { /* navigate to AI config */ window.location.href = "/dashboard/settings/ai-config"; }}>
+          <Button
+            variant="outline"
+            onClick={() => {
+              window.location.href = "/dashboard/settings/ai-config";
+            }}
+          >
             Configure AI Replies
           </Button>
         </div>
@@ -443,7 +1071,9 @@ function PlayStoreWizard({
   );
 }
 
-// ─── GBP Wizard ──────────────────────────────────────────────────────────────
+// ---------------------------------------------------------------------------
+// GBP Wizard (unchanged)
+// ---------------------------------------------------------------------------
 
 function GBPWizard({
   onBack,
@@ -460,10 +1090,14 @@ function GBPWizard({
     setSaving(true);
 
     const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { setSaving(false); return; }
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      setSaving(false);
+      return;
+    }
 
-    // Ensure profile row exists
     await supabase.from("profiles").upsert({ id: user.id }, { onConflict: "id" });
 
     const { data: conn, error } = await supabase
@@ -502,7 +1136,8 @@ function GBPWizard({
       <CardContent className="space-y-4">
         <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 p-3">
           <p className="text-xs text-amber-700 dark:text-amber-400">
-            GBP API access is pending approval. Save your business name now and we&apos;ll activate live syncing once approved. Reviews will show mock data in the meantime.
+            GBP API access is pending approval. Save your business name now
+            and we&apos;ll activate live syncing once approved.
           </p>
         </div>
         <div className="space-y-2">
@@ -518,7 +1153,15 @@ function GBPWizard({
             <ArrowLeft className="mr-2 h-4 w-4" /> Back
           </Button>
           <Button onClick={handleConnect} disabled={saving || !businessName}>
-            {saving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : <>Save Connection <ArrowRight className="ml-2 h-4 w-4" /></>}
+            {saving ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...
+              </>
+            ) : (
+              <>
+                Save Connection <ArrowRight className="ml-2 h-4 w-4" />
+              </>
+            )}
           </Button>
         </div>
       </CardContent>
@@ -526,7 +1169,9 @@ function GBPWizard({
   );
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
 function StepBadge({ current, total }: { current: number; total: number }) {
   return (

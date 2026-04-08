@@ -257,7 +257,22 @@ export default function ConnectionsPage() {
                         )}
                       </div>
                       <div>
-                        <p className="text-sm font-semibold">{conn.name}</p>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm font-semibold">{conn.name}</p>
+                          {conn.type === "play_store" && (
+                            <Badge
+                              variant="secondary"
+                              className={cn(
+                                "text-[10px]",
+                                conn.credentials
+                                  ? "bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400"
+                                  : "bg-teal-100 text-teal-700 dark:bg-teal-950/40 dark:text-teal-400"
+                              )}
+                            >
+                              {conn.credentials ? "Own Credentials" : "Invite Email"}
+                            </Badge>
+                          )}
+                        </div>
                         <p className="text-xs text-muted-foreground capitalize">
                           {conn.type === "play_store" ? "Google Play Store" : "Google Business Profile"}
                           {conn.external_id && (

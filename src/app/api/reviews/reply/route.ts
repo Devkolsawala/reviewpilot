@@ -131,12 +131,13 @@ export async function POST(request: Request) {
 
   let published = false;
 
-  if (review.source === "play_store" && connection?.credentials) {
+  if (review.source === "play_store") {
+    // connection.credentials is null for Invite Email method → lib falls back to shared env credentials
     const result = await replyToPlayStoreReview(
-      connection.credentials,
-      connection.external_id || "",
+      connection?.external_id || "",
       review.external_review_id,
-      finalReplyText
+      finalReplyText,
+      connection?.credentials as Record<string, unknown> | null
     );
     published = result.success;
     if (!result.success) {
