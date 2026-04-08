@@ -20,21 +20,31 @@ import {
   Bot,
   Star,
   ArrowRight,
-  TrendingUp,
   Zap,
-  Send,
   Info,
   RefreshCw,
   FlaskConical,
   Loader2,
+  Inbox,
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
+import { timeAgo } from "@/lib/utils";
 
-const ACTIVITY_FEED = [
-  { icon: Zap, color: "text-teal-500", bg: "bg-teal-50 dark:bg-teal-950/30", text: "AI replied to 3 reviews automatically", time: "1 hour ago" },
-  { icon: Send, color: "text-purple-500", bg: "bg-purple-50 dark:bg-purple-950/30", text: "Campaign \"March Feedback\" sent to 15 contacts", time: "3 hours ago" },
-  { icon: TrendingUp, color: "text-green-500", bg: "bg-green-50 dark:bg-green-950/30", text: "Rating improved from 3.8 to 4.1", time: "Yesterday" },
-  { icon: Star, color: "text-amber-500", bg: "bg-amber-50 dark:bg-amber-950/30", text: "5 new reviews received from Play Store", time: "Yesterday" },
+type ActivityItem = {
+  icon: typeof Zap;
+  color: string;
+  bg: string;
+  text: string;
+  time: string;
+  sortKey: number;
+};
+
+// Shown only in mock/demo mode so the activity section doesn't look empty for new users
+const MOCK_ACTIVITY_FEED: ActivityItem[] = [
+  { icon: Zap, color: "text-teal-500", bg: "bg-teal-50 dark:bg-teal-950/30", text: "AI replied to 3 reviews automatically", time: "1 hour ago", sortKey: 0 },
+  { icon: RefreshCw, color: "text-blue-500", bg: "bg-blue-50 dark:bg-blue-950/30", text: "Synced 12 reviews from your Play Store", time: "3 hours ago", sortKey: 0 },
+  { icon: Bot, color: "text-indigo-500", bg: "bg-indigo-50 dark:bg-indigo-950/30", text: "AI drafted reply for a 2★ review", time: "Yesterday", sortKey: 0 },
+  { icon: Star, color: "text-amber-500", bg: "bg-amber-50 dark:bg-amber-950/30", text: "5 new reviews received from Play Store", time: "Yesterday", sortKey: 0 },
 ];
 
 function getGreeting() {
@@ -50,6 +60,7 @@ export default function DashboardPage() {
   const { connections } = useConnections();
   const [firstName, setFirstName] = useState<string | null>(null);
   const [seeding, setSeeding] = useState(false);
+  const [activityFeed, setActivityFeed] = useState<ActivityItem[]>([]);
 
   async function handleSeedTestData() {
     setSeeding(true);
@@ -84,6 +95,83 @@ export default function DashboardPage() {
     }
     loadName();
   }, []);
+
+  // Load real activity feed from Supabase
+  useEffect(() => {
+    if (isMock) return; // Skip for mock mode — no real data to show
+    async function loadActivity() {
+      const supabase = createClient();
+      const items: ActivityItem[] = [];
+
+      // 1. Recent published replies
+      const { data: replies } = await supabase
+        .from("reviews")
+        .select("author_name, reply_published_at, rating, source")
+        .not("reply_published_at", "is", null)
+        .order("reply_published_at", { ascending: false })
+        .limit(5);
+
+      for (const r of replies ?? []) {
+        if (!r.reply_published_at) continue;
+        items.push({
+          icon: Zap,
+          color: "text-teal-500",
+          bg: "bg-teal-50 dark:bg-teal-950/30",
+          text: `Replied to ${r.author_name}'s ${r.rating}★ review`,
+          time: timeAgo(r.reply_published_at),
+          sortKey: new Date(r.reply_published_at).getTime(),
+        });
+      }
+
+      // 2. Recent AI drafts (auto-replied but not yet published)
+      const { data: drafts } = await supabase
+        .from("reviews")
+        .select("author_name, updated_at, rating")
+        .eq("reply_status", "drafted")
+        .eq("is_auto_replied", true)
+        .not("reply_text", "is", null)
+        .order("updated_at", { ascending: false })
+        .limit(3);
+
+      for (const d of drafts ?? []) {
+        if (!d.updated_at) continue;
+        items.push({
+          icon: Bot,
+          color: "text-indigo-500",
+          bg: "bg-indigo-50 dark:bg-indigo-950/30",
+          text: `AI drafted reply for ${d.author_name}'s ${d.rating}★ review`,
+          time: timeAgo(d.updated_at),
+          sortKey: new Date(d.updated_at).getTime(),
+        });
+      }
+
+      // 3. Recent connection syncs
+      const { data: conns } = await supabase
+        .from("connections")
+        .select("name, type, last_synced_at, review_count")
+        .not("last_synced_at", "is", null)
+        .order("last_synced_at", { ascending: false })
+        .limit(3);
+
+      for (const c of conns ?? []) {
+        if (!c.last_synced_at) continue;
+        const source = c.type === "play_store" ? "Play Store" : "Google Business";
+        items.push({
+          icon: RefreshCw,
+          color: "text-blue-500",
+          bg: "bg-blue-50 dark:bg-blue-950/30",
+          text: `Synced ${c.review_count ?? 0} reviews from ${c.name} (${source})`,
+          time: timeAgo(c.last_synced_at),
+          sortKey: new Date(c.last_synced_at).getTime(),
+        });
+      }
+
+      // Sort by most recent, take top 5
+      items.sort((a, b) => b.sortKey - a.sortKey);
+      setActivityFeed(items.slice(0, 5));
+    }
+    loadActivity();
+  }, [isMock, connections.length]);
   const pendingReviews = reviews.filter((r) => r.reply_status === "pending");
 
   const hasConnections = connections.length > 0;
@@ -332,23 +420,35 @@ export default function DashboardPage() {
             <CardTitle className="text-base font-semibold">Recent Activity</CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
-            <div className="relative">
-              {/* Vertical timeline line */}
-              <div className="absolute left-[15px] top-2 bottom-2 w-px bg-border" />
-              <div className="space-y-4">
-                {ACTIVITY_FEED.map((item, i) => (
-                  <div key={i} className="flex items-start gap-4 relative">
-                    <div className={`relative z-10 rounded-full p-1.5 ${item.bg} ring-4 ring-card`}>
-                      <item.icon className={`h-3.5 w-3.5 ${item.color}`} />
-                    </div>
-                    <div className="flex-1 min-w-0 pt-0.5">
-                      <p className="text-sm">{item.text}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">{item.time}</p>
-                    </div>
-                  </div>
-                ))}
+            {activityFeed.length === 0 && !isMock ? (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <div className="rounded-2xl bg-secondary/60 p-4 mb-3">
+                  <Inbox className="h-6 w-6 text-muted-foreground/50 mx-auto" />
+                </div>
+                <p className="text-sm text-muted-foreground">No activity yet</p>
+                <p className="text-xs text-muted-foreground/70 mt-1">
+                  Activity will appear here once you start syncing reviews and generating replies.
+                </p>
               </div>
-            </div>
+            ) : (
+              <div className="relative">
+                {/* Vertical timeline line */}
+                <div className="absolute left-[15px] top-2 bottom-2 w-px bg-border" />
+                <div className="space-y-4">
+                  {(isMock ? MOCK_ACTIVITY_FEED : activityFeed).map((item, i) => (
+                    <div key={i} className="flex items-start gap-4 relative">
+                      <div className={`relative z-10 rounded-full p-1.5 ${item.bg} ring-4 ring-card`}>
+                        <item.icon className={`h-3.5 w-3.5 ${item.color}`} />
+                      </div>
+                      <div className="flex-1 min-w-0 pt-0.5">
+                        <p className="text-sm">{item.text}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{item.time}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

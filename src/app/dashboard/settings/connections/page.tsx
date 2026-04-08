@@ -78,14 +78,15 @@ export default function ConnectionsPage() {
       });
       const data = await res.json();
 
+      // Always refetch to update last_synced_at in the UI (server updates it even on error)
+      await refetch();
+
       if (data.error) {
         if (!silent) {
           toast({ title: "Sync error", description: data.error, variant: "destructive" });
         }
         return;
       }
-
-      await refetch();
 
       if (!silent) {
         const parts: string[] = [];
@@ -113,7 +114,12 @@ export default function ConnectionsPage() {
     }
   }, [refetch]);
 
-  // Manage auto-sync intervals
+  // Keep a stable ref to doSync so timers don't reset on every re-render
+  const doSyncRef = useRef(doSync);
+  useEffect(() => { doSyncRef.current = doSync; }, [doSync]);
+
+  // Manage auto-sync intervals — only depends on intervals/connections (not doSync)
+  // to prevent timers from constantly resetting
   useEffect(() => {
     // Clear all existing timers
     for (const id of Object.keys(timerRefs.current)) {
@@ -126,7 +132,7 @@ export default function ConnectionsPage() {
       const mins = parseInt(intervals[conn.id] ?? "0", 10);
       if (mins > 0) {
         timerRefs.current[conn.id] = setInterval(() => {
-          doSync(conn.id, true);
+          doSyncRef.current(conn.id, true);
         }, mins * 60 * 1000);
       }
     }
@@ -136,7 +142,7 @@ export default function ConnectionsPage() {
         clearInterval(timerRefs.current[id]);
       }
     };
-  }, [intervals, connections, doSync]);
+  }, [intervals, connections]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleIntervalChange(connId: string, value: string) {
     setStoredInterval(connId, value);

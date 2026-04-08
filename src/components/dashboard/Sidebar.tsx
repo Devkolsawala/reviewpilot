@@ -309,7 +309,19 @@ export function Sidebar({ collapsed, mobile }: { collapsed?: boolean; mobile?: b
                 </p>
                 {!isAiUnlimited && (
                   <p className="text-[10px] text-teal-700/50 dark:text-teal-400/50 mb-2">
-                    Resets {USAGE_PERIOD.getResetDate().toLocaleDateString("en-IN", { month: "short", day: "numeric" })}
+                    {(() => {
+                      const resetDate = USAGE_PERIOD.getResetDate();
+                      const msUntilReset = resetDate.getTime() - Date.now();
+                      if (msUntilReset < 60 * 60 * 1000) {
+                        const mins = Math.max(1, Math.ceil(msUntilReset / 60000));
+                        return `Resets in ${mins} min`;
+                      }
+                      if (msUntilReset < 24 * 60 * 60 * 1000) {
+                        const hrs = Math.ceil(msUntilReset / 3600000);
+                        return `Resets in ${hrs}h`;
+                      }
+                      return `Resets ${resetDate.toLocaleDateString("en-IN", { month: "short", day: "numeric" })}`;
+                    })()}
                   </p>
                 )}
               </>

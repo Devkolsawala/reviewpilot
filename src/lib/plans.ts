@@ -89,7 +89,7 @@ export const USAGE_PERIOD = {
     return 'week';
   },
   get label(): string {
-    if (process.env.NEXT_PUBLIC_USAGE_PERIOD_MINUTES) return 'minute (test mode)';
+    if (process.env.NEXT_PUBLIC_USAGE_PERIOD_MINUTES) return 'minute';
     return 'week';
   },
   getCurrentPeriodKey(): string {
