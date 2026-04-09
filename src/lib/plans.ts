@@ -16,7 +16,7 @@ export const PLANS = {
       ai_replies_per_period: 10,
       sms_per_period: 5,
       connections: 1,
-      team_members: 1,
+      team_members: 1,  // total seats (owner only — no invites on free)
       reviews_stored: 100,
     },
     features: {
@@ -45,7 +45,7 @@ export const PLANS = {
       ai_replies_per_period: 100,
       sms_per_period: 50,
       connections: 1,
-      team_members: 1,
+      team_members: 3,  // total seats: owner + 2 members
       reviews_stored: 1000,
     },
     features: {
@@ -74,7 +74,7 @@ export const PLANS = {
       ai_replies_per_period: 500,
       sms_per_period: 200,
       connections: 3,
-      team_members: 3,
+      team_members: 5,  // total seats: owner + 4 members
       reviews_stored: 10000,
     },
     features: {
@@ -103,7 +103,7 @@ export const PLANS = {
       ai_replies_per_period: -1, // -1 = unlimited
       sms_per_period: 1000,
       connections: 10,
-      team_members: 5,
+      team_members: 10, // total seats: owner + 9 members
       reviews_stored: -1, // unlimited
     },
     features: {

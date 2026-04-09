@@ -19,7 +19,7 @@ export async function sendEmail(params: {
       Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
     },
     body: JSON.stringify({
-      from: params.from || "ReviewPilot <noreply@reviewpilot.com>",
+      from: params.from || process.env.RESEND_FROM_EMAIL || "ReviewPilot <onboarding@resend.dev>",
       to: params.to,
       subject: params.subject,
       html: params.html,

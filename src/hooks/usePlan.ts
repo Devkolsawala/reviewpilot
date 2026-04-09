@@ -9,20 +9,34 @@ export function usePlan() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    async function fetch() {
+    async function load() {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { setIsLoading(false); return; }
+
       const { data: profile } = await supabase
         .from('profiles')
-        .select('plan, trial_ends_at, created_at')
+        .select('plan, trial_ends_at, owner_id')
         .eq('id', user.id)
         .single();
-      setPlanId(profile?.plan || 'free');
-      setTrialEndsAt(profile?.trial_ends_at || null);
+
+      if (profile?.owner_id) {
+        // Team member — read plan from the workspace owner's profile
+        const { data: ownerProfile } = await supabase
+          .from('profiles')
+          .select('plan, trial_ends_at')
+          .eq('id', profile.owner_id)
+          .single();
+        setPlanId(ownerProfile?.plan || 'free');
+        setTrialEndsAt(ownerProfile?.trial_ends_at || null);
+      } else {
+        setPlanId(profile?.plan || 'free');
+        setTrialEndsAt(profile?.trial_ends_at || null);
+      }
+
       setIsLoading(false);
     }
-    fetch();
+    load();
   }, []);
 
   const plan = getPlan(planId);

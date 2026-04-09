@@ -4,6 +4,7 @@ import { useState, useCallback } from "react";
 import { ConnectionWizard } from "@/components/dashboard/ConnectionWizard";
 import { useConnections } from "@/hooks/useConnection";
 import { usePlan } from "@/hooks/usePlan";
+import { useTeamRole } from "@/hooks/useTeamRole";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -29,6 +30,7 @@ function timeAgo(iso: string | null | undefined) {
 export default function ConnectionsPage() {
   const { connections, loading, refetch } = useConnections();
   const { planId } = usePlan();
+  const { isOwner } = useTeamRole();
   const [showWizard, setShowWizard] = useState(false);
   const [syncingId, setSyncingId] = useState<string | null>(null);
 
@@ -101,7 +103,7 @@ export default function ConnectionsPage() {
             Connect your Google Business Profile or Play Store to start managing reviews.
           </p>
         </div>
-        {!showWizard && (
+        {isOwner && !showWizard && (
           <Button onClick={() => setShowWizard(true)}>
             <Plus className="mr-2 h-4 w-4" />
             Add Connection
@@ -149,10 +151,12 @@ export default function ConnectionsPage() {
             <p className="text-sm text-muted-foreground mb-5">
               Connect your first review source to start managing reviews with AI.
             </p>
-            <Button onClick={() => setShowWizard(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Your First Connection
-            </Button>
+            {isOwner && (
+              <Button onClick={() => setShowWizard(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Your First Connection
+              </Button>
+            )}
           </CardContent>
         </Card>
       )}

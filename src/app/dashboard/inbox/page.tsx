@@ -14,6 +14,7 @@ import { AppSwitcher } from "@/components/dashboard/AppSwitcher";
 import { toast } from "@/components/ui/use-toast";
 import { useReviews } from "@/hooks/useReviews";
 import { useConnections } from "@/hooks/useConnection";
+import { useTeamRole } from "@/hooks/useTeamRole";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import type { Review } from "@/types/review";
@@ -28,6 +29,7 @@ type StatusFilter = "all" | "pending" | "drafted" | "published";
 export default function InboxPage() {
   const { reviews: rawReviews, isMock, updateReview, refetch } = useReviews();
   const { connections } = useConnections();
+  const { isReadOnly } = useTeamRole();
   const [localReviews, setLocalReviews] = useState<Review[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [activeAppId, setActiveAppId] = useState<string | null>(null); // null = "All Apps"
@@ -450,14 +452,26 @@ export default function InboxPage() {
               </div>
             )}
             {selectedReview ? (
-              <AIReplyGenerator
-                key={selectedReview.id}
-                review={selectedReview}
-                isMock={isMock}
-                onPublish={handlePublish}
-                onDraft={handleDraft}
-                onRefetch={refetch}
-              />
+              isReadOnly ? (
+                <div className="flex flex-col items-center justify-center h-full gap-3 text-center p-8">
+                  <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center">
+                    <Bot className="h-6 w-6 text-muted-foreground" />
+                  </div>
+                  <p className="text-sm font-medium">View-only access</p>
+                  <p className="text-xs text-muted-foreground max-w-xs">
+                    Your role doesn&apos;t allow replying to reviews. Ask your workspace owner to upgrade your permissions.
+                  </p>
+                </div>
+              ) : (
+                <AIReplyGenerator
+                  key={selectedReview.id}
+                  review={selectedReview}
+                  isMock={isMock}
+                  onPublish={handlePublish}
+                  onDraft={handleDraft}
+                  onRefetch={refetch}
+                />
+              )
             ) : (
               <EmptyState
                 icon={<Inbox className="h-10 w-10 text-muted-foreground/40" />}

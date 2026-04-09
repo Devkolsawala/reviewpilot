@@ -21,6 +21,7 @@ import {
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useUsage } from "@/hooks/useUsage";
+import { useTeamRole } from "@/hooks/useTeamRole";
 import { USAGE_PERIOD } from "@/lib/plans";
 
 const MOCK_OVERRIDES_PREFIX = "reviewpilot_mock_overrides";
@@ -118,9 +119,17 @@ export function Sidebar({ collapsed, mobile }: { collapsed?: boolean; mobile?: b
   const pathname = usePathname();
   const pendingCount = usePendingReviewCount();
   const { plan, totalAiUsed, aiLimit, isAiUnlimited, aiPercent, isLoading: usageLoading } = useUsage();
+  const { isOwner } = useTeamRole();
   const [settingsOpen, setSettingsOpen] = useState(
     pathname.startsWith("/dashboard/settings")
   );
+
+  // Non-owners (admin / read-only) cannot access Connections or Billing
+  const visibleSettingsNav = SETTINGS_NAV.filter((item) => {
+    if (!isOwner && item.href === "/dashboard/settings/connections") return false;
+    if (!isOwner && item.href === "/dashboard/settings/billing") return false;
+    return true;
+  });
 
   function isActive(href: string) {
     if (href === "/dashboard") return pathname === "/dashboard";
@@ -233,7 +242,7 @@ export function Sidebar({ collapsed, mobile }: { collapsed?: boolean; mobile?: b
               )}
             >
               <div className="ml-4 pl-3 border-l border-border/60 space-y-0.5 py-1">
-                {SETTINGS_NAV.map((item) => {
+                {visibleSettingsNav.map((item) => {
                   const active = isActive(item.href);
                   return (
                     <Link

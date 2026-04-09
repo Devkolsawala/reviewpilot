@@ -4,10 +4,12 @@ import { useState } from "react";
 import { AppContextForm } from "@/components/dashboard/AppContextForm";
 import { AppSwitcher } from "@/components/dashboard/AppSwitcher";
 import { useConnections } from "@/hooks/useConnection";
-import { Loader2 } from "lucide-react";
+import { useTeamRole } from "@/hooks/useTeamRole";
+import { Loader2, Lock } from "lucide-react";
 
 export default function AIConfigPage() {
   const { connections, loading } = useConnections();
+  const { isReadOnly } = useTeamRole();
   const [selectedConnId, setSelectedConnId] = useState<string | null>(null);
 
   const activeConnections = connections.filter((c) => c.is_active);
@@ -21,6 +23,13 @@ export default function AIConfigPage() {
           Configure your App Context Profile to help AI generate better replies.
         </p>
       </div>
+
+      {isReadOnly && (
+        <div className="flex items-center gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-400">
+          <Lock className="h-4 w-4 shrink-0" />
+          Your role is read-only. You can view AI settings but cannot make changes.
+        </div>
+      )}
 
       {/* App switcher — only shown when 2+ connections are active */}
       {!loading && activeConnections.length > 1 && (
