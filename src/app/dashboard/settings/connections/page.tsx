@@ -1,41 +1,19 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { ConnectionWizard } from "@/components/dashboard/ConnectionWizard";
 import { useConnections } from "@/hooks/useConnection";
+import { usePlan } from "@/hooks/usePlan";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Plus, Globe, Smartphone, Trash2, RefreshCw, CheckCircle2, AlertCircle, Clock } from "lucide-react";
+import { Plus, Globe, Smartphone, Trash2, RefreshCw, CheckCircle2, AlertCircle, Clock, CalendarClock } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
+import { getSyncScheduleLabel } from "@/lib/plans";
 import type { Connection } from "@/types/connection";
-
-const SYNC_INTERVALS = [
-  { label: "Off (manual only)", value: "0" },
-  { label: "Every 10 minutes", value: "10" },
-  { label: "Every 30 minutes", value: "30" },
-  { label: "Every hour", value: "60" },
-  { label: "Every 6 hours", value: "360" },
-] as const;
-
-function getStoredInterval(connId: string): string {
-  if (typeof window === "undefined") return "0";
-  return localStorage.getItem(`sync_interval_${connId}`) ?? "0";
-}
-
-function setStoredInterval(connId: string, value: string) {
-  localStorage.setItem(`sync_interval_${connId}`, value);
-}
 
 function timeAgo(iso: string | null | undefined) {
   if (!iso) return "Never";
@@ -50,20 +28,9 @@ function timeAgo(iso: string | null | undefined) {
 
 export default function ConnectionsPage() {
   const { connections, loading, refetch } = useConnections();
+  const { planId } = usePlan();
   const [showWizard, setShowWizard] = useState(false);
   const [syncingId, setSyncingId] = useState<string | null>(null);
-  const [intervals, setIntervals] = useState<Record<string, string>>({});
-  const timerRefs = useRef<Record<string, ReturnType<typeof setInterval>>>({});
-
-  // Load stored intervals once connections are available
-  useEffect(() => {
-    if (connections.length === 0) return;
-    const stored: Record<string, string> = {};
-    for (const conn of connections) {
-      stored[conn.id] = getStoredInterval(conn.id);
-    }
-    setIntervals(stored);
-  }, [connections.map((c) => c.id).join(",")]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const doSync = useCallback(async (connId: string, silent = false) => {
     if (!silent) {
@@ -78,13 +45,10 @@ export default function ConnectionsPage() {
       });
       const data = await res.json();
 
-      // Always refetch to update last_synced_at in the UI (server updates it even on error)
       await refetch();
 
       if (data.error) {
-        if (!silent) {
-          toast({ title: "Sync error", description: data.error, variant: "destructive" });
-        }
+        if (!silent) toast({ title: "Sync error", description: data.error, variant: "destructive" });
         return;
       }
 
@@ -93,69 +57,20 @@ export default function ConnectionsPage() {
         if (data.newReviews > 0) parts.push(`${data.newReviews} new review${data.newReviews === 1 ? "" : "s"}`);
         if (data.autoPublished > 0) parts.push(`${data.autoPublished} auto-published`);
         if (data.autoDrafted > 0) parts.push(`${data.autoDrafted} AI draft${data.autoDrafted === 1 ? "" : "s"}`);
-        const detail =
-          parts.length > 0
-            ? `${parts.join(", ")}.`
-            : data.updatedReviews > 0
-              ? `${data.updatedReviews} review(s) updated, no new rows.`
-              : "No new reviews found.";
-        toast({
-          title: "Sync complete",
-          description: detail,
-        });
+        const detail = parts.length > 0
+          ? `${parts.join(", ")}.`
+          : data.updatedReviews > 0
+            ? `${data.updatedReviews} review(s) updated, no new rows.`
+            : "No new reviews found.";
+        toast({ title: "Sync complete", description: detail });
       }
     } catch (err) {
       console.error("[sync] error:", err);
-      if (!silent) {
-        toast({ title: "Sync failed", description: "Could not fetch reviews. Try again.", variant: "destructive" });
-      }
+      if (!silent) toast({ title: "Sync failed", description: "Could not fetch reviews. Try again.", variant: "destructive" });
     } finally {
       if (!silent) setSyncingId(null);
     }
   }, [refetch]);
-
-  // Keep a stable ref to doSync so timers don't reset on every re-render
-  const doSyncRef = useRef(doSync);
-  useEffect(() => { doSyncRef.current = doSync; }, [doSync]);
-
-  // Manage auto-sync intervals — only depends on intervals/connections (not doSync)
-  // to prevent timers from constantly resetting
-  useEffect(() => {
-    // Clear all existing timers
-    for (const id of Object.keys(timerRefs.current)) {
-      clearInterval(timerRefs.current[id]);
-      delete timerRefs.current[id];
-    }
-
-    // Set up new timers for connections with active intervals
-    for (const conn of connections) {
-      const mins = parseInt(intervals[conn.id] ?? "0", 10);
-      if (mins > 0) {
-        timerRefs.current[conn.id] = setInterval(() => {
-          doSyncRef.current(conn.id, true);
-        }, mins * 60 * 1000);
-      }
-    }
-
-    return () => {
-      for (const id of Object.keys(timerRefs.current)) {
-        clearInterval(timerRefs.current[id]);
-      }
-    };
-  }, [intervals, connections]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  function handleIntervalChange(connId: string, value: string) {
-    setStoredInterval(connId, value);
-    setIntervals((prev) => ({ ...prev, [connId]: value }));
-
-    const mins = parseInt(value, 10);
-    if (mins > 0) {
-      const label = SYNC_INTERVALS.find((i) => i.value === value)?.label ?? value;
-      toast({ title: "Auto-sync enabled", description: `Will sync automatically: ${label.toLowerCase()}.` });
-    } else {
-      toast({ title: "Auto-sync disabled", description: "Sync will only happen manually." });
-    }
-  }
 
   async function handleComplete(newConn: Connection) {
     setShowWizard(false);
@@ -171,11 +86,11 @@ export default function ConnectionsPage() {
       toast({ title: "Error", description: "Could not remove connection.", variant: "destructive" });
     } else {
       toast({ title: "Connection removed" });
-      // Clear stored interval
-      localStorage.removeItem(`sync_interval_${connId}`);
       await refetch();
     }
   }
+
+  const syncLabel = getSyncScheduleLabel(planId);
 
   return (
     <div className="space-y-6 max-w-2xl">
@@ -247,8 +162,6 @@ export default function ConnectionsPage() {
         <div className="space-y-3">
           {connections.map((conn) => {
             const isSyncing = syncingId === conn.id;
-            const currentInterval = intervals[conn.id] ?? "0";
-            const autoSyncActive = parseInt(currentInterval, 10) > 0;
 
             return (
               <Card key={conn.id} className="transition-shadow hover:shadow-sm">
@@ -325,47 +238,23 @@ export default function ConnectionsPage() {
                     </div>
                   </div>
 
-                  <div className="mt-3 flex flex-col sm:flex-row sm:items-center gap-3 border-t pt-3">
-                    <div className="flex items-center gap-4 text-xs text-muted-foreground flex-1">
-                      <span className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        Last synced:{" "}
-                        <span className="font-medium text-foreground ml-0.5">
-                          {timeAgo(conn.last_synced_at)}
-                        </span>
+                  {/* Last synced + auto-sync schedule */}
+                  <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 border-t pt-3 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      Last synced:{" "}
+                      <span className="font-medium text-foreground ml-0.5">
+                        {timeAgo(conn.last_synced_at)}
                       </span>
-                      <span>
-                        Reviews:{" "}
-                        <span className="font-medium text-foreground">
-                          {conn.review_count ?? 0}
-                        </span>
-                      </span>
-                    </div>
-
-                    {/* Auto-sync interval selector */}
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-xs text-muted-foreground whitespace-nowrap">Auto-sync:</span>
-                      <Select
-                        value={currentInterval}
-                        onValueChange={(v) => handleIntervalChange(conn.id, v)}
-                      >
-                        <SelectTrigger
-                          className={cn(
-                            "h-7 text-xs w-40",
-                            autoSyncActive && "border-teal-400 text-teal-700 dark:text-teal-400"
-                          )}
-                        >
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {SYNC_INTERVALS.map((opt) => (
-                            <SelectItem key={opt.value} value={opt.value} className="text-xs">
-                              {opt.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                    </span>
+                    <span>
+                      Reviews:{" "}
+                      <span className="font-medium text-foreground">{conn.review_count ?? 0}</span>
+                    </span>
+                    <span className="flex items-center gap-1 text-teal-600 dark:text-teal-400">
+                      <CalendarClock className="h-3 w-3" />
+                      {syncLabel}
+                    </span>
                   </div>
                 </CardContent>
               </Card>
@@ -378,8 +267,8 @@ export default function ConnectionsPage() {
         <CardContent className="p-4">
           <p className="text-xs font-medium mb-1">How review syncing works</p>
           <ul className="text-xs text-muted-foreground space-y-1">
-            <li>• Set an auto-sync interval per connection, or use &ldquo;Sync Now&rdquo; for manual fetch</li>
-            <li>• Auto-sync runs while this page is open; background sync runs every 6 hours via cron</li>
+            <li>• Reviews sync automatically in the background based on your plan schedule</li>
+            <li>• Use &ldquo;Sync Now&rdquo; any time to fetch the latest reviews immediately</li>
             <li>• New reviews appear in your inbox within seconds of syncing</li>
             <li>• If auto-reply is enabled in AI Config, replies are generated automatically</li>
           </ul>
