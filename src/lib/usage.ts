@@ -185,3 +185,8 @@ export async function incrementUsageAdmin(
   const client = getAdminClient();
   await upsertUsage(client, userId, field, amount);
 }
+
+export async function getUserPlanAdmin(userId: string): Promise<string> {
+  const client = getAdminClient();
+  return fetchPlan(client, userId);
+}

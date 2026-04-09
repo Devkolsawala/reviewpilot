@@ -1,9 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { createClient as createBrowserClient } from "@/lib/supabase/client";
 import { createClient } from "@supabase/supabase-js";
 import { fetchPlayStoreReviews } from "@/lib/google/playstore";
 import { processAutoReplyForReview } from "@/lib/reviews/auto-reply";
-import { checkUsageLimitAdmin, incrementUsageAdmin } from "@/lib/usage";
+import { checkUsageLimitAdmin, incrementUsageAdmin, getUserPlanAdmin } from "@/lib/usage";
+import { isCronSyncAllowed } from "@/lib/plans";
 import type { AppContext } from "@/types/database";
 
 function getAdminClient() {
@@ -115,7 +115,20 @@ async function handleCron(request: NextRequest) {
       const appContext: AppContext | null =
         connection.app_contexts?.[0] ?? null;
 
-      // For automated cron runs, respect the connection's sync_interval
+      // For automated cron runs, apply plan-based sync cadence
+      // (Manual POST from "Sync Now" button always bypasses this check)
+      if (!isManualSync) {
+        const userPlan = await getUserPlanAdmin(connection.user_id);
+        const tz = appContext?.schedule_timezone ?? null;
+
+        if (!isCronSyncAllowed(userPlan, tz)) {
+          // Not their sync window — skip silently
+          results.push({ ...connResult, skipped: true });
+          continue;
+        }
+      }
+
+      // For automated cron runs, also respect the connection's sync_interval
       if (!isManualSync) {
         const syncInterval = (appContext as AppContext & { sync_interval?: string } | null)?.sync_interval ?? "24h";
         const requiredHours = INTERVAL_HOURS[syncInterval] ?? 24;

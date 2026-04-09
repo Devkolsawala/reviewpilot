@@ -1,8 +1,17 @@
+/**
+ * sync_cadence controls automated cron behaviour:
+ *  - 'none'      : no automatic sync (Free)
+ *  - 'daily_8am' : once per day, at 8 AM in the connection's timezone (Starter / Growth)
+ *  - 'hourly'    : every hour (Agency)
+ */
+export type SyncCadence = 'none' | 'daily_8am' | 'hourly';
+
 export const PLANS = {
   free: {
     name: 'Free',
     price_inr: 0,
     price_usd: 0,
+    sync_cadence: 'daily_8am' as SyncCadence,
     limits: {
       ai_replies_per_period: 10,
       sms_per_period: 5,
@@ -31,6 +40,7 @@ export const PLANS = {
     name: 'Starter',
     price_inr: 1500,
     price_usd: 19,
+    sync_cadence: 'daily_8am' as SyncCadence,
     limits: {
       ai_replies_per_period: 100,
       sms_per_period: 50,
@@ -59,6 +69,7 @@ export const PLANS = {
     name: 'Growth',
     price_inr: 3000,
     price_usd: 39,
+    sync_cadence: 'daily_8am' as SyncCadence,
     limits: {
       ai_replies_per_period: 500,
       sms_per_period: 200,
@@ -87,6 +98,7 @@ export const PLANS = {
     name: 'Agency',
     price_inr: 8000,
     price_usd: 99,
+    sync_cadence: 'hourly' as SyncCadence,
     limits: {
       ai_replies_per_period: -1, // -1 = unlimited
       sms_per_period: 1000,
@@ -163,4 +175,39 @@ export function canUseFeature(
 ): boolean {
   const plan = getPlan(planId);
   return (plan.features as Record<string, boolean>)[feature] ?? false;
+}
+
+export function getSyncCadence(planId: string): SyncCadence {
+  return getPlan(planId).sync_cadence;
+}
+
+/**
+ * Returns true if the automated cron should process this connection right now.
+ * Only called for GET (Cloudflare cron) requests — manual POST always proceeds.
+ *
+ * - Agency  : every hour → always true
+ * - Starter/Growth: daily_8am → true if current local time is 07:30–08:30
+ * - Free    : none → always false
+ *
+ * @param planId          user's plan id
+ * @param timezone        IANA timezone string (e.g. "Asia/Kolkata"). Defaults to IST.
+ */
+export function isCronSyncAllowed(planId: string, timezone?: string | null): boolean {
+  const cadence = getSyncCadence(planId);
+
+  if (cadence === 'hourly') return true;
+  if (cadence === 'none') return false;
+
+  // daily_8am: allow a 60-minute window centred on 08:00 local time (07:30–08:30)
+  const tz = timezone || 'Asia/Kolkata';
+  try {
+    const nowLocal = new Date(new Date().toLocaleString('en-US', { timeZone: tz }));
+    const minuteOfDay = nowLocal.getHours() * 60 + nowLocal.getMinutes();
+    return Math.abs(minuteOfDay - 8 * 60) <= 30; // ±30 min from 08:00
+  } catch {
+    // Unknown timezone — fall back to UTC
+    const now = new Date();
+    const minuteOfDay = now.getUTCHours() * 60 + now.getUTCMinutes();
+    return Math.abs(minuteOfDay - 8 * 60) <= 30;
+  }
 }
