@@ -66,7 +66,7 @@ export default function AcceptInvitePage() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <h1 className="text-xl font-semibold text-white">You're in!</h1>
+            <h1 className="text-xl font-semibold text-white">You&apos;re in!</h1>
             <p className="text-gray-400 mt-2 text-sm">Redirecting you to the dashboard…</p>
           </>
         )}
