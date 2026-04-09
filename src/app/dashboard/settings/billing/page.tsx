@@ -89,8 +89,6 @@ export default function BillingPage() {
     weekday: "long", year: "numeric", month: "long", day: "numeric",
   });
 
-  const daysSinceExpiry = trialExpired && trialDaysLeft === 0 ? 0 : null;
-
   return (
     <div className="space-y-6">
       <div>
