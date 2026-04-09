@@ -9,6 +9,7 @@ import { useAnalytics } from "@/hooks/useAnalytics";
 import { useReviews } from "@/hooks/useReviews";
 import { cn } from "@/lib/utils";
 import { Zap, CheckCircle2, Clock, Info } from "lucide-react";
+import { UpgradeGate } from "@/components/dashboard/UpgradeGate";
 
 const PERIODS = [
   { label: "7d", value: "7d" },
@@ -66,6 +67,7 @@ export default function AnalyticsPage() {
         />
 
         {/* Auto-reply stat card */}
+        <UpgradeGate feature="inbox_auto_reply">
         <Card className="border-teal-200/70 dark:border-teal-800/70 bg-gradient-to-r from-teal-50/60 to-emerald-50/60 dark:from-teal-950/20 dark:to-emerald-950/20">
           <CardContent className="p-5">
             <div className="flex items-center gap-2 mb-4">
@@ -113,7 +115,9 @@ export default function AnalyticsPage() {
             </p>
           </CardContent>
         </Card>
+        </UpgradeGate>
 
+        <UpgradeGate feature="analytics_advanced">
         <AnalyticsCharts
           ratingTrend={analytics.rating_trend}
           sentimentBreakdown={analytics.sentiment_breakdown}
@@ -125,6 +129,7 @@ export default function AnalyticsPage() {
           }))}
           replyRate={analytics.response_rate}
         />
+        </UpgradeGate>
       </div>
     </PageTransition>
   );

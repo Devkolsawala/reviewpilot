@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Check, CreditCard, Zap, RefreshCw, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUsage } from "@/hooks/useUsage";
+import { usePlan } from "@/hooks/usePlan";
 
 declare global {
   interface Window {
@@ -44,6 +45,7 @@ export default function BillingPage() {
     smsUsed, smsLimit, isSmsUnlimited, smsPercent,
     resetDate, periodLabel,
   } = useUsage();
+  const { trialExpired, trialDaysLeft } = usePlan();
 
   const isTestMode = process.env.NEXT_PUBLIC_TEST_MODE === "true";
 
@@ -67,8 +69,10 @@ export default function BillingPage() {
             await fetch("/api/razorpay/verify", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(response),
+              body: JSON.stringify({ ...response, planKey }),
             });
+            // Redirect to dashboard after successful upgrade
+            window.location.href = "/dashboard";
           },
           theme: { color: "#14b8a6" },
         });
@@ -85,12 +89,27 @@ export default function BillingPage() {
     weekday: "long", year: "numeric", month: "long", day: "numeric",
   });
 
+  const daysSinceExpiry = trialExpired && trialDaysLeft === 0 ? 0 : null;
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="font-heading text-2xl font-bold">Billing</h1>
         <p className="text-sm text-muted-foreground mt-1">Manage your subscription and billing.</p>
       </div>
+
+      {/* Trial expired banner */}
+      {trialExpired && (
+        <div className="flex items-start gap-3 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/20 px-4 py-4">
+          <AlertTriangle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
+          <div>
+            <p className="font-semibold text-red-800 dark:text-red-200">Your free trial has ended</p>
+            <p className="text-sm text-red-600 dark:text-red-400 mt-0.5">
+              Choose a plan below to continue using ReviewPilot and keep all your data.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Test mode notice */}
       {isTestMode && (
@@ -105,83 +124,93 @@ export default function BillingPage() {
       )}
 
       {/* Current plan */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <CreditCard className="h-5 w-5 text-teal-500" />
-            Current Plan
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-lg font-bold font-heading">{plan.name} Plan</p>
-              <p className="text-sm text-muted-foreground">
-                {planId === "free"
-                  ? `Limited to ${aiLimit} AI replies and ${smsLimit} SMS per ${periodLabel}`
-                  : "Your subscription is active"}
-              </p>
+      {!trialExpired && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <CreditCard className="h-5 w-5 text-teal-500" />
+              Current Plan
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-lg font-bold font-heading">{plan.name} Plan</p>
+                <p className="text-sm text-muted-foreground">
+                  {planId === "free"
+                    ? trialDaysLeft !== null
+                      ? `Free trial — ${trialDaysLeft} day${trialDaysLeft === 1 ? "" : "s"} remaining`
+                      : `Limited to ${aiLimit} AI replies and ${smsLimit} SMS per ${periodLabel}`
+                    : "Your subscription is active"}
+                </p>
+              </div>
+              <Badge variant="secondary" className="text-xs capitalize">{planId}</Badge>
             </div>
-            <Badge variant="secondary" className="text-xs capitalize">{planId}</Badge>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Usage */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center justify-between">
-            <span>Usage This {periodLabel.charAt(0).toUpperCase() + periodLabel.slice(1)}</span>
-            {isTestMode && (
-              <Badge className="text-[10px] bg-purple-100 text-purple-700 dark:bg-purple-950/40 dark:text-purple-400">
-                Test Mode
-              </Badge>
+      {!trialExpired && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center justify-between">
+              <span>Usage This {periodLabel.charAt(0).toUpperCase() + periodLabel.slice(1)}</span>
+              {isTestMode && (
+                <Badge className="text-[10px] bg-purple-100 text-purple-700 dark:bg-purple-950/40 dark:text-purple-400">
+                  Test Mode
+                </Badge>
+              )}
+            </CardTitle>
+            <CardDescription className="flex items-center gap-1.5">
+              <RefreshCw className="h-3 w-3" />
+              Resets on {resetLabel}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {isLoading ? (
+              <p className="text-sm text-muted-foreground">Loading usage data…</p>
+            ) : (
+              <>
+                <UsageBar
+                  label="AI Replies"
+                  used={totalAiUsed}
+                  total={isAiUnlimited ? null : aiLimit}
+                  percent={aiPercent}
+                />
+                <UsageBar
+                  label="SMS Sent"
+                  used={smsUsed}
+                  total={isSmsUnlimited ? null : smsLimit}
+                  percent={smsPercent}
+                />
+                <UsageBar
+                  label="Reviews Fetched"
+                  used={usage?.reviews_fetched ?? 0}
+                  total={null}
+                  percent={0}
+                />
+              </>
             )}
-          </CardTitle>
-          <CardDescription className="flex items-center gap-1.5">
-            <RefreshCw className="h-3 w-3" />
-            Resets on {resetLabel}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {isLoading ? (
-            <p className="text-sm text-muted-foreground">Loading usage data…</p>
-          ) : (
-            <>
-              <UsageBar
-                label="AI Replies"
-                used={totalAiUsed}
-                total={isAiUnlimited ? null : aiLimit}
-                percent={aiPercent}
-              />
-              <UsageBar
-                label="SMS Sent"
-                used={smsUsed}
-                total={isSmsUnlimited ? null : smsLimit}
-                percent={smsPercent}
-              />
-              <UsageBar
-                label="Reviews Fetched"
-                used={usage?.reviews_fetched ?? 0}
-                total={null}
-                percent={0}
-              />
-            </>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Plans */}
       <div>
         <h2 className="font-heading text-lg font-semibold mb-4 flex items-center gap-2">
           <Zap className="h-5 w-5 text-amber-500" />
-          Upgrade Your Plan
+          {trialExpired ? "Choose Your Plan" : "Upgrade Your Plan"}
         </h2>
         <div className="grid gap-4 md:grid-cols-3">
           {PLAN_CARDS.map((p) => (
             <Card
               key={p.key}
-              className={cn("relative", p.popular && "border-teal-500 shadow-lg")}
+              className={cn(
+                "relative",
+                p.popular && "border-teal-500 shadow-lg",
+                trialExpired && "hover:border-teal-400 transition-colors"
+              )}
             >
               {p.popular && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-teal-500 px-3 py-0.5 text-[10px] font-medium text-white">
@@ -205,12 +234,12 @@ export default function BillingPage() {
                   ))}
                 </ul>
                 <Button
-                  className="w-full mt-6"
+                  className={cn("w-full mt-6", trialExpired && "bg-teal-600 hover:bg-teal-700")}
                   variant={p.popular ? "default" : "outline"}
                   onClick={() => handleSubscribe(p.key)}
                   disabled={loading === p.key || planId === p.key}
                 >
-                  {loading === p.key ? "Processing…" : planId === p.key ? "Current Plan" : "Subscribe"}
+                  {loading === p.key ? "Processing…" : planId === p.key ? "Current Plan" : trialExpired ? "Select Plan" : "Subscribe"}
                 </Button>
               </CardContent>
             </Card>

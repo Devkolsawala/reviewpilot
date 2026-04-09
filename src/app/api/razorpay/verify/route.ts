@@ -11,7 +11,7 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  const { razorpay_payment_id, razorpay_subscription_id, razorpay_signature } = body;
+  const { razorpay_payment_id, razorpay_subscription_id, razorpay_signature, planKey } = body;
 
   if (!razorpay_payment_id || !razorpay_subscription_id || !razorpay_signature) {
     return NextResponse.json({ error: "Missing parameters" }, { status: 400 });
@@ -27,10 +27,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
-  // Update user profile with subscription
+  const validPlans = ["starter", "growth", "agency"];
+  const selectedPlan = validPlans.includes(planKey) ? planKey : null;
+
+  // Update profile: set subscription, upgrade plan, clear trial
   await supabase
     .from("profiles")
-    .update({ razorpay_subscription_id })
+    .update({
+      razorpay_subscription_id,
+      ...(selectedPlan ? { plan: selectedPlan, trial_ends_at: null } : {}),
+    })
     .eq("id", user.id);
 
   return NextResponse.json({ success: true });

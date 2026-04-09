@@ -1,8 +1,18 @@
 "use client";
 
+import { useState } from "react";
 import { AppContextForm } from "@/components/dashboard/AppContextForm";
+import { AppSwitcher } from "@/components/dashboard/AppSwitcher";
+import { useConnections } from "@/hooks/useConnection";
+import { Loader2 } from "lucide-react";
 
 export default function AIConfigPage() {
+  const { connections, loading } = useConnections();
+  const [selectedConnId, setSelectedConnId] = useState<string | null>(null);
+
+  const activeConnections = connections.filter((c) => c.is_active);
+  const resolvedConnId = selectedConnId ?? activeConnections[0]?.id ?? null;
+
   return (
     <div className="space-y-6">
       <div>
@@ -11,7 +21,37 @@ export default function AIConfigPage() {
           Configure your App Context Profile to help AI generate better replies.
         </p>
       </div>
-      <AppContextForm />
+
+      {/* App switcher — only shown when 2+ connections are active */}
+      {!loading && activeConnections.length > 1 && (
+        <div className="flex flex-col gap-1.5">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            Configuring for
+          </p>
+          <AppSwitcher
+            connections={activeConnections}
+            activeId={resolvedConnId}
+            onChange={(id) => setSelectedConnId(id)}
+            showAllApps={false}
+            className="rounded-lg border bg-card"
+          />
+        </div>
+      )}
+
+      {loading && (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Loading connections…
+        </div>
+      )}
+
+      {/* Mount a fresh form when the selected connection changes */}
+      {resolvedConnId && (
+        <AppContextForm key={resolvedConnId} connectionId={resolvedConnId} />
+      )}
+      {!loading && !resolvedConnId && (
+        <AppContextForm />
+      )}
     </div>
   );
 }

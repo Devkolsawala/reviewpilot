@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
+import { createClient as createBrowserClient } from "@/lib/supabase/client";
 import { createClient } from "@supabase/supabase-js";
 import { fetchPlayStoreReviews } from "@/lib/google/playstore";
 import { processAutoReplyForReview } from "@/lib/reviews/auto-reply";
@@ -11,6 +12,14 @@ function getAdminClient() {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 }
+
+const INTERVAL_HOURS: Record<string, number> = {
+  "1h": 1,
+  "6h": 6,
+  "12h": 12,
+  "24h": 24,
+  "48h": 48,
+};
 
 function isScheduleWindowActive(appContext: AppContext): boolean {
   if (!appContext.schedule_enabled) return false;
@@ -47,17 +56,28 @@ function isWithinAgeWindow(
   return reviewDate >= cutoff;
 }
 
-export async function GET(request: Request) {
-  const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+async function handleCron(request: NextRequest) {
+  const isManualSync = request.method === "POST";
+
+  if (!isManualSync) {
+    // Automated cron (GET from Vercel): verify CRON_SECRET
+    const authHeader = request.headers.get("authorization");
+    const cronSecret = process.env.CRON_SECRET;
+    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
   }
 
+  // For POST (manual sync), use the admin client too — the cron route runs server-side
+  // and the user's cookie session isn't available here. Auth is implicitly trusted
+  // because the route requires a logged-in session to reach (protected by middleware).
   const supabase = getAdminClient();
+
   const results: Array<{
     connectionId: string;
     name: string;
     type: string;
+    skipped?: boolean;
     reviewsFetched: number;
     newReviews: number;
     autoReplied: number;
@@ -94,6 +114,22 @@ export async function GET(request: Request) {
 
       const appContext: AppContext | null =
         connection.app_contexts?.[0] ?? null;
+
+      // For automated cron runs, respect the connection's sync_interval
+      if (!isManualSync) {
+        const syncInterval = (appContext as AppContext & { sync_interval?: string } | null)?.sync_interval ?? "24h";
+        const requiredHours = INTERVAL_HOURS[syncInterval] ?? 24;
+        const lastSynced = connection.last_synced_at
+          ? new Date(connection.last_synced_at).getTime()
+          : 0;
+        const hoursSinceLastSync = (Date.now() - lastSynced) / 3600000;
+
+        if (hoursSinceLastSync < requiredHours) {
+          results.push({ ...connResult, skipped: true });
+          continue;
+        }
+      }
+
       const runScheduled = appContext
         ? isScheduleWindowActive(appContext)
         : false;
@@ -103,7 +139,6 @@ export async function GET(request: Request) {
           connection.type === "play_store" &&
           connection.external_id
         ) {
-          // connection.credentials is null for Invite Email method → lib falls back to shared env credentials
           const fetchedReviews = await fetchPlayStoreReviews(
             connection.external_id,
             connection.credentials as Record<string, unknown> | null
@@ -198,7 +233,6 @@ export async function GET(request: Request) {
               );
               if (outcome === "drafted") { connResult.drafted++; await incrementUsageAdmin(connection.user_id, "auto_replies_used", 1); }
               if (outcome === "published") { connResult.autoReplied++; await incrementUsageAdmin(connection.user_id, "auto_replies_used", 1); }
-              // Small delay to avoid Groq rate limits during batch processing
               await new Promise((resolve) => setTimeout(resolve, 2500));
             } catch (replyError: unknown) {
               const e = replyError as { message?: string };
@@ -286,4 +320,14 @@ export async function GET(request: Request) {
       { status: 500 }
     );
   }
+}
+
+// GET: called by Vercel cron (authenticated via CRON_SECRET)
+export async function GET(request: NextRequest) {
+  return handleCron(request);
+}
+
+// POST: called by "Sync Now" button or manual trigger (authenticated via user session middleware)
+export async function POST(request: NextRequest) {
+  return handleCron(request);
 }

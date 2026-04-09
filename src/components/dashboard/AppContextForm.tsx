@@ -10,6 +10,7 @@ import { Slider } from "@/components/ui/slider";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, X, Bot, Sparkles, Clock, Shield, Calendar, Loader2, Zap } from "lucide-react";
+import { UpgradeGate } from "@/components/dashboard/UpgradeGate";
 import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
 import { createClient } from "@/lib/supabase/client";
@@ -48,8 +49,13 @@ function detectTimezone() {
   }
 }
 
-export function AppContextForm() {
-  const [connectionId, setConnectionId] = useState<string | null>(null);
+interface AppContextFormProps {
+  /** When provided (multi-app scenario), use this connection instead of auto-detecting. */
+  connectionId?: string;
+}
+
+export function AppContextForm({ connectionId: connectionIdProp }: AppContextFormProps = {}) {
+  const [connectionId, setConnectionId] = useState<string | null>(connectionIdProp ?? null);
   const [contextId, setContextId] = useState<string | null>(null);
   const [mockUserId, setMockUserId] = useState<string>("anon");
   const [loadingData, setLoadingData] = useState(true);
@@ -62,6 +68,8 @@ export function AppContextForm() {
   const [customTone, setCustomTone] = useState("");
   const [supportUrl, setSupportUrl] = useState("");
   const [additionalInstructions, setAdditionalInstructions] = useState("");
+
+  const [syncInterval, setSyncInterval] = useState("24h");
 
   /** manual | semi (draft_for_review) | full (auto_publish) */
   const [replyMode, setReplyMode] = useState<"manual" | "semi" | "full">("manual");
@@ -87,6 +95,17 @@ export function AppContextForm() {
   // Load existing app context from Supabase
   useEffect(() => {
     async function loadContext() {
+      setLoadingData(true);
+      // Reset fields so stale data from the previous connection doesn't bleed through
+      setContextId(null);
+      setDescription(""); setFeatures([""]); setQuestions([""]); setIssues([""]);
+      setTone("friendly"); setCustomTone(""); setSupportUrl(""); setAdditionalInstructions("");
+      setSyncInterval("24h");
+      setReplyMode("manual"); setDraftLowSafety(true); setRatingRange([1, 5]);
+      setScheduledEnabled(false); setScheduleTime("08:00"); setTimezone(detectTimezone());
+      setActiveDays([true, true, true, true, true, true, true]);
+      setReviewAge("24"); setSafetyToggle(true);
+
       try {
         const supabase = createClient();
 
@@ -94,18 +113,21 @@ export function AppContextForm() {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) setMockUserId(user.id);
 
-        const { data: connections } = await supabase
-          .from("connections")
-          .select("id")
-          .eq("is_active", true)
-          .limit(1);
+        // Use prop if provided (multi-app), else auto-detect first active connection
+        let connId: string | null = connectionIdProp ?? null;
+        if (!connId) {
+          const { data: connections } = await supabase
+            .from("connections")
+            .select("id")
+            .eq("is_active", true)
+            .limit(1);
 
-        if (!connections || connections.length === 0) {
-          setLoadingData(false);
-          return;
+          if (!connections || connections.length === 0) {
+            setLoadingData(false);
+            return;
+          }
+          connId = connections[0].id;
         }
-
-        const connId = connections[0].id;
         setConnectionId(connId);
 
         const { data: ctx } = await supabase
@@ -133,6 +155,7 @@ export function AppContextForm() {
           }
           setDraftLowSafety(ctx.auto_reply_draft_low_ratings !== false);
           setRatingRange([ctx.auto_reply_min_rating || 1, ctx.auto_reply_max_rating || 5]);
+          setSyncInterval(ctx.sync_interval || "24h");
           setScheduledEnabled(ctx.schedule_enabled || false);
           setScheduleTime(ctx.schedule_time || "08:00");
           setTimezone(ctx.schedule_timezone || detectTimezone());
@@ -147,7 +170,7 @@ export function AppContextForm() {
       }
     }
     loadContext();
-  }, []);
+  }, [connectionIdProp]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function addItem(setter: React.Dispatch<React.SetStateAction<string[]>>) {
     setter((prev) => [...prev, ""]);
@@ -403,6 +426,7 @@ export function AppContextForm() {
         schedule_days: activeDays,
         schedule_review_age_hours: parseInt(reviewAge),
         schedule_safety_toggle: safetyToggle,
+        sync_interval: syncInterval,
         updated_at: new Date().toISOString(),
       };
 
@@ -631,9 +655,30 @@ export function AppContextForm() {
               rows={3}
             />
           </div>
+          <div className="space-y-2">
+            <Label>Auto-sync frequency</Label>
+            <Select value={syncInterval} onValueChange={setSyncInterval}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1h">Every hour</SelectItem>
+                <SelectItem value="6h">Every 6 hours</SelectItem>
+                <SelectItem value="12h">Every 12 hours</SelectItem>
+                <SelectItem value="24h">Daily (default)</SelectItem>
+                <SelectItem value="48h">Every 2 days</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Reviews are fetched from Play Store at this interval. You can also sync manually from the{" "}
+              <a href="/dashboard/settings/connections" className="underline">Connections page</a>.
+            </p>
+          </div>
         </CardContent>
       </Card>
 
+      {/* Review Reply Mode + Scheduled Auto-Reply — gated behind inbox_auto_reply */}
+      <UpgradeGate feature="inbox_auto_reply">
       {/* Review Reply Mode */}
       <Card>
         <CardHeader>
@@ -876,6 +921,7 @@ export function AppContextForm() {
           </CardContent>
         )}
       </Card>
+      </UpgradeGate>
 
       <div className="flex gap-3">
         <Button onClick={handleSave} disabled={saving || applyingAutoReply} className="flex-1">

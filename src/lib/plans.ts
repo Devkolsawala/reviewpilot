@@ -17,6 +17,14 @@ export const PLANS = {
       export_data: false,
       white_label: false,
       priority_support: false,
+      analytics_basic: true,
+      analytics_advanced: false,
+      analytics_export: false,
+      inbox_ai_reply: true,
+      inbox_bulk_reply: false,
+      inbox_auto_reply: false,
+      campaigns_sms: false,
+      campaigns_email: false,
     },
   },
   starter: {
@@ -37,6 +45,14 @@ export const PLANS = {
       export_data: false,
       white_label: false,
       priority_support: false,
+      analytics_basic: true,
+      analytics_advanced: true,
+      analytics_export: false,
+      inbox_ai_reply: true,
+      inbox_bulk_reply: false,
+      inbox_auto_reply: true,
+      campaigns_sms: true,
+      campaigns_email: true,
     },
   },
   growth: {
@@ -57,6 +73,14 @@ export const PLANS = {
       export_data: true,
       white_label: false,
       priority_support: false,
+      analytics_basic: true,
+      analytics_advanced: true,
+      analytics_export: true,
+      inbox_ai_reply: true,
+      inbox_bulk_reply: true,
+      inbox_auto_reply: true,
+      campaigns_sms: true,
+      campaigns_email: true,
     },
   },
   agency: {
@@ -77,6 +101,14 @@ export const PLANS = {
       export_data: true,
       white_label: true,
       priority_support: true,
+      analytics_basic: true,
+      analytics_advanced: true,
+      analytics_export: true,
+      inbox_ai_reply: true,
+      inbox_bulk_reply: true,
+      inbox_auto_reply: true,
+      campaigns_sms: true,
+      campaigns_email: true,
     },
   },
 } as const;
@@ -129,5 +161,6 @@ export function canUseFeature(
   planId: string,
   feature: keyof (typeof PLANS)['free']['features']
 ): boolean {
-  return getPlan(planId).features[feature];
+  const plan = getPlan(planId);
+  return (plan.features as Record<string, boolean>)[feature] ?? false;
 }

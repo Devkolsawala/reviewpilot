@@ -9,8 +9,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Search, CheckCheck, Inbox, Zap, Info, BookOpen, ChevronDown, Bot, Loader2, ArrowLeft } from "lucide-react";
+import { UpgradeGate } from "@/components/dashboard/UpgradeGate";
+import { AppSwitcher } from "@/components/dashboard/AppSwitcher";
 import { toast } from "@/components/ui/use-toast";
 import { useReviews } from "@/hooks/useReviews";
+import { useConnections } from "@/hooks/useConnection";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import type { Review } from "@/types/review";
@@ -24,8 +27,10 @@ type StatusFilter = "all" | "pending" | "drafted" | "published";
 
 export default function InboxPage() {
   const { reviews: rawReviews, isMock, updateReview, refetch } = useReviews();
+  const { connections } = useConnections();
   const [localReviews, setLocalReviews] = useState<Review[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [activeAppId, setActiveAppId] = useState<string | null>(null); // null = "All Apps"
   const [search, setSearch] = useState("");
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
   const [ratingFilter, setRatingFilter] = useState<RatingFilter>("all");
@@ -33,6 +38,10 @@ export default function InboxPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [aiReplyingAll, setAiReplyingAll] = useState(false);
   const [aiReplyProgress, setAiReplyProgress] = useState<{ current: number; total: number } | null>(null);
+
+  // When switching apps, clear the selected review
+  const activeConnections = connections.filter((c) => c.is_active);
+  const showAppSwitcher = !isMock && activeConnections.length > 1;
 
   // Keep local reviews in sync with hook (allow optimistic updates)
   useEffect(() => {
@@ -48,8 +57,14 @@ export default function InboxPage() {
 
   const reviews = localReviews;
 
+  // Reviews scoped to the active app (if app switcher is visible)
+  const appScopedReviews = useMemo(() => {
+    if (!showAppSwitcher || activeAppId === null) return reviews;
+    return reviews.filter((r) => r.connection_id === activeAppId);
+  }, [reviews, activeAppId, showAppSwitcher]);
+
   const filteredReviews = useMemo(() => {
-    return reviews.filter((r) => {
+    return appScopedReviews.filter((r) => {
       if (sourceFilter !== "all" && r.source !== sourceFilter) return false;
       if (ratingFilter !== "all" && r.rating !== ratingFilter) return false;
       if (statusFilter !== "all" && r.reply_status !== statusFilter) return false;
@@ -62,10 +77,10 @@ export default function InboxPage() {
       }
       return true;
     });
-  }, [reviews, sourceFilter, ratingFilter, statusFilter, search]);
+  }, [appScopedReviews, sourceFilter, ratingFilter, statusFilter, search]);
 
   const selectedReview = filteredReviews.find((r) => r.id === selectedId);
-  const pendingCount = reviews.filter((r) => r.reply_status === "pending").length;
+  const pendingCount = appScopedReviews.filter((r) => r.reply_status === "pending").length;
   const totalCount = filteredReviews.length;
 
   // Keyboard navigation: J/K to move, R to generate
@@ -139,12 +154,16 @@ export default function InboxPage() {
     setAiReplyingAll(true);
 
     if (!isMock) {
-      // Real mode: delegate to the fetch/sync route which processes pending reviews
+      // Real mode: use the currently selected app, or fall back to the first active connection
       try {
         toast({ title: "Applying AI replies…", description: "Processing pending reviews. This may take a moment." });
-        const supabase = createClient();
-        const { data: connections } = await supabase.from("connections").select("id").eq("is_active", true).limit(1);
-        const connId = connections?.[0]?.id;
+        // If an app is selected in the switcher, use it directly; otherwise find first active
+        let connId = activeAppId;
+        if (!connId) {
+          const supabase = createClient();
+          const { data: conns } = await supabase.from("connections").select("id").eq("is_active", true).limit(1);
+          connId = conns?.[0]?.id ?? null;
+        }
         if (!connId) {
           toast({ title: "No connection found", description: "Connect a review source first in Settings → Connections.", variant: "destructive" });
           setAiReplyingAll(false);
@@ -331,6 +350,16 @@ export default function InboxPage() {
             "flex flex-col border-r shrink-0 w-full md:w-96",
             selectedId ? "hidden md:flex" : "flex"
           )}>
+            {/* App switcher — only visible when 2+ active connections */}
+            {showAppSwitcher && (
+              <AppSwitcher
+                connections={activeConnections}
+                activeId={activeAppId}
+                onChange={(id) => { setActiveAppId(id); setSelectedId(null); }}
+                className="border-b"
+              />
+            )}
+
             {/* Search and filters */}
             <div className="p-3 border-b space-y-2">
               <div className="relative">
@@ -361,6 +390,14 @@ export default function InboxPage() {
               </div>
 
               {/* Batch actions */}
+              <UpgradeGate feature="inbox_bulk_reply" fallback={
+                <div className="flex items-center justify-between pt-1">
+                  <span className="text-[11px] text-muted-foreground opacity-50">Select all (upgrade to unlock)</span>
+                  <span className="text-[10px] text-muted-foreground hidden sm:inline">
+                    <kbd className="px-1 py-0.5 rounded bg-secondary font-mono text-[9px]">J</kbd>/<kbd className="px-1 py-0.5 rounded bg-secondary font-mono text-[9px]">K</kbd> to navigate
+                  </span>
+                </div>
+              }>
               <div className="flex items-center justify-between pt-1">
                 <button onClick={selectAll} className="text-[11px] text-muted-foreground hover:text-foreground transition-colors">
                   {selectedIds.size === filteredReviews.length && filteredReviews.length > 0 ? "Deselect all" : "Select all"}
@@ -369,6 +406,7 @@ export default function InboxPage() {
                   <kbd className="px-1 py-0.5 rounded bg-secondary font-mono text-[9px]">J</kbd>/<kbd className="px-1 py-0.5 rounded bg-secondary font-mono text-[9px]">K</kbd> to navigate
                 </span>
               </div>
+              </UpgradeGate>
             </div>
 
             {/* Review list */}
@@ -431,6 +469,7 @@ export default function InboxPage() {
         </div>
 
         {/* Floating bulk action bar */}
+        <UpgradeGate feature="inbox_bulk_reply">
         {selectedIds.size > 0 && (
           <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
             <div className="flex items-center gap-3 bg-card border shadow-xl rounded-xl px-5 py-3">
@@ -445,6 +484,7 @@ export default function InboxPage() {
             </div>
           </div>
         )}
+        </UpgradeGate>
       </div>
     </PageTransition>
   );

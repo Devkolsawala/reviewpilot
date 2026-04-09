@@ -83,12 +83,15 @@ export default function DashboardPage() {
   useEffect(() => {
     async function loadName() {
       const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      // getSession() reads from localStorage — no network call, no lock contention.
+      // Safe here because we only need the user ID to fetch their display name.
+      const { data: { session } } = await supabase.auth.getSession();
+      const userId = session?.user?.id;
+      if (!userId) return;
       const { data } = await supabase
         .from("profiles")
         .select("full_name")
-        .eq("id", user.id)
+        .eq("id", userId)
         .single();
       const name = data?.full_name?.split(" ")[0] ?? null;
       setFirstName(name);

@@ -15,6 +15,11 @@ export async function GET(request: Request) {
 
   if (code) {
     const cookieStore = cookies();
+    // Build the redirect response first so we can attach cookies directly to it.
+    // cookieStore from next/headers is read-only in route handlers — setting cookies there
+    // silently fails and the session never reaches the browser on the redirect.
+    const redirectResponse = NextResponse.redirect(`${baseUrl}${next}`);
+
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -22,10 +27,10 @@ export async function GET(request: Request) {
         cookies: {
           get(name: string) { return cookieStore.get(name)?.value; },
           set(name: string, value: string, options) {
-            try { cookieStore.set({ name, value, ...options }); } catch { /* read-only context */ }
+            redirectResponse.cookies.set({ name, value, ...options });
           },
           remove(name: string, options) {
-            try { cookieStore.set({ name, value: "", ...options }); } catch { /* read-only context */ }
+            redirectResponse.cookies.set({ name, value: "", ...options });
           },
         },
       }
@@ -33,7 +38,7 @@ export async function GET(request: Request) {
 
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
-      return NextResponse.redirect(`${baseUrl}${next}`);
+      return redirectResponse;
     }
     console.error("[auth/callback] exchangeCodeForSession error:", error.message);
   }
