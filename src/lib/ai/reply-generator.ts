@@ -1,6 +1,6 @@
 import Groq from "groq-sdk";
 import { buildReplyPrompt } from "./prompts";
-import { waitForRateLimit } from "./rate-limiter";
+import { waitForRateLimit, retryWithBackoff } from "./rate-limiter";
 import type { AppContext } from "@/types/database";
 import type { Review } from "@/types/review";
 
@@ -78,26 +78,30 @@ export async function generateReply(params: GenerateReplyParams): Promise<string
     const model = process.env.GROQ_MODEL || "openai/gpt-oss-120b";
     const gptOss = isGptOssModel(model);
 
-    // Respect Groq rate limits before calling the API
+    // Respect local RPM cap before calling the API
     await waitForRateLimit();
 
     // GPT-OSS is a reasoning model: without reasoning_format / enough output budget, `content` can be empty.
-    const completion = await client.chat.completions.create({
-      model,
-      messages: [
-        { role: "system", content: prompt.system },
-        { role: "user", content: prompt.user },
-      ],
-      temperature: 0.7,
-      max_completion_tokens: gptOss ? 1536 : 600,
-      top_p: 1,
-      ...(gptOss
-        ? {
-            reasoning_format: "hidden" as const,
-            reasoning_effort: "low" as const,
-          }
-        : {}),
-    });
+    // retryWithBackoff handles real 429 responses from Groq (reads Retry-After header + exponential backoff).
+    const completion = await retryWithBackoff(
+      () => client!.chat.completions.create({
+        model,
+        messages: [
+          { role: "system", content: prompt.system },
+          { role: "user", content: prompt.user },
+        ],
+        temperature: 0.7,
+        max_completion_tokens: gptOss ? 1536 : 600,
+        top_p: 1,
+        ...(gptOss
+          ? {
+              reasoning_format: "hidden" as const,
+              reasoning_effort: "low" as const,
+            }
+          : {}),
+      }),
+      `generateReply(${params.review.id})`
+    );
 
     const choice = completion.choices[0];
     const msg = choice?.message as GroqAssistantMessage | undefined;

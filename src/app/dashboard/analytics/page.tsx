@@ -7,8 +7,9 @@ import { AnimatedCounter } from "@/components/dashboard/AnimatedCounter";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAnalytics } from "@/hooks/useAnalytics";
 import { useReviews } from "@/hooks/useReviews";
+import { usePlan } from "@/hooks/usePlan";
 import { cn } from "@/lib/utils";
-import { Zap, CheckCircle2, Clock, Info } from "lucide-react";
+import { Zap, CheckCircle2, Clock, Info, Timer, TrendingUp, Bot, IndianRupee } from "lucide-react";
 import { UpgradeGate } from "@/components/dashboard/UpgradeGate";
 
 const PERIODS = [
@@ -17,10 +18,35 @@ const PERIODS = [
   { label: "90d", value: "90d" },
 ] as const;
 
+const PERIOD_DAYS: Record<string, number> = { "7d": 7, "30d": 30, "90d": 90 };
+// Avg minutes a human spends writing one review reply
+const MINS_PER_MANUAL_REPLY = 5;
+// Approx hourly rate for a response manager (INR)
+const HOURLY_RATE_INR = 500;
+
 export default function AnalyticsPage() {
   const { analytics, isMock, period, setPeriod } = useAnalytics();
   const { reviews } = useReviews();
+  const { planId } = usePlan();
   const pendingCount = reviews.filter((r) => r.reply_status === "pending").length;
+  const isAgency = planId === "agency";
+
+  // Agency metrics — computed from available data
+  const aiTotal = analytics.auto_reply_stats.total;
+  const timeSavedMins = aiTotal * MINS_PER_MANUAL_REPLY;
+  const timeSavedHrs = Math.floor(timeSavedMins / 60);
+  const timeSavedRemMins = timeSavedMins % 60;
+  const timeSavedLabel = timeSavedHrs > 0
+    ? `${timeSavedHrs}h ${timeSavedRemMins}m`
+    : `${timeSavedMins}m`;
+  const costSavedINR = Math.round((timeSavedMins / 60) * HOURLY_RATE_INR);
+  const aiEfficiency = analytics.total_reviews > 0
+    ? Math.round((aiTotal / analytics.total_reviews) * 100)
+    : 0;
+  const periodDays = PERIOD_DAYS[period] ?? 30;
+  const reviewVelocity = analytics.total_reviews > 0
+    ? (analytics.total_reviews / periodDays).toFixed(1)
+    : "0.0";
 
   return (
     <PageTransition>
@@ -65,6 +91,89 @@ export default function AnalyticsPage() {
           responseRate={analytics.response_rate}
           pendingCount={pendingCount}
         />
+
+        {/* Agency Intelligence Panel */}
+        {isAgency && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Agency Intelligence</h2>
+              <span className="rounded-full bg-teal-100 dark:bg-teal-950/40 text-teal-700 dark:text-teal-400 text-[10px] font-semibold px-2 py-0.5">Agency Plan</span>
+            </div>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              {/* Time Saved */}
+              <Card className="border-violet-200/70 dark:border-violet-800/70 bg-gradient-to-br from-violet-50/60 to-purple-50/60 dark:from-violet-950/20 dark:to-purple-950/20">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="rounded-lg p-1.5 bg-violet-100 dark:bg-violet-950/50">
+                      <Timer className="h-3.5 w-3.5 text-violet-600 dark:text-violet-400" />
+                    </div>
+                    <p className="text-xs font-medium text-muted-foreground">Time Saved</p>
+                  </div>
+                  <p className="text-2xl font-bold font-heading text-violet-700 dark:text-violet-300">
+                    {timeSavedLabel}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    vs. manual replies this month
+                  </p>
+                </CardContent>
+              </Card>
+
+              {/* Cost Saved */}
+              <Card className="border-emerald-200/70 dark:border-emerald-800/70 bg-gradient-to-br from-emerald-50/60 to-green-50/60 dark:from-emerald-950/20 dark:to-green-950/20">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="rounded-lg p-1.5 bg-emerald-100 dark:bg-emerald-950/50">
+                      <IndianRupee className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                    </div>
+                    <p className="text-xs font-medium text-muted-foreground">Cost Saved</p>
+                  </div>
+                  <p className="text-2xl font-bold font-heading text-emerald-700 dark:text-emerald-300">
+                    ₹{costSavedINR.toLocaleString("en-IN")}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    at ₹{HOURLY_RATE_INR}/hr manager cost
+                  </p>
+                </CardContent>
+              </Card>
+
+              {/* AI Efficiency */}
+              <Card className="border-blue-200/70 dark:border-blue-800/70 bg-gradient-to-br from-blue-50/60 to-sky-50/60 dark:from-blue-950/20 dark:to-sky-950/20">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="rounded-lg p-1.5 bg-blue-100 dark:bg-blue-950/50">
+                      <Bot className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <p className="text-xs font-medium text-muted-foreground">AI Efficiency</p>
+                  </div>
+                  <p className="text-2xl font-bold font-heading text-blue-700 dark:text-blue-300">
+                    {aiEfficiency}%
+                  </p>
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    of reviews handled by AI
+                  </p>
+                </CardContent>
+              </Card>
+
+              {/* Review Velocity */}
+              <Card className="border-orange-200/70 dark:border-orange-800/70 bg-gradient-to-br from-orange-50/60 to-amber-50/60 dark:from-orange-950/20 dark:to-amber-950/20">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="rounded-lg p-1.5 bg-orange-100 dark:bg-orange-950/50">
+                      <TrendingUp className="h-3.5 w-3.5 text-orange-600 dark:text-orange-400" />
+                    </div>
+                    <p className="text-xs font-medium text-muted-foreground">Review Velocity</p>
+                  </div>
+                  <p className="text-2xl font-bold font-heading text-orange-700 dark:text-orange-300">
+                    {reviewVelocity}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    reviews per day ({period})
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        )}
 
         {/* Auto-reply stat card */}
         <UpgradeGate feature="inbox_auto_reply">

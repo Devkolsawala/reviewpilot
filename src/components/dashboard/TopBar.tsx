@@ -17,12 +17,14 @@ import { createClient } from "@/lib/supabase/client";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { GlobalSearch, SearchTrigger } from "@/components/dashboard/GlobalSearch";
 import { cn } from "@/lib/utils";
+import { usePlan } from "@/hooks/usePlan";
 import Link from "next/link";
 
 const NOTIFICATIONS: { id: string; icon: typeof Star; color: string; bg: string; text: string; time: string; unread: boolean }[] = [];
 
 export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
   const router = useRouter();
+  const { plan } = usePlan();
   const [searchOpen, setSearchOpen] = useState(false);
   const [notifications, setNotifications] = useState(NOTIFICATIONS);
   const [profile, setProfile] = useState<{ full_name: string | null; email: string | null }>({ full_name: null, email: null });
@@ -136,7 +138,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
                   <p className="text-xs text-muted-foreground">{profile.email || ""}</p>
                   <span className="inline-flex items-center gap-1 mt-1 text-[10px] font-medium text-teal-600 dark:text-teal-400">
                     <span className="h-1.5 w-1.5 rounded-full bg-teal-500" />
-                    Free Plan
+                    {plan.name} Plan
                   </span>
                 </div>
               </DropdownMenuLabel>
