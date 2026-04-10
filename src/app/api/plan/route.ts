@@ -27,12 +27,12 @@ export async function GET() {
 
   const { data: profile } = await adminClient
     .from("profiles")
-    .select("plan, trial_ends_at, owner_id")
+    .select("plan, trial_ends_at, owner_id, subscription_cancel_at")
     .eq("id", user.id)
     .single();
 
   if (!profile) {
-    return NextResponse.json({ plan: "free", trial_ends_at: null, role: "owner" as TeamRole });
+    return NextResponse.json({ plan: "free", trial_ends_at: null, subscription_cancel_at: null, role: "owner" as TeamRole });
   }
 
   // ── Already linked to an owner → return owner's plan + role ─
@@ -40,7 +40,7 @@ export async function GET() {
     const [{ data: ownerProfile }, { data: membership }] = await Promise.all([
       adminClient
         .from("profiles")
-        .select("plan, trial_ends_at")
+        .select("plan, trial_ends_at, subscription_cancel_at")
         .eq("id", profile.owner_id)
         .single(),
       adminClient
@@ -57,6 +57,7 @@ export async function GET() {
     return NextResponse.json({
       plan: ownerProfile?.plan ?? "free",
       trial_ends_at: ownerProfile?.trial_ends_at ?? null,
+      subscription_cancel_at: ownerProfile?.subscription_cancel_at ?? null,
       role,
     });
   }
@@ -90,7 +91,7 @@ export async function GET() {
       // Return the owner's plan + the role from the invite
       const { data: ownerProfile } = await adminClient
         .from("profiles")
-        .select("plan, trial_ends_at")
+        .select("plan, trial_ends_at, subscription_cancel_at")
         .eq("id", pendingInvite.owner_id)
         .single();
 
@@ -99,6 +100,7 @@ export async function GET() {
       return NextResponse.json({
         plan: ownerProfile?.plan ?? "free",
         trial_ends_at: ownerProfile?.trial_ends_at ?? null,
+        subscription_cancel_at: ownerProfile?.subscription_cancel_at ?? null,
         role,
       });
     }
@@ -108,6 +110,7 @@ export async function GET() {
   return NextResponse.json({
     plan: profile.plan ?? "free",
     trial_ends_at: profile.trial_ends_at ?? null,
+    subscription_cancel_at: profile.subscription_cancel_at ?? null,
     role: "owner" as TeamRole,
   });
 }

@@ -85,8 +85,13 @@ export async function getSubscription(subscriptionId: string) {
   return await razorpay.subscriptions.fetch(subscriptionId);
 }
 
-// Cancel a subscription
+// Cancel a subscription — returns the end date (Unix seconds) if cancel_at_cycle_end
 export async function cancelSubscription(subscriptionId: string, cancelAtEnd: boolean = true) {
   const razorpay = getRazorpay();
-  return await razorpay.subscriptions.cancel(subscriptionId, cancelAtEnd);
+  const result = await razorpay.subscriptions.cancel(subscriptionId, cancelAtEnd);
+  const raw = result as unknown as Record<string, unknown>;
+  // current_end is a Unix timestamp (seconds) — the date the billing period ends
+  const currentEndUnix = raw.current_end as number | undefined;
+  const cancelAt = currentEndUnix ? new Date(currentEndUnix * 1000).toISOString() : null;
+  return { subscriptionId: result.id, status: result.status, cancelAt };
 }

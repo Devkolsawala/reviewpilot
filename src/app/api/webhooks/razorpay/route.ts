@@ -75,6 +75,7 @@ export async function POST(request: NextRequest) {
               plan: 'free',
               razorpay_subscription_id: null,
               trial_ends_at: null,
+              subscription_cancel_at: null, // Period ended — clear the pending flag
             })
             .eq('razorpay_subscription_id', subscriptionId);
           console.log(`[WEBHOOK] Cancelled/Completed: downgraded to free, error: ${error?.message || 'none'}`);
@@ -88,7 +89,7 @@ export async function POST(request: NextRequest) {
         if (subscriptionId) {
           await supabase
             .from('profiles')
-            .update({ plan: 'free' })
+            .update({ plan: 'free', razorpay_subscription_id: null, subscription_cancel_at: null })
             .eq('razorpay_subscription_id', subscriptionId);
           console.log(`[WEBHOOK] Halted: downgraded to free`);
         }

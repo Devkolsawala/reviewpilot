@@ -39,7 +39,8 @@ export async function POST(request: NextRequest) {
         plan: selectedPlan ?? 'starter',
         razorpay_subscription_id: razorpay_subscription_id,
         razorpay_customer_id: razorpay_payment_id,
-        trial_ends_at: null, // Clear trial — they're a paying customer
+        trial_ends_at: null,           // Clear trial — they're a paying customer
+        subscription_cancel_at: null,  // Clear any pending cancellation
       })
       .eq('id', user.id);
 

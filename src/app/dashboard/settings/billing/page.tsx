@@ -121,7 +121,7 @@ export default function BillingPage() {
     resetDate,
     periodLabel,
   } = useUsage();
-  const { trialExpired, trialDaysLeft } = usePlan();
+  const { trialExpired, trialDaysLeft, cancellationPending, cancelDate } = usePlan();
 
   const isTestMode = process.env.NEXT_PUBLIC_TEST_MODE === "true";
   const isPaidPlan = planId !== "free";
@@ -246,9 +246,10 @@ export default function BillingPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       toast({
-        title: "Subscription cancelled",
+        title: "Cancellation scheduled",
         description: data.message ?? "Your plan will remain active until the end of the billing period.",
       });
+      setTimeout(() => window.location.reload(), 1500);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Something went wrong";
       toast({
@@ -278,6 +279,32 @@ export default function BillingPage() {
               Choose a plan below to continue using ReviewPilot and keep all your data.
             </p>
           </div>
+        </div>
+      )}
+
+      {/* Cancellation pending banner */}
+      {cancellationPending && cancelDate && (
+        <div className="flex items-start gap-3 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/20 px-4 py-4">
+          <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="font-semibold text-amber-800 dark:text-amber-200">Cancellation scheduled</p>
+            <p className="text-sm text-amber-700 dark:text-amber-300 mt-0.5">
+              Your plan will remain active until{" "}
+              <strong>
+                {cancelDate.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}
+              </strong>
+              . After that, your account moves to the free plan.
+            </p>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            className="shrink-0 border-amber-400 text-amber-700 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-300"
+            onClick={() => handleSubscribe(planId as string)}
+            disabled={loading !== null}
+          >
+            Re-subscribe
+          </Button>
         </div>
       )}
 
@@ -311,7 +338,9 @@ export default function BillingPage() {
                     ? trialDaysLeft !== null && trialDaysLeft > 0
                       ? `Free trial — ${trialDaysLeft} day${trialDaysLeft === 1 ? "" : "s"} remaining`
                       : `Limited to ${aiLimit} AI replies per ${periodLabel}`
-                    : "Your subscription is active"}
+                    : cancellationPending && cancelDate
+                      ? `Active until ${cancelDate.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}`
+                      : "Your subscription is active"}
                 </p>
               </div>
               <Badge
@@ -460,14 +489,16 @@ export default function BillingPage() {
               Cancel Subscription
             </CardTitle>
             <CardDescription>
-              Your plan stays active until the end of the current billing period. No refunds for the current period.
+              {cancellationPending && cancelDate
+                ? `Cancellation scheduled for ${cancelDate.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}. No refunds for the current period.`
+                : "Your plan stays active until the end of the current billing period. No refunds for the current period."}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Button
               variant="outline"
-              className="border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/20"
-              disabled={loading === "cancel"}
+              className="border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/20 disabled:opacity-50"
+              disabled={loading === "cancel" || cancellationPending}
               onClick={() => setCancelDialogOpen(true)}
             >
               {loading === "cancel" ? (
@@ -475,6 +506,8 @@ export default function BillingPage() {
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Cancelling…
                 </>
+              ) : cancellationPending ? (
+                "Cancellation Scheduled"
               ) : (
                 "Cancel Subscription"
               )}

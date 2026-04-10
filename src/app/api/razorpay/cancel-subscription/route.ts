@@ -21,13 +21,24 @@ export async function POST() {
     }
 
     // Cancel at end of billing period (cancelAtEnd = true)
-    await cancelSubscription(profile.razorpay_subscription_id, true);
+    const { cancelAt } = await cancelSubscription(profile.razorpay_subscription_id, true);
 
-    console.log(`[RAZORPAY] Subscription cancellation scheduled: ${profile.razorpay_subscription_id} for user ${user.id}`);
+    // Persist the cancellation date so the UI can show "cancels on X"
+    await supabase
+      .from('profiles')
+      .update({ subscription_cancel_at: cancelAt })
+      .eq('id', user.id);
+
+    console.log(`[RAZORPAY] Cancellation scheduled for ${user.id}, ends: ${cancelAt}`);
+
+    const cancelLabel = cancelAt
+      ? new Date(cancelAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
+      : 'end of billing period';
 
     return NextResponse.json({
       success: true,
-      message: 'Subscription will be cancelled at the end of the current billing period.',
+      cancelAt,
+      message: `Your ${profile.plan} plan will remain active until ${cancelLabel}. No refunds for the current period.`,
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';

@@ -5,6 +5,7 @@ import { getPlan, canUseFeature, type PlanId } from '@/lib/plans';
 export function usePlan() {
   const [planId, setPlanId] = useState<string>('free');
   const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null);
+  const [subscriptionCancelAt, setSubscriptionCancelAt] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -17,6 +18,7 @@ export function usePlan() {
           const data = await res.json();
           setPlanId(data.plan ?? 'free');
           setTrialEndsAt(data.trial_ends_at ?? null);
+          setSubscriptionCancelAt(data.subscription_cancel_at ?? null);
         }
       } finally {
         setIsLoading(false);
@@ -32,5 +34,8 @@ export function usePlan() {
     : null;
   const trialExpired = trialDaysLeft !== null && trialDaysLeft <= 0 && planId === 'free';
 
-  return { planId: planId as PlanId | string, plan, can, trialDaysLeft, trialExpired, isLoading };
+  const cancellationPending = !!subscriptionCancelAt;
+  const cancelDate = subscriptionCancelAt ? new Date(subscriptionCancelAt) : null;
+
+  return { planId: planId as PlanId | string, plan, can, trialDaysLeft, trialExpired, isLoading, subscriptionCancelAt, cancellationPending, cancelDate };
 }
