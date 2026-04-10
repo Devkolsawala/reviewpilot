@@ -185,6 +185,11 @@ export function Sidebar({ collapsed, mobile }: { collapsed?: boolean; mobile?: b
                       {pendingCount}
                     </span>
                   )}
+                  {item.href === "/dashboard/campaigns" && (
+                    <span className="flex items-center rounded-full bg-muted px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      Soon
+                    </span>
+                  )}
                 </>
               )}
               {collapsed && item.href === "/dashboard/inbox" && pendingCount > 0 && (

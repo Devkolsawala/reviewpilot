@@ -1,63 +1,92 @@
-import Razorpay from "razorpay";
-import crypto from "crypto";
+import Razorpay from 'razorpay';
+import crypto from 'crypto';
 
-// Lazy instantiation — avoids build-time crash when env vars are absent
-function getRazorpay() {
-  return new Razorpay({
-    key_id: process.env.RAZORPAY_KEY_ID || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "",
-    key_secret: process.env.RAZORPAY_KEY_SECRET || "",
-  });
+let razorpayInstance: Razorpay | null = null;
+
+function getRazorpay(): Razorpay {
+  if (!razorpayInstance) {
+    if (!process.env.RAZORPAY_KEY_SECRET) {
+      throw new Error('RAZORPAY_KEY_SECRET not configured');
+    }
+    razorpayInstance = new Razorpay({
+      key_id: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID!,
+      key_secret: process.env.RAZORPAY_KEY_SECRET!,
+    });
+  }
+  return razorpayInstance;
 }
 
-export const RAZORPAY_PLANS = {
-  starter: {
-    id: process.env.RAZORPAY_PLAN_STARTER || "",
-    name: "Starter",
-    priceINR: 1500,
-    priceUSD: 19,
-  },
-  growth: {
-    id: process.env.RAZORPAY_PLAN_GROWTH || "",
-    name: "Growth",
-    priceINR: 3000,
-    priceUSD: 39,
-  },
-  agency: {
-    id: process.env.RAZORPAY_PLAN_AGENCY || "",
-    name: "Agency",
-    priceINR: 8000,
-    priceUSD: 99,
-  },
-} as const;
+// Map plan names to Razorpay plan IDs from env
+export function getRazorpayPlanId(planName: string): string {
+  const planMap: Record<string, string | undefined> = {
+    starter: process.env.RAZORPAY_PLAN_STARTER,
+    growth: process.env.RAZORPAY_PLAN_GROWTH,
+    agency: process.env.RAZORPAY_PLAN_AGENCY,
+  };
+  const planId = planMap[planName];
+  if (!planId) throw new Error(`No Razorpay plan ID configured for "${planName}"`);
+  return planId;
+}
 
-export async function createSubscription(planId: string, customerEmail: string) {
+// Create a subscription for a user
+export async function createSubscription(
+  planName: string,
+  customerEmail: string,
+  customerName?: string
+) {
   const razorpay = getRazorpay();
+  const razorpayPlanId = getRazorpayPlanId(planName);
+
   const subscription = await razorpay.subscriptions.create({
-    plan_id: planId,
-    total_count: 12,
+    plan_id: razorpayPlanId,
+    total_count: 120, // Max billing cycles (10 years monthly)
     quantity: 1,
     customer_notify: 1,
-    notes: { email: customerEmail },
+    notes: {
+      email: customerEmail,
+      name: customerName || '',
+      plan: planName,
+    },
   });
-  return subscription;
+
+  return {
+    subscriptionId: subscription.id,
+    shortUrl: (subscription as unknown as Record<string, unknown>).short_url as string | undefined,
+    status: subscription.status,
+  };
 }
 
+// Verify payment signature from Razorpay checkout
 export function verifyPaymentSignature(params: {
   razorpay_payment_id: string;
   razorpay_subscription_id: string;
   razorpay_signature: string;
-}) {
-  const generated = crypto
-    .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET || "")
-    .update(params.razorpay_payment_id + "|" + params.razorpay_subscription_id)
-    .digest("hex");
-  return generated === params.razorpay_signature;
+}): boolean {
+  const body = params.razorpay_payment_id + '|' + params.razorpay_subscription_id;
+  const expectedSignature = crypto
+    .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET!)
+    .update(body)
+    .digest('hex');
+  return expectedSignature === params.razorpay_signature;
 }
 
-export function verifyWebhookSignature(body: string, signature: string) {
-  const expected = crypto
-    .createHmac("sha256", process.env.RAZORPAY_WEBHOOK_SECRET || "")
+// Verify webhook signature
+export function verifyWebhookSignature(body: string, signature: string): boolean {
+  const expectedSignature = crypto
+    .createHmac('sha256', process.env.RAZORPAY_WEBHOOK_SECRET!)
     .update(body)
-    .digest("hex");
-  return expected === signature;
+    .digest('hex');
+  return expectedSignature === signature;
+}
+
+// Fetch subscription details
+export async function getSubscription(subscriptionId: string) {
+  const razorpay = getRazorpay();
+  return await razorpay.subscriptions.fetch(subscriptionId);
+}
+
+// Cancel a subscription
+export async function cancelSubscription(subscriptionId: string, cancelAtEnd: boolean = true) {
+  const razorpay = getRazorpay();
+  return await razorpay.subscriptions.cancel(subscriptionId, cancelAtEnd);
 }

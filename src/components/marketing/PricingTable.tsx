@@ -17,7 +17,7 @@ const PLANS = [
     features: [
       "1 location OR 1 app",
       "100 AI replies/week",
-      "50 SMS/week",
+      "50 SMS/week (Coming Soon)",
       "3 team seats",
       "Basic analytics",
       "Auto-reply",
@@ -36,7 +36,7 @@ const PLANS = [
     features: [
       "3 locations OR 3 apps",
       "500 AI replies/week",
-      "200 SMS/week",
+      "200 SMS/week (Coming Soon)",
       "5 team seats",
       "Full analytics + sentiment",
       "Data export",
@@ -55,7 +55,7 @@ const PLANS = [
     features: [
       "10 locations or apps",
       "Unlimited AI replies",
-      "1,000 SMS/week",
+      "1,000 SMS/week (Coming Soon)",
       "10 team seats",
       "White-label reports",
       "Priority support",
@@ -161,12 +161,23 @@ export function PricingTable() {
               </CardHeader>
               <CardContent>
                 <ul className="space-y-3 mb-6">
-                  {plan.features.map((f) => (
-                    <li key={f} className="flex items-start gap-2 text-sm">
-                      <Check className="h-4 w-4 text-teal-500 mt-0.5 shrink-0" />
-                      {f}
-                    </li>
-                  ))}
+                  {plan.features.map((f) => {
+                    const isComingSoon = f.includes("(Coming Soon)");
+                    const label = f.replace(" (Coming Soon)", "");
+                    return (
+                      <li key={f} className="flex items-start gap-2 text-sm">
+                        <Check className="h-4 w-4 text-teal-500 mt-0.5 shrink-0" />
+                        <span>
+                          {label}
+                          {isComingSoon && (
+                            <span className="ml-1.5 inline-flex items-center rounded-full bg-amber-100 dark:bg-amber-950/40 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-400">
+                              Soon
+                            </span>
+                          )}
+                        </span>
+                      </li>
+                    );
+                  })}
                 </ul>
                 <Button
                   className="w-full"
