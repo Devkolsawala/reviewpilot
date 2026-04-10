@@ -492,6 +492,14 @@ export function AppContextForm({ connectionId: connectionIdProp, disabled = fals
   }
 
   async function handleTestReply() {
+    if (disabled) {
+      toast({
+        title: "Read-only access",
+        description: "You have read-only access. Ask the workspace owner to upgrade your permissions.",
+        variant: "destructive",
+      });
+      return;
+    }
     setTesting(true);
     setTestReply("");
     try {
@@ -938,6 +946,7 @@ export function AppContextForm({ connectionId: connectionIdProp, disabled = fals
         <Button variant="outline" onClick={handleTestReply} disabled={testing || saving || applyingAutoReply}>
           <Sparkles className="mr-2 h-4 w-4" />
           {testing ? "Generating..." : "Test AI Reply"}
+          {disabled && <span className="ml-1 text-[10px] opacity-60">(read-only)</span>}
         </Button>
       </div>
 

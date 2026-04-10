@@ -42,6 +42,8 @@ export default function TeamPage() {
   const { isOwner } = useTeamRole();
 
   const [ownerEmail, setOwnerEmail] = useState("");
+  const [ownerId, setOwnerId] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -65,17 +67,19 @@ export default function TeamPage() {
     if (res.ok) {
       const data = await res.json();
       setMembers(data.members ?? []);
-      // API now returns ownerEmail so non-owners see the correct owner address
+      // API returns ownerEmail + ownerId so non-owners see the correct workspace owner
       if (data.ownerEmail) setOwnerEmail(data.ownerEmail);
+      if (data.ownerId) setOwnerId(data.ownerId);
     }
     setLoading(false);
   }, []);
 
   useEffect(() => {
     async function init() {
-      // Seed ownerEmail from current user as a quick default; fetchMembers overwrites it
+      // Track current user so we can show "You" on the correct row
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
+      setCurrentUserId(user?.id ?? null);
       setOwnerEmail(user?.email ?? "");
       await fetchMembers();
     }
@@ -244,8 +248,12 @@ export default function TeamPage() {
               </Avatar>
               <div>
                 <p className="text-sm font-medium flex items-center gap-1.5">
-                  You
-                  <Crown className="h-3 w-3 text-amber-500" />
+                  {/* Show "You" only if the current user IS the owner */}
+                  {currentUserId && ownerId && currentUserId === ownerId ? (
+                    <>You <Crown className="h-3 w-3 text-amber-500" /></>
+                  ) : (
+                    <>{ownerEmail} <Crown className="h-3 w-3 text-amber-500" /></>
+                  )}
                 </p>
                 <p className="text-xs text-muted-foreground">{ownerEmail}</p>
               </div>
@@ -278,6 +286,10 @@ export default function TeamPage() {
                   <div>
                     <p className="text-sm font-medium flex items-center gap-1.5">
                       {member.email}
+                      {/* Mark this row as "You" if the current user is this member */}
+                      {currentUserId && member.member_id === currentUserId && (
+                        <span className="text-xs text-teal-600 font-semibold">(You)</span>
+                      )}
                       {member.status === "pending" && (
                         <span className="inline-flex items-center gap-0.5 text-xs text-amber-500">
                           <Clock className="h-3 w-3" />
