@@ -16,10 +16,11 @@ const PLANS = [
     description: "Perfect for a single location or app",
     features: [
       "1 location OR 1 app",
-      "100 AI replies/month",
-      "50 SMS/month",
+      "100 AI replies/week",
+      "50 SMS/week",
+      "3 team seats",
       "Basic analytics",
-      "Email support",
+      "Auto-reply",
     ],
     cta: "Start Free Trial",
     highlight: false,
@@ -34,11 +35,11 @@ const PLANS = [
     description: "For growing businesses and dev studios",
     features: [
       "3 locations OR 3 apps",
-      "Unlimited AI replies",
-      "200 SMS/month",
+      "500 AI replies/week",
+      "200 SMS/week",
+      "5 team seats",
       "Full analytics + sentiment",
-      "Weekly email digest",
-      "Priority support",
+      "Data export",
     ],
     cta: "Start Free Trial",
     highlight: true,
@@ -52,12 +53,12 @@ const PLANS = [
     annualUSD: 79,
     description: "For agencies managing multiple clients",
     features: [
-      "10 locations + 10 apps",
+      "10 locations or apps",
       "Unlimited AI replies",
-      "Unlimited SMS",
+      "1,000 SMS/week",
+      "10 team seats",
       "White-label reports",
-      "5 team seats",
-      "Dedicated account manager",
+      "Priority support",
     ],
     cta: "Start Free Trial",
     highlight: false,
@@ -175,7 +176,7 @@ export function PricingTable() {
                   <Link href="/signup">{plan.cta}</Link>
                 </Button>
                 <p className="text-xs text-center text-muted-foreground mt-3">
-                  14-day free trial. No credit card required.
+                  7-day free trial. No credit card required.
                 </p>
               </CardContent>
             </Card>

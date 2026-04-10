@@ -10,13 +10,13 @@ import {
 export const metadata: Metadata = {
   title: "Pricing",
   description:
-    "Simple, transparent pricing starting at ₹1,500/mo. 14-day free trial, no credit card required.",
+    "Simple, transparent pricing starting at ₹1,500/mo. 7-day free trial, no credit card required.",
 };
 
 const FAQ = [
   {
     q: "Is there a free trial?",
-    a: "Yes! Every plan includes a 14-day free trial with full access to all features. No credit card required to start.",
+    a: "Yes! Every plan includes a 7-day free trial with full access to all features. No credit card required to start.",
   },
   {
     q: "Can I switch plans later?",

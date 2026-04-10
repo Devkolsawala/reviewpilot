@@ -62,7 +62,7 @@ export default function SignupPage() {
 
       <h1 className="font-heading text-2xl font-bold">Create your account</h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        Start your 14-day free trial. No credit card required.
+        Start your 7-day free trial. No credit card required.
       </p>
 
       <div className="mt-8">

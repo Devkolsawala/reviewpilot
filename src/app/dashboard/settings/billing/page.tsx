@@ -33,7 +33,7 @@ const PLAN_CARDS = [
     key: "agency",
     name: "Agency",
     price: 8000,
-    features: ["10 locations + apps", "Unlimited AI replies", "1000 SMS/week", "White-label", "5 team seats", "Priority support"],
+    features: ["10 locations or apps", "Unlimited AI replies", "1,000 SMS/week", "White-label", "10 team seats", "Priority support"],
   },
 ];
 

@@ -106,7 +106,7 @@ export default function HomePage() {
       <section className="py-20 sm:py-28 bg-navy-900">
         <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="font-heading text-3xl font-bold text-white sm:text-4xl">
-            Start Your Free 14-Day Trial
+            Start Your Free 7-Day Trial
           </h2>
           <p className="mt-4 text-lg text-navy-300">
             No credit card required. Set up in under 5 minutes.
