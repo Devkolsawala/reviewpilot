@@ -27,12 +27,12 @@ export async function DELETE(
     return NextResponse.json({ error: "Member not found" }, { status: 404 });
   }
 
-  // Clear owner_id on the member's profile so they become an independent user again
+  // Reset the member's profile: clear workspace link and drop them back to free plan
   if (member.member_id) {
     const adminClient = createAdminClient();
     await adminClient
       .from("profiles")
-      .update({ owner_id: null })
+      .update({ owner_id: null, plan: "free" })
       .eq("id", member.member_id);
   }
 

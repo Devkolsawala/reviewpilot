@@ -16,6 +16,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const userEmail = user.email ?? "";
+
   const body = await request.json();
   const { email, role } = body as { email?: string; role?: string };
 
@@ -26,10 +28,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "role must be admin or read_only" }, { status: 400 });
   }
 
-  // ── Fetch owner's profile (plan) ─────────────────────────
+  // ── Fetch owner's profile (plan + name for email) ────────
   const { data: ownerProfile, error: profileErr } = await supabase
     .from("profiles")
-    .select("plan, owner_id")
+    .select("plan, owner_id, full_name")
     .eq("id", user.id)
     .single();
 
@@ -114,14 +116,92 @@ export async function POST(request: Request) {
   const next = encodeURIComponent(`/dashboard/accept-invite?token=${inviteToken}`);
   const redirectTo = `${appUrl}/auth/callback?next=${next}`;
 
+  const inviterName = ownerProfile.full_name || userEmail || "Your teammate";
+  const roleLabel = role === "admin" ? "Admin" : "Read-only";
+
+  // Shared branded email builder
+  function buildInviteEmail(acceptLink: string): string {
+    return `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"/></head>
+<body style="margin:0;padding:0;background:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 0;">
+    <tr><td align="center">
+      <table width="560" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
+
+        <!-- Header -->
+        <tr>
+          <td style="background:linear-gradient(135deg,#0f766e,#0d9488);padding:32px 40px;">
+            <div style="display:inline-flex;align-items:center;gap:10px;">
+              <div style="width:36px;height:36px;background:rgba(255,255,255,0.2);border-radius:8px;display:inline-block;text-align:center;line-height:36px;">
+                <span style="color:#fff;font-weight:700;font-size:14px;">RP</span>
+              </div>
+              <span style="color:#fff;font-size:20px;font-weight:700;letter-spacing:-0.3px;margin-left:8px;">ReviewPilot</span>
+            </div>
+          </td>
+        </tr>
+
+        <!-- Body -->
+        <tr>
+          <td style="padding:40px;">
+            <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#111827;">
+              You&apos;ve been invited to join ReviewPilot
+            </h1>
+            <p style="margin:0 0 24px;font-size:15px;color:#6b7280;line-height:1.6;">
+              <strong style="color:#111827;">${inviterName}</strong> has invited you to join their
+              ReviewPilot workspace as <strong style="color:#0d9488;">${roleLabel}</strong>.
+            </p>
+
+            <div style="background:#f0fdfa;border:1px solid #99f6e4;border-radius:8px;padding:16px 20px;margin-bottom:28px;">
+              <p style="margin:0;font-size:14px;color:#0f766e;line-height:1.6;">
+                <strong>What is ReviewPilot?</strong><br/>
+                ReviewPilot helps businesses manage, respond to, and analyse customer reviews from Google Business Profile and the Play Store — powered by AI.
+              </p>
+            </div>
+
+            <table cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
+              <tr>
+                <td style="background:#0d9488;border-radius:8px;">
+                  <a href="${acceptLink}"
+                     style="display:inline-block;padding:14px 32px;color:#fff;font-size:15px;font-weight:600;text-decoration:none;letter-spacing:-0.1px;">
+                    Accept Invitation →
+                  </a>
+                </td>
+              </tr>
+            </table>
+
+            <p style="margin:0 0 4px;font-size:12px;color:#9ca3af;">
+              Or copy and paste this link into your browser:
+            </p>
+            <p style="margin:0;font-size:12px;color:#0d9488;word-break:break-all;">
+              <a href="${acceptLink}" style="color:#0d9488;">${acceptLink}</a>
+            </p>
+          </td>
+        </tr>
+
+        <!-- Footer -->
+        <tr>
+          <td style="padding:20px 40px;border-top:1px solid #f3f4f6;">
+            <p style="margin:0;font-size:12px;color:#9ca3af;line-height:1.6;">
+              This invite was sent by ${inviterName} (${userEmail}) via ReviewPilot.<br/>
+              If you were not expecting this, you can safely ignore this email.
+            </p>
+          </td>
+        </tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+  }
+
   // ── Send invite email ─────────────────────────────────────
-  // If the email is already in our profiles table (inviteePlan is non-null → existing user),
-  // use a magic link so we bypass the "already registered" Supabase error.
-  // Otherwise use inviteUserByEmail which creates the auth account and sends the email.
   const userExistsInDb = inviteePlan !== null && inviteePlan !== undefined;
 
   if (userExistsInDb) {
-    // Existing user — generate a magic link and send it ourselves
+    // Existing user — generate a magic link and send via Resend
     const { data: linkData, error: linkErr } = await adminClient.auth.admin.generateLink({
       type: "magiclink",
       email,
@@ -137,66 +217,34 @@ export async function POST(request: Request) {
 
     await sendEmail({
       to: email,
-      subject: "You've been invited to join ReviewPilot",
-      html: `
-        <p>You have been invited to join a ReviewPilot workspace.</p>
-        <p>
-          <a href="${linkData.properties.action_link}" style="display:inline-block;padding:12px 24px;background:#0d9488;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;">
-            Accept Invite
-          </a>
-        </p>
-        <p style="color:#666;font-size:13px;">
-          If the button doesn't work, copy and paste this link:<br/>
-          <a href="${linkData.properties.action_link}">${linkData.properties.action_link}</a>
-        </p>
-      `,
+      subject: `${inviterName} invited you to ReviewPilot`,
+      html: buildInviteEmail(linkData.properties.action_link),
     });
   } else {
-    // New user — Supabase creates the account and sends the invite email automatically
-    const { error: inviteErr } = await adminClient.auth.admin.inviteUserByEmail(email, {
-      redirectTo,
+    // New user — Supabase creates the account and sends its own invite email.
+    // We override with our branded email via generateLink to avoid the plain Supabase default.
+    const { data: linkData, error: genErr } = await adminClient.auth.admin.generateLink({
+      type: "invite",
+      email,
+      options: { redirectTo },
     });
 
-    if (inviteErr) {
-      // Last-resort fallback: auth user exists without a profile row (orphaned invite, etc.)
-      const isAlreadyRegistered =
-        inviteErr.status === 422 ||
-        inviteErr.message.toLowerCase().includes("already been registered") ||
-        inviteErr.message.toLowerCase().includes("already registered");
+    if (genErr || !linkData?.properties?.action_link) {
+      return NextResponse.json(
+        { error: genErr?.message ?? "Failed to generate invite link." },
+        { status: 500 }
+      );
+    }
 
-      if (!isAlreadyRegistered) {
-        return NextResponse.json({ error: inviteErr.message }, { status: 500 });
-      }
+    const emailResult = await sendEmail({
+      to: email,
+      subject: `${inviterName} invited you to ReviewPilot`,
+      html: buildInviteEmail(linkData.properties.action_link),
+    });
 
-      const { data: linkData, error: linkErr } = await adminClient.auth.admin.generateLink({
-        type: "magiclink",
-        email,
-        options: { redirectTo },
-      });
-
-      if (linkErr || !linkData?.properties?.action_link) {
-        return NextResponse.json(
-          { error: linkErr?.message ?? "Failed to generate invite link." },
-          { status: 500 }
-        );
-      }
-
-      await sendEmail({
-        to: email,
-        subject: "You've been invited to join ReviewPilot",
-        html: `
-          <p>You have been invited to join a ReviewPilot workspace.</p>
-          <p>
-            <a href="${linkData.properties.action_link}" style="display:inline-block;padding:12px 24px;background:#0d9488;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;">
-              Accept Invite
-            </a>
-          </p>
-          <p style="color:#666;font-size:13px;">
-            If the button doesn't work, copy and paste this link:<br/>
-            <a href="${linkData.properties.action_link}">${linkData.properties.action_link}</a>
-          </p>
-        `,
-      });
+    // Last-resort fallback: if Resend fails, fall back to Supabase's own invite email
+    if (!emailResult.success) {
+      await adminClient.auth.admin.inviteUserByEmail(email, { redirectTo });
     }
   }
 

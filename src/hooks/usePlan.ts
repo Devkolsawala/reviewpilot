@@ -1,6 +1,5 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
 import { getPlan, canUseFeature, type PlanId } from '@/lib/plans';
 
 export function usePlan() {
@@ -10,31 +9,18 @@ export function usePlan() {
 
   useEffect(() => {
     async function load() {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { setIsLoading(false); return; }
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('plan, trial_ends_at, owner_id')
-        .eq('id', user.id)
-        .single();
-
-      if (profile?.owner_id) {
-        // Team member — read plan from the workspace owner's profile
-        const { data: ownerProfile } = await supabase
-          .from('profiles')
-          .select('plan, trial_ends_at')
-          .eq('id', profile.owner_id)
-          .single();
-        setPlanId(ownerProfile?.plan || 'free');
-        setTrialEndsAt(ownerProfile?.trial_ends_at || null);
-      } else {
-        setPlanId(profile?.plan || 'free');
-        setTrialEndsAt(profile?.trial_ends_at || null);
+      try {
+        // /api/plan uses the admin client server-side, bypassing RLS so team
+        // members correctly inherit their workspace owner's plan.
+        const res = await fetch('/api/plan');
+        if (res.ok) {
+          const data = await res.json();
+          setPlanId(data.plan ?? 'free');
+          setTrialEndsAt(data.trial_ends_at ?? null);
+        }
+      } finally {
+        setIsLoading(false);
       }
-
-      setIsLoading(false);
     }
     load();
   }, []);

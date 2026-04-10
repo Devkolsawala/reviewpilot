@@ -11,6 +11,14 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -45,6 +53,7 @@ export default function TeamPage() {
 
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [updatingRoleId, setUpdatingRoleId] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<Member | null>(null);
 
   const maxSeats = plan.limits.team_members;
   const usedSeats = members.filter((m) => m.status === "active" || m.status === "pending").length + 1; // +1 for owner
@@ -94,9 +103,15 @@ export default function TeamPage() {
     await fetchMembers();
   }
 
-  async function handleRemove(memberId: string) {
-    setRemovingId(memberId);
-    await fetch(`/api/team/members/${memberId}`, { method: "DELETE" });
+  async function handleRemove(member: Member) {
+    setConfirmDelete(member);
+  }
+
+  async function confirmRemove() {
+    if (!confirmDelete) return;
+    setRemovingId(confirmDelete.id);
+    setConfirmDelete(null);
+    await fetch(`/api/team/members/${confirmDelete.id}`, { method: "DELETE" });
     setRemovingId(null);
     await fetchMembers();
   }
@@ -301,7 +316,7 @@ export default function TeamPage() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => handleRemove(member.id)}
+                        onClick={() => handleRemove(member)}
                         disabled={removingId === member.id}
                         className="h-8 w-8"
                       >
@@ -334,6 +349,28 @@ export default function TeamPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Delete confirmation dialog */}
+      <Dialog open={!!confirmDelete} onOpenChange={(open) => { if (!open) setConfirmDelete(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Remove team member?</DialogTitle>
+            <DialogDescription>
+              This will remove <strong>{confirmDelete?.email}</strong> from your workspace.
+              They will lose access immediately and their account will be downgraded to the
+              <strong> Free plan</strong>. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmDelete(null)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={confirmRemove} disabled={!!removingId}>
+              {removingId ? "Removing…" : "Yes, remove member"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
