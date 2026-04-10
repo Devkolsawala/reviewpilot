@@ -28,8 +28,9 @@ export async function sendEmail(params: {
 
   const data = await response.json();
   if (!response.ok) {
-    console.error("[Resend Error]", data);
+    console.error("[Resend Error] status:", response.status, "body:", JSON.stringify(data));
     return { success: false };
   }
+  console.log("[Resend] Email sent successfully, id:", data.id);
   return { success: true, id: data.id };
 }

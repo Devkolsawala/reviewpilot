@@ -215,14 +215,29 @@ export async function POST(request: Request) {
       );
     }
 
-    await sendEmail({
+    const emailResult = await sendEmail({
       to: email,
       subject: `${inviterName} invited you to ReviewPilot`,
       html: buildInviteEmail(linkData.properties.action_link),
     });
+
+    if (!emailResult.success) {
+      console.error("[invite] Resend failed for existing user, attempting magic link via Supabase OTP");
+      // Fallback: trigger Supabase's own magic-link email for existing users
+      const { error: otpErr } = await adminClient.auth.admin.generateLink({
+        type: "magiclink",
+        email,
+        options: { redirectTo },
+      });
+      if (otpErr) {
+        return NextResponse.json(
+          { error: "Failed to send invite email. Please try again.", message: "Failed to send invite email. Please try again." },
+          { status: 500 }
+        );
+      }
+    }
   } else {
-    // New user — Supabase creates the account and sends its own invite email.
-    // We override with our branded email via generateLink to avoid the plain Supabase default.
+    // New user — generate invite link and send branded email via Resend
     const { data: linkData, error: genErr } = await adminClient.auth.admin.generateLink({
       type: "invite",
       email,
@@ -244,7 +259,14 @@ export async function POST(request: Request) {
 
     // Last-resort fallback: if Resend fails, fall back to Supabase's own invite email
     if (!emailResult.success) {
-      await adminClient.auth.admin.inviteUserByEmail(email, { redirectTo });
+      console.error("[invite] Resend failed for new user, falling back to Supabase invite email");
+      const { error: fbErr } = await adminClient.auth.admin.inviteUserByEmail(email, { redirectTo });
+      if (fbErr) {
+        return NextResponse.json(
+          { error: "Failed to send invite email. Please try again.", message: "Failed to send invite email. Please try again." },
+          { status: 500 }
+        );
+      }
     }
   }
 

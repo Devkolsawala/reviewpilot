@@ -101,6 +101,7 @@ export default function TeamPage() {
     setInviteSuccess(`Invite sent to ${inviteEmail}`);
     setInviteEmail("");
     await fetchMembers();
+    setTimeout(() => setInviteSuccess(""), 3000);
   }
 
   async function handleRemove(member: Member) {
