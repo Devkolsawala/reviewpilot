@@ -52,9 +52,11 @@ function detectTimezone() {
 interface AppContextFormProps {
   /** When provided (multi-app scenario), use this connection instead of auto-detecting. */
   connectionId?: string;
+  /** When true, all save/edit actions are disabled (read-only role). */
+  disabled?: boolean;
 }
 
-export function AppContextForm({ connectionId: connectionIdProp }: AppContextFormProps = {}) {
+export function AppContextForm({ connectionId: connectionIdProp, disabled = false }: AppContextFormProps = {}) {
   const [connectionId, setConnectionId] = useState<string | null>(connectionIdProp ?? null);
   const [contextId, setContextId] = useState<string | null>(null);
   const [mockUserId, setMockUserId] = useState<string>("anon");
@@ -924,7 +926,7 @@ export function AppContextForm({ connectionId: connectionIdProp }: AppContextFor
       </UpgradeGate>
 
       <div className="flex gap-3">
-        <Button onClick={handleSave} disabled={saving || applyingAutoReply} className="flex-1">
+        <Button onClick={handleSave} disabled={disabled || saving || applyingAutoReply} className="flex-1" title={disabled ? "Your role is read-only" : undefined}>
           {saving ? (
             <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</>
           ) : applyingAutoReply ? (

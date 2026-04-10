@@ -1,14 +1,17 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import type { TeamRole } from "@/hooks/useTeamRole";
 
 /**
- * Returns the effective plan for the current user.
+ * Returns the effective plan AND role for the current user.
  * Uses the admin client to bypass RLS so team members can read their owner's plan.
  *
  * Also auto-accepts any pending invite for this user's email. This is the
  * fallback for cases where the magic-link redirect_to was wrong and the user
  * landed on the homepage instead of /dashboard/accept-invite.
+ *
+ * Response: { plan, trial_ends_at, role: 'owner' | 'admin' | 'read_only' }
  */
 export async function GET() {
   const supabase = createClient();
@@ -17,7 +20,7 @@ export async function GET() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ plan: "free", trial_ends_at: null });
+    return NextResponse.json({ plan: "free", trial_ends_at: null, role: "owner" as TeamRole });
   }
 
   const adminClient = createAdminClient();
@@ -29,30 +32,42 @@ export async function GET() {
     .single();
 
   if (!profile) {
-    return NextResponse.json({ plan: "free", trial_ends_at: null });
+    return NextResponse.json({ plan: "free", trial_ends_at: null, role: "owner" as TeamRole });
   }
 
-  // ── Already linked to an owner → return owner's plan ────
+  // ── Already linked to an owner → return owner's plan + role ─
   if (profile.owner_id) {
-    const { data: ownerProfile } = await adminClient
-      .from("profiles")
-      .select("plan, trial_ends_at")
-      .eq("id", profile.owner_id)
-      .single();
+    const [{ data: ownerProfile }, { data: membership }] = await Promise.all([
+      adminClient
+        .from("profiles")
+        .select("plan, trial_ends_at")
+        .eq("id", profile.owner_id)
+        .single(),
+      adminClient
+        .from("team_members")
+        .select("role")
+        .eq("member_id", user.id)
+        .eq("owner_id", profile.owner_id)
+        .eq("status", "active")
+        .single(),
+    ]);
+
+    const role: TeamRole = (membership?.role as TeamRole) ?? "read_only";
 
     return NextResponse.json({
       plan: ownerProfile?.plan ?? "free",
       trial_ends_at: ownerProfile?.trial_ends_at ?? null,
+      role,
     });
   }
 
   // ── No owner_id yet — check for a pending invite by email ─
-  // This auto-accepts the invite even when the magic-link redirect
-  // failed to land on /dashboard/accept-invite (e.g. wrong redirectTo URL).
+  // Auto-accepts the invite even when the magic-link redirect failed to land
+  // on /dashboard/accept-invite (e.g. wrong redirectTo URL in Vercel env).
   if (user.email) {
     const { data: pendingInvite } = await adminClient
       .from("team_members")
-      .select("id, owner_id")
+      .select("id, owner_id, role")
       .eq("email", user.email)
       .eq("status", "pending")
       .maybeSingle();
@@ -72,16 +87,19 @@ export async function GET() {
         .update({ owner_id: pendingInvite.owner_id })
         .eq("id", user.id);
 
-      // Return the owner's plan immediately
+      // Return the owner's plan + the role from the invite
       const { data: ownerProfile } = await adminClient
         .from("profiles")
         .select("plan, trial_ends_at")
         .eq("id", pendingInvite.owner_id)
         .single();
 
+      const role: TeamRole = (pendingInvite.role as TeamRole) ?? "read_only";
+
       return NextResponse.json({
         plan: ownerProfile?.plan ?? "free",
         trial_ends_at: ownerProfile?.trial_ends_at ?? null,
+        role,
       });
     }
   }
@@ -90,5 +108,6 @@ export async function GET() {
   return NextResponse.json({
     plan: profile.plan ?? "free",
     trial_ends_at: profile.trial_ends_at ?? null,
+    role: "owner" as TeamRole,
   });
 }

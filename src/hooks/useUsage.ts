@@ -23,8 +23,9 @@ export function useUsage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { setIsLoading(false); return; }
 
-      const [{ data: profile }, { data: usageRow }] = await Promise.all([
-        supabase.from('profiles').select('plan').eq('id', user.id).single(),
+      // Fetch plan via /api/plan so team members get the owner's plan (bypasses RLS)
+      const [planRes, { data: usageRow }] = await Promise.all([
+        fetch('/api/plan'),
         supabase
           .from('usage')
           .select('ai_replies_used, auto_replies_used, sms_sent, reviews_fetched, period_key')
@@ -33,7 +34,11 @@ export function useUsage() {
           .single(),
       ]);
 
-      setPlanId(profile?.plan ?? 'free');
+      if (planRes.ok) {
+        const planData = await planRes.json();
+        setPlanId(planData.plan ?? 'free');
+      }
+
       setUsage(
         usageRow ?? {
           ai_replies_used: 0,

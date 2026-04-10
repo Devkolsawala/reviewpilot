@@ -65,12 +65,15 @@ export default function TeamPage() {
     if (res.ok) {
       const data = await res.json();
       setMembers(data.members ?? []);
+      // API now returns ownerEmail so non-owners see the correct owner address
+      if (data.ownerEmail) setOwnerEmail(data.ownerEmail);
     }
     setLoading(false);
   }, []);
 
   useEffect(() => {
     async function init() {
+      // Seed ownerEmail from current user as a quick default; fetchMembers overwrites it
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       setOwnerEmail(user?.email ?? "");

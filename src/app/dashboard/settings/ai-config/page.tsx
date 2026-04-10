@@ -56,10 +56,10 @@ export default function AIConfigPage() {
 
       {/* Mount a fresh form when the selected connection changes */}
       {resolvedConnId && (
-        <AppContextForm key={resolvedConnId} connectionId={resolvedConnId} />
+        <AppContextForm key={resolvedConnId} connectionId={resolvedConnId} disabled={isReadOnly} />
       )}
       {!loading && !resolvedConnId && (
-        <AppContextForm />
+        <AppContextForm disabled={isReadOnly} />
       )}
     </div>
   );
