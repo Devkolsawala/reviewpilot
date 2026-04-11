@@ -127,6 +127,21 @@ export const PLANS = {
 
 export type PlanId = keyof typeof PLANS;
 
+export const PLAN_HIERARCHY: Record<string, number> = {
+  free: 0,
+  starter: 1,
+  growth: 2,
+  agency: 3,
+};
+
+export function isUpgrade(currentPlan: string, targetPlan: string): boolean {
+  return (PLAN_HIERARCHY[targetPlan] ?? 0) > (PLAN_HIERARCHY[currentPlan] ?? 0);
+}
+
+export function isDowngrade(currentPlan: string, targetPlan: string): boolean {
+  return (PLAN_HIERARCHY[targetPlan] ?? 0) < (PLAN_HIERARCHY[currentPlan] ?? 0);
+}
+
 export const USAGE_PERIOD = {
   get duration(): 'week' | 'test' {
     if (process.env.NEXT_PUBLIC_USAGE_PERIOD_MINUTES) return 'test';

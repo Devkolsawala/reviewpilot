@@ -73,6 +73,32 @@ async function handleCron(request: NextRequest) {
   // because the route requires a logged-in session to reach (protected by middleware).
   const supabase = getAdminClient();
 
+  // Safety net: downgrade users whose subscription_cancel_at has passed and webhook was missed
+  try {
+    const { data: expiredSubs } = await supabase
+      .from('profiles')
+      .select('id, plan')
+      .not('subscription_cancel_at', 'is', null)
+      .lt('subscription_cancel_at', new Date().toISOString())
+      .neq('plan', 'free');
+
+    if (expiredSubs && expiredSubs.length > 0) {
+      for (const profile of expiredSubs) {
+        await supabase
+          .from('profiles')
+          .update({
+            plan: 'free',
+            razorpay_subscription_id: null,
+            subscription_cancel_at: null,
+          })
+          .eq('id', profile.id);
+        console.log(`[CRON] Auto-downgraded expired user ${profile.id} from ${profile.plan} to free`);
+      }
+    }
+  } catch (safetyErr) {
+    console.error('[CRON] Safety downgrade check failed:', safetyErr);
+  }
+
   const results: Array<{
     connectionId: string;
     name: string;

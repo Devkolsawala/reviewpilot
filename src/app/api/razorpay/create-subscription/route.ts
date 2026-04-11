@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { createSubscription } from '@/lib/razorpay';
+import { createSubscription, cancelSubscription } from '@/lib/razorpay';
+import { isUpgrade, isDowngrade } from '@/lib/plans';
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,17 +16,49 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid plan' }, { status: 400 });
     }
 
-    // Check if user already has an active subscription
     const { data: profile } = await supabase
       .from('profiles')
-      .select('razorpay_subscription_id, plan')
+      .select('razorpay_subscription_id, plan, subscription_cancel_at')
       .eq('id', user.id)
       .single();
 
-    if (profile?.plan !== 'free' && profile?.razorpay_subscription_id) {
+    const currentPlan = profile?.plan ?? 'free';
+    const isCurrentlyPaid = currentPlan !== 'free';
+    const hasCancellationPending = !!profile?.subscription_cancel_at;
+    const hasActiveSubId = !!profile?.razorpay_subscription_id;
+
+    // Block downgrade while subscription is fully active (no cancellation pending)
+    if (isCurrentlyPaid && !hasCancellationPending && isDowngrade(currentPlan, planName)) {
       return NextResponse.json({
-        error: 'You already have an active subscription. Cancel it first to switch plans.',
+        error: `Downgrade not available while your ${currentPlan} plan is active. Cancel your current plan first — it will remain active until the billing period ends, then you can subscribe to the ${planName} plan.`,
+        code: 'downgrade_blocked',
       }, { status: 400 });
+    }
+
+    // Upgrade from active paid plan: cancel old subscription immediately, then create new one
+    if (isCurrentlyPaid && !hasCancellationPending && isUpgrade(currentPlan, planName) && hasActiveSubId) {
+      try {
+        await cancelSubscription(profile!.razorpay_subscription_id!, false); // false = cancel immediately
+        console.log(`[UPGRADE] Immediately cancelled ${currentPlan} sub for upgrade to ${planName}`);
+      } catch (err) {
+        console.error('[UPGRADE] Failed to cancel old subscription:', err);
+        // Continue — old sub may already be cancelled or in a terminal state
+      }
+    }
+
+    // Re-subscribe: user cancelled and wants to come back (same or different plan)
+    if (hasCancellationPending && hasActiveSubId) {
+      try {
+        await cancelSubscription(profile!.razorpay_subscription_id!, false); // cancel immediately
+        console.log(`[RESUBSCRIBE] Cancelled pending-cancel sub, creating new ${planName} sub`);
+      } catch (err) {
+        console.error('[RESUBSCRIBE] Cancel failed:', err);
+      }
+      // Clear the cancel flag before creating new subscription
+      await supabase
+        .from('profiles')
+        .update({ subscription_cancel_at: null, razorpay_subscription_id: null })
+        .eq('id', user.id);
     }
 
     const result = await createSubscription(
@@ -34,7 +67,7 @@ export async function POST(request: NextRequest) {
       user.user_metadata?.full_name
     );
 
-    // Save the pending subscription ID to profile
+    // Save the new pending subscription ID
     await supabase
       .from('profiles')
       .update({ razorpay_subscription_id: result.subscriptionId })

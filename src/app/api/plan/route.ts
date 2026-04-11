@@ -35,6 +35,21 @@ export async function GET() {
     return NextResponse.json({ plan: "free", trial_ends_at: null, subscription_cancel_at: null, role: "owner" as TeamRole });
   }
 
+  // ── Auto-downgrade if subscription_cancel_at has passed ──────────────────
+  if (
+    profile.subscription_cancel_at &&
+    new Date(profile.subscription_cancel_at) < new Date() &&
+    profile.plan !== "free"
+  ) {
+    await adminClient
+      .from("profiles")
+      .update({ plan: "free", razorpay_subscription_id: null, subscription_cancel_at: null })
+      .eq("id", user.id);
+    profile.plan = "free";
+    profile.subscription_cancel_at = null;
+    console.log(`[PLAN API] Auto-downgraded user ${user.id} — subscription_cancel_at passed`);
+  }
+
   // ── Already linked to an owner → return owner's plan + role ─
   if (profile.owner_id) {
     const [{ data: ownerProfile }, { data: membership }] = await Promise.all([
@@ -52,12 +67,24 @@ export async function GET() {
         .single(),
     ]);
 
+    // Auto-downgrade owner if their cancel date passed
+    let ownerPlan = ownerProfile?.plan ?? "free";
+    let ownerCancelAt = ownerProfile?.subscription_cancel_at ?? null;
+    if (ownerCancelAt && new Date(ownerCancelAt) < new Date() && ownerPlan !== "free") {
+      await adminClient
+        .from("profiles")
+        .update({ plan: "free", razorpay_subscription_id: null, subscription_cancel_at: null })
+        .eq("id", profile.owner_id);
+      ownerPlan = "free";
+      ownerCancelAt = null;
+    }
+
     const role: TeamRole = (membership?.role as TeamRole) ?? "read_only";
 
     return NextResponse.json({
-      plan: ownerProfile?.plan ?? "free",
+      plan: ownerPlan,
       trial_ends_at: ownerProfile?.trial_ends_at ?? null,
-      subscription_cancel_at: ownerProfile?.subscription_cancel_at ?? null,
+      subscription_cancel_at: ownerCancelAt,
       role,
     });
   }

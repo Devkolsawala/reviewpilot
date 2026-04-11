@@ -12,6 +12,8 @@ import {
   AlertTriangle,
   Loader2,
   XCircle,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUsage } from "@/hooks/useUsage";
@@ -26,6 +28,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { isUpgrade, isDowngrade } from "@/lib/plans";
 
 declare global {
   interface Window {
@@ -103,6 +106,7 @@ export default function BillingPage() {
   const [userEmail, setUserEmail] = useState("");
   const [userName, setUserName] = useState("");
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [upgradeTarget, setUpgradeTarget] = useState<string | null>(null);
   const { toast } = useToast();
 
   const {
@@ -145,19 +149,20 @@ export default function BillingPage() {
     day: "numeric",
   });
 
-  async function handleSubscribe(planName: string) {
+  async function openCheckout(planName: string) {
     setLoading(planName);
     try {
-      // Step 1: Create subscription on server
       const res = await fetch("/api/razorpay/create-subscription", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ planName }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      if (!res.ok) {
+        // Downgrade blocked — show the server's message
+        throw new Error(data.error);
+      }
 
-      // Step 2: Open Razorpay checkout
       if (typeof window === "undefined" || !window.Razorpay) {
         throw new Error("Razorpay checkout not loaded. Please refresh the page.");
       }
@@ -168,7 +173,6 @@ export default function BillingPage() {
         name: "ReviewPilot",
         description: `${planName.charAt(0).toUpperCase() + planName.slice(1)} Plan — Monthly`,
         handler: async (response: Record<string, string>) => {
-          // Step 3: Verify payment on server
           const verifyRes = await fetch("/api/razorpay/verify", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -189,7 +193,7 @@ export default function BillingPage() {
           } else {
             toast({
               title: "Verification failed",
-              description: verifyData.error ?? "Payment verification failed. Contact support.",
+              description: verifyData.error ?? "Contact support.",
               variant: "destructive",
             });
             setLoading(null);
@@ -198,69 +202,53 @@ export default function BillingPage() {
         modal: {
           ondismiss: () => {
             setLoading(null);
-            toast({
-              title: "Payment cancelled",
-              description: "You can try again any time.",
-              variant: "destructive",
-            });
+            toast({ title: "Payment cancelled", description: "You can try again any time.", variant: "destructive" });
           },
         },
-        prefill: {
-          email: userEmail,
-          name: userName,
-        },
-        theme: {
-          color: "#14B8A6",
-        },
+        prefill: { email: userEmail, name: userName },
+        theme: { color: "#14B8A6" },
       };
 
       const rzp = new window.Razorpay(options);
       rzp.on("payment.failed", (response: Record<string, unknown>) => {
         const err = response.error as Record<string, string> | undefined;
-        toast({
-          title: "Payment failed",
-          description: err?.description ?? "Please try again.",
-          variant: "destructive",
-        });
+        toast({ title: "Payment failed", description: err?.description ?? "Please try again.", variant: "destructive" });
         setLoading(null);
       });
       rzp.open();
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Something went wrong";
-      toast({
-        title: "Error",
-        description: message,
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: message, variant: "destructive" });
       setLoading(null);
+    }
+  }
+
+  function handlePlanClick(targetPlan: string) {
+    // Upgrade from active paid plan needs a confirmation dialog
+    if (isPaidPlan && !cancellationPending && isUpgrade(planId as string, targetPlan)) {
+      setUpgradeTarget(targetPlan);
+    } else {
+      openCheckout(targetPlan);
     }
   }
 
   async function handleCancelSubscription() {
     setLoading("cancel");
     try {
-      const res = await fetch("/api/razorpay/cancel-subscription", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      });
+      const res = await fetch("/api/razorpay/cancel-subscription", { method: "POST" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      toast({
-        title: "Cancellation scheduled",
-        description: data.message ?? "Your plan will remain active until the end of the billing period.",
-      });
+      toast({ title: "Cancellation scheduled", description: data.message });
       setTimeout(() => window.location.reload(), 1500);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Something went wrong";
-      toast({
-        title: "Error",
-        description: message,
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: message, variant: "destructive" });
     } finally {
       setLoading(null);
     }
   }
+
+  const upgradeTargetCard = PLAN_CARDS.find((p) => p.key === upgradeTarget);
 
   return (
     <div className="space-y-6">
@@ -275,9 +263,7 @@ export default function BillingPage() {
           <AlertTriangle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
           <div>
             <p className="font-semibold text-red-800 dark:text-red-200">Your free trial has ended</p>
-            <p className="text-sm text-red-600 dark:text-red-400 mt-0.5">
-              Choose a plan below to continue using ReviewPilot and keep all your data.
-            </p>
+            <p className="text-sm text-red-600 dark:text-red-400 mt-0.5">Choose a plan below to continue using ReviewPilot.</p>
           </div>
         </div>
       )}
@@ -290,9 +276,7 @@ export default function BillingPage() {
             <p className="font-semibold text-amber-800 dark:text-amber-200">Cancellation scheduled</p>
             <p className="text-sm text-amber-700 dark:text-amber-300 mt-0.5">
               Your plan will remain active until{" "}
-              <strong>
-                {cancelDate.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}
-              </strong>
+              <strong>{cancelDate.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}</strong>
               . After that, your account moves to the free plan.
             </p>
           </div>
@@ -300,7 +284,7 @@ export default function BillingPage() {
             size="sm"
             variant="outline"
             className="shrink-0 border-amber-400 text-amber-700 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-300"
-            onClick={() => handleSubscribe(planId as string)}
+            onClick={() => openCheckout(planId as string)}
             disabled={loading !== null}
           >
             Re-subscribe
@@ -315,7 +299,7 @@ export default function BillingPage() {
           <p className="text-purple-800 dark:text-purple-300">
             <strong>Test mode active</strong> — limits reset every minute. Remove{" "}
             <code className="bg-black/10 dark:bg-white/10 px-1 py-0.5 rounded font-mono text-[11px]">USAGE_PERIOD_MINUTES</code>{" "}
-            from <code className="bg-black/10 dark:bg-white/10 px-1 py-0.5 rounded font-mono text-[11px]">.env.local</code> for production weekly reset.
+            from <code className="bg-black/10 dark:bg-white/10 px-1 py-0.5 rounded font-mono text-[11px]">.env.local</code> for production.
           </p>
         </div>
       )}
@@ -347,10 +331,11 @@ export default function BillingPage() {
                 variant="secondary"
                 className={cn(
                   "text-xs capitalize",
-                  isPaidPlan && "bg-teal-100 text-teal-700 dark:bg-teal-950/50 dark:text-teal-300"
+                  isPaidPlan && !cancellationPending && "bg-teal-100 text-teal-700 dark:bg-teal-950/50 dark:text-teal-300",
+                  cancellationPending && "bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300"
                 )}
               >
-                {planId}
+                {cancellationPending ? "Cancelling" : planId}
               </Badge>
             </div>
           </CardContent>
@@ -382,25 +367,9 @@ export default function BillingPage() {
               </div>
             ) : (
               <>
-                <UsageBar
-                  label="AI Replies"
-                  used={totalAiUsed}
-                  total={isAiUnlimited ? null : aiLimit}
-                  percent={aiPercent}
-                />
-                <UsageBar
-                  label="SMS Sent"
-                  used={smsUsed}
-                  total={isSmsUnlimited ? null : smsLimit}
-                  percent={smsPercent}
-                  comingSoon
-                />
-                <UsageBar
-                  label="Reviews Fetched"
-                  used={usage?.reviews_fetched ?? 0}
-                  total={null}
-                  percent={0}
-                />
+                <UsageBar label="AI Replies" used={totalAiUsed} total={isAiUnlimited ? null : aiLimit} percent={aiPercent} />
+                <UsageBar label="SMS Sent" used={smsUsed} total={isSmsUnlimited ? null : smsLimit} percent={smsPercent} comingSoon />
+                <UsageBar label="Reviews Fetched" used={usage?.reviews_fetched ?? 0} total={null} percent={0} />
               </>
             )}
           </CardContent>
@@ -415,15 +384,19 @@ export default function BillingPage() {
         </h2>
         <div className="grid gap-4 md:grid-cols-3">
           {PLAN_CARDS.map((p) => {
-            const isCurrent = planId === p.key;
+            const isCurrent = planId === p.key && !cancellationPending;
+            const upgrading = isPaidPlan && !cancellationPending && isUpgrade(planId as string, p.key);
+            const downgrading = isPaidPlan && !cancellationPending && isDowngrade(planId as string, p.key);
+            const isResubscribe = cancellationPending && planId === p.key;
+
             return (
               <Card
                 key={p.key}
                 className={cn(
                   "relative",
-                  p.popular && "border-teal-500 shadow-lg",
+                  p.popular && !isCurrent && "border-teal-500 shadow-lg",
                   isCurrent && "ring-2 ring-teal-500",
-                  trialExpired && !isCurrent && "hover:border-teal-400 transition-colors"
+                  downgrading && "opacity-75"
                 )}
               >
                 {p.popular && !isCurrent && (
@@ -439,40 +412,62 @@ export default function BillingPage() {
                 <CardContent className="p-6">
                   <h3 className="font-heading text-lg font-bold">{p.name}</h3>
                   <p className="mt-2">
-                    <span className="text-3xl font-bold font-heading">
-                      ₹{p.price.toLocaleString("en-IN")}
-                    </span>
+                    <span className="text-3xl font-bold font-heading">₹{p.price.toLocaleString("en-IN")}</span>
                     <span className="text-sm text-muted-foreground">/mo</span>
                   </p>
                   <ul className="mt-4 space-y-2">
-                    {p.features.map((f) => (
-                      <FeatureItem key={f} text={f} />
-                    ))}
+                    {p.features.map((f) => <FeatureItem key={f} text={f} />)}
                   </ul>
-                  <Button
-                    className={cn(
-                      "w-full mt-6",
-                      trialExpired && !isCurrent && "bg-teal-600 hover:bg-teal-700"
-                    )}
-                    variant={isCurrent ? "secondary" : p.popular ? "default" : "outline"}
-                    onClick={() => !isCurrent && handleSubscribe(p.key)}
-                    disabled={loading === p.key || isCurrent}
-                  >
-                    {loading === p.key ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Processing…
-                      </>
-                    ) : isCurrent ? (
-                      "Current Plan"
-                    ) : trialExpired ? (
-                      "Select Plan"
-                    ) : isPaidPlan ? (
-                      "Switch Plan"
-                    ) : (
-                      "Subscribe"
-                    )}
-                  </Button>
+
+                  {/* Button logic */}
+                  {isCurrent ? (
+                    <Button className="w-full mt-6" variant="secondary" disabled>Current Plan</Button>
+                  ) : isResubscribe ? (
+                    <Button
+                      className="w-full mt-6 bg-teal-600 hover:bg-teal-700"
+                      onClick={() => openCheckout(p.key)}
+                      disabled={loading === p.key}
+                    >
+                      {loading === p.key ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Processing…</> : "Re-subscribe"}
+                    </Button>
+                  ) : upgrading ? (
+                    <div className="mt-6 space-y-2">
+                      <Button
+                        className="w-full bg-teal-600 hover:bg-teal-700"
+                        onClick={() => handlePlanClick(p.key)}
+                        disabled={loading === p.key}
+                      >
+                        {loading === p.key ? (
+                          <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Processing…</>
+                        ) : (
+                          <><ArrowUp className="mr-2 h-4 w-4" />Upgrade to {p.name}</>
+                        )}
+                      </Button>
+                      <p className="text-[11px] text-center text-muted-foreground">
+                        Your current plan will be cancelled and you&apos;ll be billed ₹{p.price.toLocaleString("en-IN")}/mo from today.
+                      </p>
+                    </div>
+                  ) : downgrading ? (
+                    <div className="mt-6 space-y-2">
+                      <Button className="w-full" variant="outline" disabled>
+                        <ArrowDown className="mr-2 h-4 w-4" />Downgrade to {p.name}
+                      </Button>
+                      <p className="text-[11px] text-center text-muted-foreground">
+                        Cancel your current plan first. You can downgrade after it expires.
+                      </p>
+                    </div>
+                  ) : (
+                    <Button
+                      className={cn("w-full mt-6", trialExpired && "bg-teal-600 hover:bg-teal-700")}
+                      variant={p.popular ? "default" : "outline"}
+                      onClick={() => openCheckout(p.key)}
+                      disabled={loading === p.key}
+                    >
+                      {loading === p.key ? (
+                        <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Processing…</>
+                      ) : trialExpired ? "Select Plan" : "Subscribe"}
+                    </Button>
+                  )}
                 </CardContent>
               </Card>
             );
@@ -480,7 +475,7 @@ export default function BillingPage() {
         </div>
       </div>
 
-      {/* Cancel subscription — only for paid users */}
+      {/* Cancel subscription — only for paid, non-pending users */}
       {isPaidPlan && (
         <Card className="border-red-200 dark:border-red-900/50">
           <CardHeader>
@@ -502,10 +497,7 @@ export default function BillingPage() {
               onClick={() => setCancelDialogOpen(true)}
             >
               {loading === "cancel" ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Cancelling…
-                </>
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Cancelling…</>
               ) : cancellationPending ? (
                 "Cancellation Scheduled"
               ) : (
@@ -519,29 +511,15 @@ export default function BillingPage() {
                   <DialogTitle>Cancel your subscription?</DialogTitle>
                   <DialogDescription asChild>
                     <div className="space-y-3 text-sm text-muted-foreground">
-                      <p>
-                        You have <strong className="text-foreground">already been charged</strong> for the current billing period. Your <strong className="text-foreground">{plan.name} plan</strong> will remain active until the end of this period.
-                      </p>
-                      <p>
-                        From next month, you will <strong className="text-foreground">not be charged</strong>.
-                      </p>
-                      <p className="text-amber-600 dark:text-amber-400 font-medium">
-                        No refunds are provided for the current billing period.
-                      </p>
+                      <p>You have <strong className="text-foreground">already been charged</strong> for the current billing period. Your <strong className="text-foreground">{plan.name} plan</strong> will remain active until the end of this period.</p>
+                      <p>From next month, you will <strong className="text-foreground">not be charged</strong>.</p>
+                      <p className="text-amber-600 dark:text-amber-400 font-medium">No refunds are provided for the current billing period.</p>
                     </div>
                   </DialogDescription>
                 </DialogHeader>
                 <DialogFooter>
-                  <Button variant="outline" onClick={() => setCancelDialogOpen(false)}>
-                    Keep Subscription
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    onClick={() => {
-                      setCancelDialogOpen(false);
-                      handleCancelSubscription();
-                    }}
-                  >
+                  <Button variant="outline" onClick={() => setCancelDialogOpen(false)}>Keep Subscription</Button>
+                  <Button variant="destructive" onClick={() => { setCancelDialogOpen(false); handleCancelSubscription(); }}>
                     Yes, Cancel
                   </Button>
                 </DialogFooter>
@@ -550,22 +528,45 @@ export default function BillingPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Upgrade confirmation dialog */}
+      {upgradeTargetCard && (
+        <Dialog open={!!upgradeTarget} onOpenChange={(open) => { if (!open) setUpgradeTarget(null); }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Upgrade to {upgradeTargetCard.name}?</DialogTitle>
+              <DialogDescription asChild>
+                <div className="space-y-3 text-sm text-muted-foreground">
+                  <p>
+                    Your current <strong className="text-foreground">{plan.name} plan</strong> will be cancelled immediately and you&apos;ll be charged{" "}
+                    <strong className="text-foreground">₹{upgradeTargetCard.price.toLocaleString("en-IN")}/mo</strong> starting today.
+                  </p>
+                  <p className="text-amber-600 dark:text-amber-400">
+                    Unused days from your current plan are not refunded. For best value, upgrade near the end of your billing cycle.
+                  </p>
+                </div>
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setUpgradeTarget(null)}>Cancel</Button>
+              <Button
+                className="bg-teal-600 hover:bg-teal-700"
+                onClick={() => { setUpgradeTarget(null); openCheckout(upgradeTargetCard.key); }}
+              >
+                Confirm Upgrade — ₹{upgradeTargetCard.price.toLocaleString("en-IN")}/mo
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
 
 function UsageBar({
-  label,
-  used,
-  total,
-  percent,
-  comingSoon,
+  label, used, total, percent, comingSoon,
 }: {
-  label: string;
-  used: number;
-  total: number | null;
-  percent: number;
-  comingSoon?: boolean;
+  label: string; used: number; total: number | null; percent: number; comingSoon?: boolean;
 }) {
   return (
     <div>
@@ -579,11 +580,7 @@ function UsageBar({
           )}
         </span>
         <span className="text-muted-foreground">
-          {comingSoon
-            ? "Coming Soon"
-            : total === null
-              ? `${used} used`
-              : `${used} / ${total}`}
+          {comingSoon ? "Coming Soon" : total === null ? `${used} used` : `${used} / ${total}`}
         </span>
       </div>
       {total !== null && !comingSoon && (

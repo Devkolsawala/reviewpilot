@@ -42,6 +42,7 @@ export async function POST(request: NextRequest) {
             .update({
               plan: planName,
               trial_ends_at: null,
+              subscription_cancel_at: null, // Fresh activation — no pending cancel
             })
             .eq('razorpay_subscription_id', subscriptionId);
           console.log(`[WEBHOOK] Activated: ${planName}, error: ${error?.message || 'none'}`);
@@ -50,23 +51,58 @@ export async function POST(request: NextRequest) {
       }
 
       case 'subscription.charged': {
-        // Recurring payment successful
+        // Recurring payment successful — subscription renewed
         const subscriptionId = payload.subscription?.entity?.id;
         if (subscriptionId) {
-          const { data: profile } = await supabase
+          // Clear any stale cancel flag on renewal
+          await supabase
             .from('profiles')
-            .select('id')
-            .eq('razorpay_subscription_id', subscriptionId)
-            .single();
-          if (profile) {
-            console.log(`[WEBHOOK] Charged: user ${profile.id}, usage resets via period_key system`);
-          }
+            .update({ subscription_cancel_at: null })
+            .eq('razorpay_subscription_id', subscriptionId);
+          console.log(`[WEBHOOK] Charged: usage resets via period_key system`);
         }
         break;
       }
 
-      case 'subscription.cancelled':
+      case 'subscription.cancelled': {
+        // Razorpay fires this IMMEDIATELY when a cancel is scheduled (cancel_at_cycle_end=1).
+        // The subscription is still ACTIVE until current_end — DO NOT downgrade yet.
+        // We only downgrade when subscription.completed fires (period actually ends).
+        //
+        // Exception: if current_end is in the past (or absent), the cancel was immediate — downgrade now.
+        const sub = payload.subscription?.entity;
+        const subscriptionId = sub?.id;
+        if (!subscriptionId) break;
+
+        const currentEndUnix = sub?.current_end as number | undefined;
+        const currentEnd = currentEndUnix ? new Date(currentEndUnix * 1000) : null;
+        const isGraceful = currentEnd && currentEnd > new Date();
+
+        if (isGraceful) {
+          // Graceful cancel-at-cycle-end: keep plan active, record end date
+          const { error } = await supabase
+            .from('profiles')
+            .update({ subscription_cancel_at: currentEnd.toISOString() })
+            .eq('razorpay_subscription_id', subscriptionId);
+          console.log(`[WEBHOOK] Graceful cancel — plan stays active until ${currentEnd.toISOString()}, error: ${error?.message || 'none'}`);
+        } else {
+          // Immediate cancel (cancelAtEnd=false) or unknown — downgrade now
+          const { error } = await supabase
+            .from('profiles')
+            .update({
+              plan: 'free',
+              razorpay_subscription_id: null,
+              subscription_cancel_at: null,
+              trial_ends_at: null,
+            })
+            .eq('razorpay_subscription_id', subscriptionId);
+          console.log(`[WEBHOOK] Immediate cancel — downgraded to free, error: ${error?.message || 'none'}`);
+        }
+        break;
+      }
+
       case 'subscription.completed': {
+        // Billing period is OVER — the subscription has fully ended. Downgrade now.
         const subscriptionId = payload.subscription?.entity?.id;
         if (subscriptionId) {
           const { error } = await supabase
@@ -74,24 +110,28 @@ export async function POST(request: NextRequest) {
             .update({
               plan: 'free',
               razorpay_subscription_id: null,
+              subscription_cancel_at: null,
               trial_ends_at: null,
-              subscription_cancel_at: null, // Period ended — clear the pending flag
             })
             .eq('razorpay_subscription_id', subscriptionId);
-          console.log(`[WEBHOOK] Cancelled/Completed: downgraded to free, error: ${error?.message || 'none'}`);
+          console.log(`[WEBHOOK] Completed — downgraded to free, error: ${error?.message || 'none'}`);
         }
         break;
       }
 
       case 'subscription.halted': {
-        // Payment failed repeatedly — downgrade
+        // Payment failed repeatedly — downgrade immediately
         const subscriptionId = payload.subscription?.entity?.id;
         if (subscriptionId) {
-          await supabase
+          const { error } = await supabase
             .from('profiles')
-            .update({ plan: 'free', razorpay_subscription_id: null, subscription_cancel_at: null })
+            .update({
+              plan: 'free',
+              razorpay_subscription_id: null,
+              subscription_cancel_at: null,
+            })
             .eq('razorpay_subscription_id', subscriptionId);
-          console.log(`[WEBHOOK] Halted: downgraded to free`);
+          console.log(`[WEBHOOK] Halted — downgraded to free, error: ${error?.message || 'none'}`);
         }
         break;
       }
@@ -99,7 +139,7 @@ export async function POST(request: NextRequest) {
       case 'payment.failed': {
         const subscriptionId = payload.payment?.entity?.subscription_id;
         console.log(`[WEBHOOK] Payment failed for subscription: ${subscriptionId}`);
-        // Don't downgrade immediately — Razorpay retries automatically
+        // Don't downgrade — Razorpay retries automatically. Only halt does the downgrade.
         break;
       }
 
