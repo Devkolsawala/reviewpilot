@@ -151,6 +151,7 @@ export const USAGE_PERIOD = {
     if (process.env.NEXT_PUBLIC_USAGE_PERIOD_MINUTES) return 'minute';
     return 'week';
   },
+  // Legacy global period key — kept for backward compat but usage.ts now uses getUserPeriodKey
   getCurrentPeriodKey(): string {
     if (process.env.NEXT_PUBLIC_USAGE_PERIOD_MINUTES) {
       const minutes = parseInt(process.env.NEXT_PUBLIC_USAGE_PERIOD_MINUTES) || 1;
@@ -165,6 +166,7 @@ export const USAGE_PERIOD = {
     );
     return `${now.getFullYear()}-W${String(weekNumber).padStart(2, '0')}`;
   },
+  // Legacy global reset date — kept for backward compat
   getResetDate(): Date {
     if (process.env.NEXT_PUBLIC_USAGE_PERIOD_MINUTES) {
       const minutes = parseInt(process.env.NEXT_PUBLIC_USAGE_PERIOD_MINUTES) || 1;
@@ -177,6 +179,36 @@ export const USAGE_PERIOD = {
     const nextMonday = new Date(now.getFullYear(), now.getMonth(), now.getDate() + daysUntilMonday);
     nextMonday.setHours(0, 0, 0, 0);
     return nextMonday;
+  },
+
+  // ── User-specific period key ──────────────────────────────────────────────────
+  // Period key format: "p-{periodNumber}-{startDate}" (e.g. "p-2-2026-04-12")
+  // Each user has an independent 7-day rolling cycle anchored to their signup date.
+  getUserPeriodKey(userStartDate: string | Date): string {
+    if (process.env.NEXT_PUBLIC_USAGE_PERIOD_MINUTES) {
+      const minutes = parseInt(process.env.NEXT_PUBLIC_USAGE_PERIOD_MINUTES) || 1;
+      const periodNumber = Math.floor(Date.now() / (minutes * 60 * 1000));
+      return `test-${periodNumber}`;
+    }
+    const start = new Date(userStartDate);
+    const now = new Date();
+    const daysSinceStart = Math.floor((now.getTime() - start.getTime()) / 86400000);
+    const periodNumber = Math.floor(daysSinceStart / 7);
+    return `p-${periodNumber}-${start.toISOString().slice(0, 10)}`;
+  },
+
+  // Returns when the current 7-day period resets for this specific user
+  getUserResetDate(userStartDate: string | Date): Date {
+    if (process.env.NEXT_PUBLIC_USAGE_PERIOD_MINUTES) {
+      const minutes = parseInt(process.env.NEXT_PUBLIC_USAGE_PERIOD_MINUTES) || 1;
+      const currentPeriodStart = Math.floor(Date.now() / (minutes * 60 * 1000)) * (minutes * 60 * 1000);
+      return new Date(currentPeriodStart + minutes * 60 * 1000);
+    }
+    const start = new Date(userStartDate);
+    const now = new Date();
+    const daysSinceStart = Math.floor((now.getTime() - start.getTime()) / 86400000);
+    const currentPeriodNumber = Math.floor(daysSinceStart / 7);
+    return new Date(start.getTime() + (currentPeriodNumber + 1) * 7 * 86400000);
   },
 };
 

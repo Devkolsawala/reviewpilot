@@ -19,11 +19,32 @@ export type UsageField = 'ai_replies_used' | 'sms_sent' | 'reviews_fetched' | 'a
 
 // ── Shared helpers ─────────────────────────────────────────────────────────────
 
-async function fetchUsage(
+/**
+ * Fetches plan, usage_period_start, and created_at in a single query.
+ * Used to compute the user-specific period key without a second DB round-trip.
+ */
+async function fetchProfile(
   supabase: SupabaseClient | ReturnType<typeof createAdminClient>,
   userId: string
+): Promise<{ plan: string; usage_period_start: string | null; created_at: string | null }> {
+  const { data } = await (supabase as SupabaseClient)
+    .from('profiles')
+    .select('plan, usage_period_start, created_at')
+    .eq('id', userId)
+    .single();
+  return data ?? { plan: 'free', usage_period_start: null, created_at: null };
+}
+
+/** Returns the user's period start date, falling back to created_at then now(). */
+function getPeriodStartDate(profile: { usage_period_start: string | null; created_at: string | null }): string {
+  return profile.usage_period_start || profile.created_at || new Date().toISOString();
+}
+
+async function fetchUsage(
+  supabase: SupabaseClient | ReturnType<typeof createAdminClient>,
+  userId: string,
+  periodKey: string
 ) {
-  const periodKey = USAGE_PERIOD.getCurrentPeriodKey();
   const { data } = await (supabase as SupabaseClient)
     .from('usage')
     .select('*')
@@ -49,9 +70,9 @@ async function upsertUsage(
   supabase: SupabaseClient | ReturnType<typeof createAdminClient>,
   userId: string,
   field: UsageField,
-  amount: number
+  amount: number,
+  periodKey: string
 ) {
-  const periodKey = USAGE_PERIOD.getCurrentPeriodKey();
   const client = supabase as SupabaseClient;
 
   const { data: existing } = await client
@@ -86,9 +107,12 @@ export async function checkUsageLimit(
   supabase?: SupabaseClient
 ): Promise<UsageCheck> {
   const client = supabase ?? createClient();
-  const planId = await fetchPlan(client, userId);
+  const profile = await fetchProfile(client, userId);
+  const planId = profile.plan ?? 'free';
   const plan = getPlan(planId);
-  const usage = await fetchUsage(client, userId);
+  const startDate = getPeriodStartDate(profile);
+  const periodKey = USAGE_PERIOD.getUserPeriodKey(startDate);
+  const usage = await fetchUsage(client, userId, periodKey);
 
   let current = 0;
   let limit = 0;
@@ -120,7 +144,7 @@ export async function checkUsageLimit(
     remaining: isUnlimited ? Infinity : Math.max(0, limit - current),
     planName: plan.name,
     periodLabel: USAGE_PERIOD.label,
-    resetDate: USAGE_PERIOD.getResetDate(),
+    resetDate: USAGE_PERIOD.getUserResetDate(startDate),
     upgradeNeeded: !allowed,
   };
 }
@@ -132,7 +156,10 @@ export async function incrementUsage(
   supabase?: SupabaseClient
 ) {
   const client = supabase ?? createClient();
-  await upsertUsage(client, userId, field, amount);
+  const profile = await fetchProfile(client, userId);
+  const startDate = getPeriodStartDate(profile);
+  const periodKey = USAGE_PERIOD.getUserPeriodKey(startDate);
+  await upsertUsage(client, userId, field, amount, periodKey);
 }
 
 // ── Admin (service role) for cron jobs ─────────────────────────────────────────
@@ -149,9 +176,12 @@ export async function checkUsageLimitAdmin(
   limitType: 'ai_replies' | 'sms'
 ): Promise<UsageCheck> {
   const client = getAdminClient();
-  const planId = await fetchPlan(client, userId);
+  const profile = await fetchProfile(client, userId);
+  const planId = profile.plan ?? 'free';
   const plan = getPlan(planId);
-  const usage = await fetchUsage(client, userId);
+  const startDate = getPeriodStartDate(profile);
+  const periodKey = USAGE_PERIOD.getUserPeriodKey(startDate);
+  const usage = await fetchUsage(client, userId, periodKey);
 
   let current = 0;
   const limit = limitType === 'ai_replies'
@@ -172,7 +202,7 @@ export async function checkUsageLimitAdmin(
     remaining: isUnlimited ? Infinity : Math.max(0, limit - current),
     planName: plan.name,
     periodLabel: USAGE_PERIOD.label,
-    resetDate: USAGE_PERIOD.getResetDate(),
+    resetDate: USAGE_PERIOD.getUserResetDate(startDate),
     upgradeNeeded: !(isUnlimited || current < limit),
   };
 }
@@ -183,7 +213,10 @@ export async function incrementUsageAdmin(
   amount: number = 1
 ) {
   const client = getAdminClient();
-  await upsertUsage(client, userId, field, amount);
+  const profile = await fetchProfile(client, userId);
+  const startDate = getPeriodStartDate(profile);
+  const periodKey = USAGE_PERIOD.getUserPeriodKey(startDate);
+  await upsertUsage(client, userId, field, amount, periodKey);
 }
 
 export async function getUserPlanAdmin(userId: string): Promise<string> {

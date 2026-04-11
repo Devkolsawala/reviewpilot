@@ -56,14 +56,14 @@ export default function ConnectionsPage() {
 
       if (!silent) {
         const parts: string[] = [];
-        if (data.newReviews > 0) parts.push(`${data.newReviews} new review${data.newReviews === 1 ? "" : "s"}`);
+        if (data.newReviews > 0) parts.push(`${data.newReviews} new unanswered review${data.newReviews === 1 ? "" : "s"}`);
         if (data.autoPublished > 0) parts.push(`${data.autoPublished} auto-published`);
         if (data.autoDrafted > 0) parts.push(`${data.autoDrafted} AI draft${data.autoDrafted === 1 ? "" : "s"}`);
         const detail = parts.length > 0
           ? `${parts.join(", ")}.`
           : data.updatedReviews > 0
             ? `${data.updatedReviews} review(s) updated, no new rows.`
-            : "No new reviews found.";
+            : "No new unanswered reviews found.";
         toast({ title: "Sync complete", description: detail });
       }
     } catch (err) {

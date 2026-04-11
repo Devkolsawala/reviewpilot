@@ -89,8 +89,9 @@ export async function POST(request: Request) {
     }
   }
 
-  // ── Step 2: Upsert fetched reviews and auto-reply new ones ───────────────────
-  let newCount = 0;
+  // ── Step 2: Upsert fetched reviews and auto-reply new unanswered ones ────────
+  let newUnansweredCount = 0;  // new reviews without a Play Store reply
+  let alreadyRepliedCount = 0; // new reviews that already had a developer reply on Play Store
   let updatedCount = 0;
   let autoDrafted = 0;
   let autoPublished = 0;
@@ -119,6 +120,8 @@ export async function POST(request: Request) {
       continue;
     }
 
+    // Include reply_status, reply_text, reply_published_at, is_read so that
+    // reviews already answered on Play Store are stored as 'published' (not 'pending').
     const { data: inserted, error: insertError } = await supabase
       .from("reviews")
       .insert({
@@ -133,9 +136,13 @@ export async function POST(request: Request) {
         sentiment: review.sentiment,
         keywords: review.keywords,
         review_created_at: review.review_created_at,
+        reply_status: review.reply_status,
+        reply_text: review.reply_text ?? null,
+        reply_published_at: review.reply_published_at ?? null,
+        is_read: review.is_read ?? false,
       })
       .select(
-        "id, source, external_review_id, author_name, rating, review_text, review_language, sentiment, keywords, review_created_at"
+        "id, source, external_review_id, author_name, rating, review_text, review_language, sentiment, keywords, review_created_at, reply_status"
       )
       .single();
 
@@ -144,23 +151,29 @@ export async function POST(request: Request) {
       continue;
     }
 
-    console.log(`[FETCH] Inserted review by ${review.author_name} (${review.rating}★, id: ${review.external_review_id})`);
-    newCount++;
+    if (inserted.reply_status === "pending") {
+      newUnansweredCount++;
+      console.log(`[FETCH] Inserted unanswered review by ${review.author_name} (${review.rating}★, id: ${review.external_review_id})`);
 
-    if (appContextRow) {
-      const outcome = await processAutoReplyForReview(
-        supabase,
-        {
-          id: connection.id,
-          type: connection.type,
-          credentials: connection.credentials as Record<string, unknown> | null,
-          external_id: connection.external_id,
-        },
-        inserted,
-        appContextRow as AppContext
-      );
-      if (outcome === "drafted") autoDrafted++;
-      if (outcome === "published") autoPublished++;
+      // Only auto-reply for reviews that are actually unanswered
+      if (appContextRow) {
+        const outcome = await processAutoReplyForReview(
+          supabase,
+          {
+            id: connection.id,
+            type: connection.type,
+            credentials: connection.credentials as Record<string, unknown> | null,
+            external_id: connection.external_id,
+          },
+          inserted,
+          appContextRow as AppContext
+        );
+        if (outcome === "drafted") autoDrafted++;
+        if (outcome === "published") autoPublished++;
+      }
+    } else {
+      alreadyRepliedCount++;
+      console.log(`[FETCH] Inserted already-replied review by ${review.author_name} (${review.rating}★, id: ${review.external_review_id})`);
     }
   }
 
@@ -214,27 +227,27 @@ export async function POST(request: Request) {
     .from("connections")
     .update({
       last_synced_at: new Date().toISOString(),
-      review_count: (connection.review_count ?? 0) + newCount,
+      review_count: (connection.review_count ?? 0) + newUnansweredCount,
     })
     .eq("id", connectionId);
 
-  console.log(`[FETCH] Sync complete: ${fetchedReviews.length} fetched from API, ${newCount} new, ${updatedCount} updated, ${autoDrafted} auto-drafted, ${autoPublished} auto-published`);
+  console.log(`[FETCH] Sync complete: ${fetchedReviews.length} fetched from Play Store, ${newUnansweredCount} new unanswered, ${alreadyRepliedCount} already replied on Play Store, ${updatedCount} updated, ${autoDrafted} auto-drafted, ${autoPublished} auto-published`);
 
   // Return sync error only if nothing was processed at all
-  if (syncError && newCount === 0 && autoDrafted === 0 && autoPublished === 0) {
+  if (syncError && newUnansweredCount === 0 && autoDrafted === 0 && autoPublished === 0) {
     return NextResponse.json({ error: syncError, fetchedCount: 0, autoDrafted, autoPublished });
   }
 
   return NextResponse.json({
     success: true,
     totalFetched: fetchedReviews.length,
-    fetchedCount: newCount,
-    newReviews: newCount,
+    newReviews: newUnansweredCount,
+    alreadyReplied: alreadyRepliedCount,
     updatedReviews: updatedCount,
     autoDrafted,
     autoPublished,
     syncError: syncError ?? undefined,
-    message: `Synced ${fetchedReviews.length} reviews (${newCount} new, ${updatedCount} updated)`,
+    message: `Found ${newUnansweredCount} new unanswered review${newUnansweredCount === 1 ? "" : "s"}`,
   });
 }
 
