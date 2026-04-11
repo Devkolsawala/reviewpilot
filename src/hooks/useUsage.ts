@@ -15,6 +15,9 @@ export interface UsageData {
 export function useUsage() {
   const [usage, setUsage] = useState<UsageData | null>(null);
   const [planId, setPlanId] = useState<string>('free');
+  // usage_period_start drives the user-specific rolling 7-day window.
+  // Falls back to "now" if the API hasn't returned it yet.
+  const [periodStart, setPeriodStart] = useState<string>(() => new Date().toISOString());
   const [isLoading, setIsLoading] = useState(true);
 
   const refresh = useCallback(async () => {
@@ -23,21 +26,27 @@ export function useUsage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { setIsLoading(false); return; }
 
-      // Fetch plan via /api/plan so team members get the owner's plan (bypasses RLS)
-      const [planRes, { data: usageRow }] = await Promise.all([
-        fetch('/api/plan'),
-        supabase
-          .from('usage')
-          .select('ai_replies_used, auto_replies_used, sms_sent, reviews_fetched, period_key')
-          .eq('user_id', user.id)
-          .eq('period_key', USAGE_PERIOD.getCurrentPeriodKey())
-          .single(),
-      ]);
-
+      // Fetch plan + user-specific period start via /api/plan so team members
+      // get the owner's plan and period anchor (bypasses RLS on the server).
+      const planRes = await fetch('/api/plan');
+      let resolvedPeriodStart = new Date().toISOString();
       if (planRes.ok) {
         const planData = await planRes.json();
         setPlanId(planData.plan ?? 'free');
+        if (planData.usage_period_start) {
+          resolvedPeriodStart = planData.usage_period_start;
+          setPeriodStart(resolvedPeriodStart);
+        }
       }
+
+      // Now we know which period_key to read
+      const userPeriodKey = USAGE_PERIOD.getUserPeriodKey(resolvedPeriodStart);
+      const { data: usageRow } = await supabase
+        .from('usage')
+        .select('ai_replies_used, auto_replies_used, sms_sent, reviews_fetched, period_key')
+        .eq('user_id', user.id)
+        .eq('period_key', userPeriodKey)
+        .single();
 
       setUsage(
         usageRow ?? {
@@ -45,7 +54,7 @@ export function useUsage() {
           auto_replies_used: 0,
           sms_sent: 0,
           reviews_fetched: 0,
-          period_key: USAGE_PERIOD.getCurrentPeriodKey(),
+          period_key: userPeriodKey,
         }
       );
     } catch (err) {
@@ -86,7 +95,7 @@ export function useUsage() {
     smsLimit,
     isSmsUnlimited,
     smsPercent: isSmsUnlimited ? 0 : Math.min(100, ((usage?.sms_sent ?? 0) / smsLimit) * 100),
-    resetDate: USAGE_PERIOD.getResetDate(),
+    resetDate: USAGE_PERIOD.getUserResetDate(periodStart),
     periodLabel: USAGE_PERIOD.label,
   };
 }

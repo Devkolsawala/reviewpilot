@@ -20,19 +20,68 @@ export async function GET() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ plan: "free", trial_ends_at: null, role: "owner" as TeamRole });
+    return NextResponse.json({ plan: "free", trial_ends_at: null, usage_period_start: null, role: "owner" as TeamRole });
   }
 
   const adminClient = createAdminClient();
 
   const { data: profile } = await adminClient
     .from("profiles")
-    .select("plan, trial_ends_at, owner_id, subscription_cancel_at")
+    .select("plan, trial_ends_at, owner_id, subscription_cancel_at, created_at, usage_period_start")
     .eq("id", user.id)
     .single();
 
   if (!profile) {
-    return NextResponse.json({ plan: "free", trial_ends_at: null, subscription_cancel_at: null, role: "owner" as TeamRole });
+    // Profile row doesn't exist yet (trigger race / upsert not yet run).
+    // Create it here with a proper trial so the banner shows immediately.
+    const trialEnds = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    const periodStart = new Date().toISOString();
+    await adminClient
+      .from("profiles")
+      .insert({
+        id: user.id,
+        full_name: user.user_metadata?.full_name ?? user.email,
+        plan: "free",
+        trial_ends_at: trialEnds,
+        usage_period_start: periodStart,
+      });
+    return NextResponse.json({
+      plan: "free",
+      trial_ends_at: trialEnds,
+      usage_period_start: periodStart,
+      subscription_cancel_at: null,
+      role: "owner" as TeamRole,
+    });
+  }
+
+  // ── Self-heal: backfill trial_ends_at if NULL for a free user ────────────
+  // Protects against legacy rows created before migration 014 or via an upsert
+  // path that only set {id}. We anchor the trial to max(created_at+7d, now+7d)
+  // so older accounts still get a fair trial window from today.
+  if (profile.plan === "free" && !profile.trial_ends_at) {
+    const createdAt = profile.created_at ? new Date(profile.created_at).getTime() : Date.now();
+    const nowMs = Date.now();
+    const weekMs = 7 * 24 * 60 * 60 * 1000;
+    const trialEnds = new Date(Math.max(createdAt + weekMs, nowMs + weekMs)).toISOString();
+    await adminClient
+      .from("profiles")
+      .update({ trial_ends_at: trialEnds })
+      .eq("id", user.id);
+    profile.trial_ends_at = trialEnds;
+    console.log(`[PLAN API] Self-healed trial_ends_at for user ${user.id} → ${trialEnds}`);
+  }
+
+  // ── Self-heal: backfill usage_period_start if NULL ───────────────────────
+  // Anchors the rolling 7-day usage window to the account creation date so
+  // usage resets on the user's own cycle, not on the calendar week.
+  if (!profile.usage_period_start) {
+    const periodStart = profile.created_at ?? new Date().toISOString();
+    await adminClient
+      .from("profiles")
+      .update({ usage_period_start: periodStart })
+      .eq("id", user.id);
+    profile.usage_period_start = periodStart;
+    console.log(`[PLAN API] Self-healed usage_period_start for user ${user.id} → ${periodStart}`);
   }
 
   // ── Auto-downgrade if subscription_cancel_at has passed ──────────────────
@@ -55,7 +104,7 @@ export async function GET() {
     const [{ data: ownerProfile }, { data: membership }] = await Promise.all([
       adminClient
         .from("profiles")
-        .select("plan, trial_ends_at, subscription_cancel_at")
+        .select("plan, trial_ends_at, subscription_cancel_at, usage_period_start")
         .eq("id", profile.owner_id)
         .single(),
       adminClient
@@ -84,6 +133,7 @@ export async function GET() {
     return NextResponse.json({
       plan: ownerPlan,
       trial_ends_at: ownerProfile?.trial_ends_at ?? null,
+      usage_period_start: ownerProfile?.usage_period_start ?? null,
       subscription_cancel_at: ownerCancelAt,
       role,
     });
@@ -118,7 +168,7 @@ export async function GET() {
       // Return the owner's plan + the role from the invite
       const { data: ownerProfile } = await adminClient
         .from("profiles")
-        .select("plan, trial_ends_at, subscription_cancel_at")
+        .select("plan, trial_ends_at, subscription_cancel_at, usage_period_start")
         .eq("id", pendingInvite.owner_id)
         .single();
 
@@ -127,6 +177,7 @@ export async function GET() {
       return NextResponse.json({
         plan: ownerProfile?.plan ?? "free",
         trial_ends_at: ownerProfile?.trial_ends_at ?? null,
+        usage_period_start: ownerProfile?.usage_period_start ?? null,
         subscription_cancel_at: ownerProfile?.subscription_cancel_at ?? null,
         role,
       });
@@ -137,6 +188,7 @@ export async function GET() {
   return NextResponse.json({
     plan: profile.plan ?? "free",
     trial_ends_at: profile.trial_ends_at ?? null,
+    usage_period_start: profile.usage_period_start ?? null,
     subscription_cancel_at: profile.subscription_cancel_at ?? null,
     role: "owner" as TeamRole,
   });

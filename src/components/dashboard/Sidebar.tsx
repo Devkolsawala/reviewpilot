@@ -22,7 +22,6 @@ import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useUsage } from "@/hooks/useUsage";
 import { useTeamRole } from "@/hooks/useTeamRole";
-import { USAGE_PERIOD } from "@/lib/plans";
 
 const MOCK_OVERRIDES_PREFIX = "reviewpilot_mock_overrides";
 const IS_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === "true";
@@ -118,7 +117,7 @@ const SETTINGS_NAV = [
 export function Sidebar({ collapsed, mobile }: { collapsed?: boolean; mobile?: boolean }) {
   const pathname = usePathname();
   const pendingCount = usePendingReviewCount();
-  const { plan, totalAiUsed, aiLimit, isAiUnlimited, aiPercent, isLoading: usageLoading } = useUsage();
+  const { plan, totalAiUsed, aiLimit, isAiUnlimited, aiPercent, resetDate, periodLabel, isLoading: usageLoading } = useUsage();
   const { isOwner } = useTeamRole();
   const [settingsOpen, setSettingsOpen] = useState(
     pathname.startsWith("/dashboard/settings")
@@ -319,12 +318,11 @@ export function Sidebar({ collapsed, mobile }: { collapsed?: boolean; mobile?: b
                 <p className="text-[10px] text-teal-700/70 dark:text-teal-400/70 mb-1">
                   {isAiUnlimited
                     ? "Unlimited AI replies"
-                    : `${totalAiUsed}/${aiLimit} AI replies this ${USAGE_PERIOD.label}`}
+                    : `${totalAiUsed}/${aiLimit} AI replies this ${periodLabel}`}
                 </p>
                 {!isAiUnlimited && (
                   <p className="text-[10px] text-teal-700/50 dark:text-teal-400/50 mb-2">
                     {(() => {
-                      const resetDate = USAGE_PERIOD.getResetDate();
                       const msUntilReset = resetDate.getTime() - Date.now();
                       if (msUntilReset < 60 * 60 * 1000) {
                         const mins = Math.max(1, Math.ceil(msUntilReset / 60000));
