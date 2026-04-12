@@ -57,6 +57,8 @@ export function TrialBanner() {
   }
 
   // ── FREE PLAN: trial states ─────────────────────────────────────────────────
+  // Billing page shows its own trial banner — don't duplicate
+  if (isBillingPage) return null;
   if (planId !== 'free') return null;
   if (trialDaysLeft === null) return null;
 

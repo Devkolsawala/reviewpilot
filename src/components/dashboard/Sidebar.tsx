@@ -18,6 +18,7 @@ import {
   HelpCircle,
   BookOpen,
 } from "lucide-react";
+import { FeedbackDialog } from "@/components/dashboard/FeedbackDialog";
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useUsage } from "@/hooks/useUsage";
@@ -270,21 +271,25 @@ export function Sidebar({ collapsed, mobile }: { collapsed?: boolean; mobile?: b
         )}
       </nav>
 
-      {/* Keyboard shortcuts hint */}
-      {!collapsed && (
-        <div className="px-4 pb-2">
-          <button
-            onClick={() => {
-              // Dispatch a synthetic "?" keydown to trigger the global modal
-              document.dispatchEvent(new KeyboardEvent("keydown", { key: "?", bubbles: true }));
-            }}
-            className="flex items-center gap-2 text-[11px] text-muted-foreground/60 hover:text-muted-foreground transition-colors w-full px-3 py-1.5"
-          >
-            <HelpCircle className="h-3 w-3" />
-            Press <kbd className="px-1 py-0.5 rounded bg-secondary text-[10px] font-mono">?</kbd> for shortcuts
-          </button>
-        </div>
-      )}
+      {/* Feedback & keyboard shortcuts */}
+      <div className="px-4 pb-2 space-y-0.5">
+        {collapsed ? (
+          <FeedbackDialog collapsed />
+        ) : (
+          <>
+            <FeedbackDialog />
+            <button
+              onClick={() => {
+                document.dispatchEvent(new KeyboardEvent("keydown", { key: "?", bubbles: true }));
+              }}
+              className="flex items-center gap-2 text-[11px] text-muted-foreground/60 hover:text-muted-foreground transition-colors w-full px-3 py-1.5"
+            >
+              <HelpCircle className="h-3 w-3" />
+              Press <kbd className="px-1 py-0.5 rounded bg-secondary text-[10px] font-mono">?</kbd> for shortcuts
+            </button>
+          </>
+        )}
+      </div>
 
       {/* Plan badge footer */}
       <div className="border-t p-3">

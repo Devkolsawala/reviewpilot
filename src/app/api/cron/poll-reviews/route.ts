@@ -1,16 +1,17 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { fetchPlayStoreReviews } from "@/lib/google/playstore";
 import { processAutoReplyForReview } from "@/lib/reviews/auto-reply";
 import { checkUsageLimitAdmin, incrementUsageAdmin, getUserPlanAdmin } from "@/lib/usage";
 import { isCronSyncAllowed } from "@/lib/plans";
 import type { AppContext } from "@/types/database";
 
 function getAdminClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) {
+    throw new Error("Missing SUPABASE_URL or SERVICE_ROLE_KEY env vars");
+  }
+  return createClient(url, key);
 }
 
 const INTERVAL_HOURS: Record<string, number> = {
@@ -60,7 +61,7 @@ async function handleCron(request: NextRequest) {
   const isManualSync = request.method === "POST";
 
   if (!isManualSync) {
-    // Automated cron (GET from Vercel): verify CRON_SECRET
+    // Automated cron (GET from Cloudflare Worker): verify CRON_SECRET
     const authHeader = request.headers.get("authorization");
     const cronSecret = process.env.CRON_SECRET;
     if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
@@ -178,6 +179,19 @@ async function handleCron(request: NextRequest) {
           connection.type === "play_store" &&
           connection.external_id
         ) {
+          // Dynamic import — graceful failure if googleapis isn't installed
+          let fetchPlayStoreReviews: typeof import("@/lib/google/playstore").fetchPlayStoreReviews;
+          try {
+            const playstore = await import("@/lib/google/playstore");
+            fetchPlayStoreReviews = playstore.fetchPlayStoreReviews;
+          } catch (importErr: unknown) {
+            const ie = importErr as { message?: string };
+            connResult.errors.push(`Play Store lib unavailable: ${ie.message}`);
+            console.error("[CRON] Failed to import playstore lib:", ie.message);
+            results.push(connResult);
+            continue;
+          }
+
           const fetchedReviews = await fetchPlayStoreReviews(
             connection.external_id,
             connection.credentials as Record<string, unknown> | null
@@ -361,7 +375,7 @@ async function handleCron(request: NextRequest) {
   }
 }
 
-// GET: called by Vercel cron (authenticated via CRON_SECRET)
+// GET: called by Cloudflare Worker cron (authenticated via CRON_SECRET)
 export async function GET(request: NextRequest) {
   return handleCron(request);
 }
