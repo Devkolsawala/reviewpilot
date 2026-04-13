@@ -1072,7 +1072,7 @@ function SuccessScreen({
 }
 
 // ---------------------------------------------------------------------------
-// GBP Wizard (unchanged)
+// GBP Wizard — 3-step manual connection flow
 // ---------------------------------------------------------------------------
 
 function GBPWizard({
@@ -1082,12 +1082,19 @@ function GBPWizard({
   onBack: () => void;
   onComplete?: (connection: Connection) => void;
 }) {
+  const [step, setStep] = useState<1 | 2 | 3>(1);
   const [businessName, setBusinessName] = useState("");
+  const [mapsUrl, setMapsUrl] = useState("");
+  const [address, setAddress] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
+  const [savedConnection, setSavedConnection] = useState<Connection | null>(null);
 
-  async function handleConnect() {
-    if (!businessName) return;
+  async function handleSave() {
+    if (!businessName || !mapsUrl || !contactEmail) return;
     setSaving(true);
+    setSaveError("");
 
     const supabase = createClient();
     const {
@@ -1095,6 +1102,7 @@ function GBPWizard({
     } = await supabase.auth.getUser();
     if (!user) {
       setSaving(false);
+      setSaveError("You must be logged in.");
       return;
     }
 
@@ -1106,6 +1114,13 @@ function GBPWizard({
         user_id: user.id,
         type: "google_business",
         name: businessName,
+        external_id: mapsUrl,
+        credentials: {
+          contact_email: contactEmail,
+          maps_url: mapsUrl,
+          address: address || null,
+          status: "pending_verification",
+        },
         is_active: true,
         review_count: 0,
       })
@@ -1116,52 +1131,203 @@ function GBPWizard({
 
     if (error) {
       console.error("[GBP connect] Insert error:", error);
+      setSaveError("Failed to save connection. Please try again.");
       return;
     }
 
-    onComplete?.(conn as Connection);
+    setSavedConnection(conn as Connection);
+    setStep(3);
   }
 
+  // ── Step 1: Enter business details ────────────────────────────────────────
+  if (step === 1) {
+    return (
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2 mb-1">
+            <StepBadge current={1} total={3} />
+            <CardTitle className="text-base">Enter your business details</CardTitle>
+          </div>
+          <CardDescription>
+            Tell us about your Google Business Profile so we can fetch your reviews.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="rounded-lg border border-blue-200 bg-blue-50 dark:bg-blue-950/20 dark:border-blue-800 p-3">
+            <p className="text-xs text-blue-700 dark:text-blue-400">
+              We need your Google Maps link to identify your business and fetch reviews once GBP API access is approved.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label>
+              Business Name <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              placeholder="Your business name as it appears on Google"
+              value={businessName}
+              onChange={(e) => setBusinessName(e.target.value)}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>
+              Google Maps URL <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              placeholder="https://maps.google.com/?cid=XXXXXXXX"
+              value={mapsUrl}
+              onChange={(e) => setMapsUrl(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              Search your business on Google Maps → click{" "}
+              <strong>Share</strong> → copy the link
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Business Address <span className="text-muted-foreground text-xs">(optional)</span></Label>
+            <Input
+              placeholder="123 Main St, City, State"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>
+              GBP Management Email <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              type="email"
+              placeholder="owner@yourbusiness.com"
+              value={contactEmail}
+              onChange={(e) => setContactEmail(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              Email address that manages this Google Business Profile — this may differ from your login email.
+            </p>
+          </div>
+
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={onBack}>
+              <ArrowLeft className="mr-2 h-4 w-4" /> Back
+            </Button>
+            <Button
+              onClick={() => setStep(2)}
+              disabled={!businessName || !mapsUrl || !contactEmail}
+            >
+              Continue <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // ── Step 2: Verify / confirm ───────────────────────────────────────────────
+  if (step === 2) {
+    return (
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2 mb-1">
+            <StepBadge current={2} total={3} />
+            <CardTitle className="text-base">Verify your business</CardTitle>
+          </div>
+          <CardDescription>
+            Confirm the details below and save your connection.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="rounded-lg border bg-secondary/40 p-4 space-y-2 text-sm">
+            <div className="flex gap-2">
+              <span className="text-muted-foreground w-28 shrink-0">Business</span>
+              <span className="font-medium">{businessName}</span>
+            </div>
+            <div className="flex gap-2">
+              <span className="text-muted-foreground w-28 shrink-0">Maps URL</span>
+              <span className="font-mono text-xs break-all">{mapsUrl}</span>
+            </div>
+            {address && (
+              <div className="flex gap-2">
+                <span className="text-muted-foreground w-28 shrink-0">Address</span>
+                <span>{address}</span>
+              </div>
+            )}
+            <div className="flex gap-2">
+              <span className="text-muted-foreground w-28 shrink-0">GBP Email</span>
+              <span>{contactEmail}</span>
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 p-3">
+            <p className="text-xs text-amber-700 dark:text-amber-400">
+              Your connection will be saved with <strong>Pending Verification</strong> status. Reviews will appear
+              in your inbox once our team verifies the connection (usually within 24 hours).
+            </p>
+          </div>
+
+          {saveError && (
+            <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-3">
+              <p className="text-xs text-destructive">{saveError}</p>
+            </div>
+          )}
+
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setStep(1)} disabled={saving}>
+              <ArrowLeft className="mr-2 h-4 w-4" /> Back
+            </Button>
+            <Button onClick={handleSave} disabled={saving}>
+              {saving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="mr-2 h-4 w-4" /> Verify Connection
+                </>
+              )}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // ── Step 3: Success ────────────────────────────────────────────────────────
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base flex items-center gap-2">
-          <Globe className="h-5 w-5 text-teal-500" />
-          Connect Google Business Profile
-        </CardTitle>
-        <CardDescription>
-          OAuth-based connection. Full setup requires GBP API approval.
-        </CardDescription>
+        <div className="flex items-center gap-2 mb-1">
+          <StepBadge current={3} total={3} />
+          <CardTitle className="text-base">Connection saved</CardTitle>
+        </div>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 p-3">
-          <p className="text-xs text-amber-700 dark:text-amber-400">
-            GBP API access is pending approval. Save your business name now
-            and we&apos;ll activate live syncing once approved.
+      <CardContent className="space-y-4 text-center">
+        <div className="flex flex-col items-center gap-2 py-2">
+          <div className="h-12 w-12 rounded-full bg-teal-100 dark:bg-teal-950/40 flex items-center justify-center">
+            <CheckCircle2 className="h-6 w-6 text-teal-600" />
+          </div>
+          <p className="font-semibold">{businessName}</p>
+          <p className="text-sm text-muted-foreground max-w-xs">
+            Your business has been saved. We&apos;ll start fetching reviews once the connection is verified.
           </p>
+          <Badge
+            variant="secondary"
+            className="text-xs bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400"
+          >
+            Pending Verification
+          </Badge>
         </div>
-        <div className="space-y-2">
-          <Label>Business Name</Label>
-          <Input
-            placeholder="My Restaurant / Clinic / Shop"
-            value={businessName}
-            onChange={(e) => setBusinessName(e.target.value)}
-          />
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={onBack}>
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back
+        <div className="flex gap-2 justify-center flex-wrap">
+          <Button
+            className="bg-teal-600 hover:bg-teal-700 text-white"
+            onClick={() => savedConnection && onComplete?.(savedConnection)}
+          >
+            Go to Review Inbox <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
-          <Button onClick={handleConnect} disabled={saving || !businessName}>
-            {saving ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...
-              </>
-            ) : (
-              <>
-                Save Connection <ArrowRight className="ml-2 h-4 w-4" />
-              </>
-            )}
+          <Button variant="outline" onClick={onBack}>
+            Connect another source
           </Button>
         </div>
       </CardContent>

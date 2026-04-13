@@ -206,21 +206,31 @@ export default function ConnectionsPage() {
                     </div>
 
                     <div className="flex items-center gap-2 shrink-0">
-                      <Badge
-                        variant="secondary"
-                        className={cn(
-                          "text-[10px]",
-                          conn.is_active
-                            ? "bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-400"
-                            : "bg-gray-100 text-gray-600 dark:bg-gray-900 dark:text-gray-400"
-                        )}
-                      >
-                        {conn.is_active ? (
-                          <><CheckCircle2 className="h-2.5 w-2.5 mr-1" />Active</>
-                        ) : (
-                          <><AlertCircle className="h-2.5 w-2.5 mr-1" />Inactive</>
-                        )}
-                      </Badge>
+                      {conn.type === "google_business" &&
+                      (conn.credentials as { status?: string } | null)?.status === "pending_verification" ? (
+                        <Badge
+                          variant="secondary"
+                          className="text-[10px] bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400"
+                        >
+                          <AlertCircle className="h-2.5 w-2.5 mr-1" />Pending Verification
+                        </Badge>
+                      ) : (
+                        <Badge
+                          variant="secondary"
+                          className={cn(
+                            "text-[10px]",
+                            conn.is_active
+                              ? "bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-400"
+                              : "bg-gray-100 text-gray-600 dark:bg-gray-900 dark:text-gray-400"
+                          )}
+                        >
+                          {conn.is_active ? (
+                            <><CheckCircle2 className="h-2.5 w-2.5 mr-1" />Active</>
+                          ) : (
+                            <><AlertCircle className="h-2.5 w-2.5 mr-1" />Inactive</>
+                          )}
+                        </Badge>
+                      )}
                       <Button
                         variant="outline"
                         size="sm"

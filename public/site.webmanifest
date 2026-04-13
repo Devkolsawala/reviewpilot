@@ -1,0 +1,14 @@
+{
+  "name": "ReviewPilot",
+  "short_name": "ReviewPilot",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ],
+  "theme_color": "#0F172A",
+  "background_color": "#FAFAF9",
+  "display": "standalone"
+}

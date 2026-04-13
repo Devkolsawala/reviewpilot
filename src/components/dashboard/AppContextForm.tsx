@@ -71,7 +71,7 @@ export function AppContextForm({ connectionId: connectionIdProp, disabled = fals
   const [supportUrl, setSupportUrl] = useState("");
   const [additionalInstructions, setAdditionalInstructions] = useState("");
 
-  const [syncInterval, setSyncInterval] = useState("24h");
+  // sync_interval removed — reviews now auto-sync every 2h for all plans
 
   /** manual | semi (draft_for_review) | full (auto_publish) */
   const [replyMode, setReplyMode] = useState<"manual" | "semi" | "full">("manual");
@@ -102,7 +102,6 @@ export function AppContextForm({ connectionId: connectionIdProp, disabled = fals
       setContextId(null);
       setDescription(""); setFeatures([""]); setQuestions([""]); setIssues([""]);
       setTone("friendly"); setCustomTone(""); setSupportUrl(""); setAdditionalInstructions("");
-      setSyncInterval("24h");
       setReplyMode("manual"); setDraftLowSafety(true); setRatingRange([1, 5]);
       setScheduledEnabled(false); setScheduleTime("08:00"); setTimezone(detectTimezone());
       setActiveDays([true, true, true, true, true, true, true]);
@@ -157,7 +156,6 @@ export function AppContextForm({ connectionId: connectionIdProp, disabled = fals
           }
           setDraftLowSafety(ctx.auto_reply_draft_low_ratings !== false);
           setRatingRange([ctx.auto_reply_min_rating || 1, ctx.auto_reply_max_rating || 5]);
-          setSyncInterval(ctx.sync_interval || "24h");
           setScheduledEnabled(ctx.schedule_enabled || false);
           setScheduleTime(ctx.schedule_time || "08:00");
           setTimezone(ctx.schedule_timezone || detectTimezone());
@@ -428,7 +426,6 @@ export function AppContextForm({ connectionId: connectionIdProp, disabled = fals
         schedule_days: activeDays,
         schedule_review_age_hours: parseInt(reviewAge),
         schedule_safety_toggle: safetyToggle,
-        sync_interval: syncInterval,
         updated_at: new Date().toISOString(),
       };
 
@@ -665,23 +662,12 @@ export function AppContextForm({ connectionId: connectionIdProp, disabled = fals
               rows={3}
             />
           </div>
-          <div className="space-y-2">
-            <Label>Auto-sync frequency</Label>
-            <Select value={syncInterval} onValueChange={setSyncInterval}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="1h">Every hour</SelectItem>
-                <SelectItem value="6h">Every 6 hours</SelectItem>
-                <SelectItem value="12h">Every 12 hours</SelectItem>
-                <SelectItem value="24h">Daily (default)</SelectItem>
-                <SelectItem value="48h">Every 2 days</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="space-y-1.5 rounded-lg border bg-secondary/30 px-3.5 py-3">
+            <p className="text-sm font-medium">Auto-sync schedule</p>
             <p className="text-xs text-muted-foreground">
-              Reviews are fetched from Play Store at this interval. You can also sync manually from the{" "}
-              <a href="/dashboard/settings/connections" className="underline">Connections page</a>.
+              Reviews are automatically synced every 2 hours. Use{" "}
+              <a href="/dashboard/settings/connections" className="underline">Sync Now</a>{" "}
+              on the Connections page for an immediate sync.
             </p>
           </div>
         </CardContent>
