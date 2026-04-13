@@ -1075,6 +1075,35 @@ function SuccessScreen({
 // GBP Wizard — 3-step manual connection flow
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// GBP validation helpers
+// ---------------------------------------------------------------------------
+
+function validateGBPEmail(email: string): string {
+  if (!email.trim()) return "Email is required";
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim()))
+    return "Enter a valid email address (e.g. owner@yourbusiness.com)";
+  return "";
+}
+
+function validateMapsUrl(url: string): string {
+  if (!url.trim()) return "Google Maps URL is required";
+  const isGoogleMaps =
+    /maps\.google\./i.test(url) ||
+    /google\.[a-z.]+\/maps/i.test(url) ||
+    /goo\.gl\/maps/i.test(url) ||
+    /maps\.app\.goo\.gl/i.test(url);
+  if (!isGoogleMaps)
+    return "Must be a Google Maps link — search your business on Google Maps, click Share, and copy the link";
+  return "";
+}
+
+function validateBusinessName(name: string): string {
+  if (!name.trim()) return "Business name is required";
+  if (name.trim().length < 2) return "Business name must be at least 2 characters";
+  return "";
+}
+
 function GBPWizard({
   onBack,
   onComplete,
@@ -1087,12 +1116,27 @@ function GBPWizard({
   const [mapsUrl, setMapsUrl] = useState("");
   const [address, setAddress] = useState("");
   const [contactEmail, setContactEmail] = useState("");
+  const [touched, setTouched] = useState({ businessName: false, mapsUrl: false, contactEmail: false });
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [savedConnection, setSavedConnection] = useState<Connection | null>(null);
 
+  const nameError = touched.businessName ? validateBusinessName(businessName) : "";
+  const mapsError = touched.mapsUrl ? validateMapsUrl(mapsUrl) : "";
+  const emailError = touched.contactEmail ? validateGBPEmail(contactEmail) : "";
+  const step1Valid =
+    !validateBusinessName(businessName) &&
+    !validateMapsUrl(mapsUrl) &&
+    !validateGBPEmail(contactEmail);
+
+  function handleStep1Continue() {
+    setTouched({ businessName: true, mapsUrl: true, contactEmail: true });
+    if (!step1Valid) return;
+    setStep(2);
+  }
+
   async function handleSave() {
-    if (!businessName || !mapsUrl || !contactEmail) return;
+    if (!step1Valid) return;
     setSaving(true);
     setSaveError("");
 
@@ -1167,7 +1211,10 @@ function GBPWizard({
               placeholder="Your business name as it appears on Google"
               value={businessName}
               onChange={(e) => setBusinessName(e.target.value)}
+              onBlur={() => setTouched((t) => ({ ...t, businessName: true }))}
+              className={nameError ? "border-destructive focus-visible:ring-destructive" : ""}
             />
+            {nameError && <p className="text-xs text-destructive">{nameError}</p>}
           </div>
 
           <div className="space-y-2">
@@ -1178,15 +1225,23 @@ function GBPWizard({
               placeholder="https://maps.google.com/?cid=XXXXXXXX"
               value={mapsUrl}
               onChange={(e) => setMapsUrl(e.target.value)}
+              onBlur={() => setTouched((t) => ({ ...t, mapsUrl: true }))}
+              className={mapsError ? "border-destructive focus-visible:ring-destructive" : ""}
             />
-            <p className="text-xs text-muted-foreground">
-              Search your business on Google Maps → click{" "}
-              <strong>Share</strong> → copy the link
-            </p>
+            {mapsError ? (
+              <p className="text-xs text-destructive">{mapsError}</p>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Search your business on Google Maps → click <strong>Share</strong> → copy the link
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
-            <Label>Business Address <span className="text-muted-foreground text-xs">(optional)</span></Label>
+            <Label>
+              Business Address{" "}
+              <span className="text-muted-foreground text-xs">(optional)</span>
+            </Label>
             <Input
               placeholder="123 Main St, City, State"
               value={address}
@@ -1203,20 +1258,23 @@ function GBPWizard({
               placeholder="owner@yourbusiness.com"
               value={contactEmail}
               onChange={(e) => setContactEmail(e.target.value)}
+              onBlur={() => setTouched((t) => ({ ...t, contactEmail: true }))}
+              className={emailError ? "border-destructive focus-visible:ring-destructive" : ""}
             />
-            <p className="text-xs text-muted-foreground">
-              Email address that manages this Google Business Profile — this may differ from your login email.
-            </p>
+            {emailError ? (
+              <p className="text-xs text-destructive">{emailError}</p>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Email that manages this Google Business Profile — may differ from your login email.
+              </p>
+            )}
           </div>
 
           <div className="flex gap-2">
             <Button variant="outline" onClick={onBack}>
               <ArrowLeft className="mr-2 h-4 w-4" /> Back
             </Button>
-            <Button
-              onClick={() => setStep(2)}
-              disabled={!businessName || !mapsUrl || !contactEmail}
-            >
+            <Button onClick={handleStep1Continue}>
               Continue <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </div>

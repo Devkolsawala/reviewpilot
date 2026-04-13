@@ -36,10 +36,6 @@ export const metadata: Metadata = {
   authors: [{ name: "ReviewPilot" }],
   creator: "ReviewPilot",
   publisher: "ReviewPilot",
-  icons: {
-    icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
-    apple: "/favicon.svg",
-  },
   manifest: "/site.webmanifest",
   openGraph: {
     type: "website",
