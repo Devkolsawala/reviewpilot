@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
   ArrowRight, CheckCircle2, XCircle, MinusCircle,
-  IndianRupee, Smartphone, MapPin, Globe,
+  IndianRupee, Smartphone, Globe,
 } from "lucide-react";
 import { JsonLd, SITE_URL, SITE_OG } from "@/components/marketing/JsonLd";
 
