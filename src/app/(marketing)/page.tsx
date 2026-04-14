@@ -68,10 +68,39 @@ const websiteSchema = {
   publisher: { "@type": "Organization", name: "ReviewPilot", logo: SITE_LOGO },
 };
 
+const FAQ_ITEMS = [
+  {
+    q: "How much does ReviewPilot cost?",
+    a: "ReviewPilot starts at ₹1,500/month for the Starter plan (1 location or app, 100 AI replies/week). Growth is ₹3,000/month and Agency is ₹8,000/month. All plans include a 7-day free trial with no credit card required.",
+  },
+  {
+    q: "Does ReviewPilot work with Google Play Store reviews?",
+    a: "Yes. ReviewPilot connects to Google Play Console via a service account and manages Play Store reviews alongside Google Business Profile reviews in a single inbox. It respects the 350-character Play Store reply limit automatically.",
+  },
+  {
+    q: "How does ReviewPilot generate AI replies?",
+    a: "ReviewPilot uses AI trained on your brand voice samples and App Context Profile to draft replies that sound like you wrote them. You can approve each draft individually, bulk-approve, or enable full auto-publish for high-confidence ratings.",
+  },
+  {
+    q: "Can ReviewPilot reply in Hindi and other Indian languages?",
+    a: "Yes. ReviewPilot detects the language of each review and replies in the same language — English, Hindi, Tamil, Telugu, Marathi, Bengali, Kannada, and Gujarati are all supported.",
+  },
+];
+
+const faqSchema = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: FAQ_ITEMS.map((f) => ({
+    "@type": "Question",
+    name: f.q,
+    acceptedAnswer: { "@type": "Answer", text: f.a },
+  })),
+};
+
 export default function HomePage() {
   return (
     <>
-      <JsonLd data={[organizationSchema, softwareSchema, websiteSchema]} />
+      <JsonLd data={[organizationSchema, softwareSchema, websiteSchema, faqSchema]} />
       <Hero />
 
       {/* Problem statement */}
@@ -174,11 +203,16 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="mt-10 text-center">
+          <div className="mt-10 flex flex-wrap justify-center gap-4">
             <Button size="lg" asChild>
               <Link href="/how-it-works">
                 See How It Works
                 <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+            <Button size="lg" variant="outline" asChild>
+              <Link href="/alternatives/birdeye-alternative">
+                Compare vs Birdeye
               </Link>
             </Button>
           </div>
@@ -187,6 +221,69 @@ export default function HomePage() {
 
       <HowItWorks />
       <ComparisonTable />
+
+      {/* Feature deep-dives */}
+      <section className="py-20 sm:py-28 bg-secondary/30">
+        <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="font-heading text-3xl font-bold sm:text-4xl">
+              Built for Every Review Surface
+            </h2>
+            <p className="mt-4 text-lg text-muted-foreground">
+              Explore how ReviewPilot handles each platform in depth.
+            </p>
+          </div>
+          <div className="grid gap-6 md:grid-cols-2">
+            <Link href="/features/google-play-reviews" className="group rounded-xl border bg-card p-6 hover:shadow-lg transition-shadow">
+              <Smartphone className="h-8 w-8 text-teal-500 mb-3" />
+              <h3 className="font-heading text-lg font-semibold mb-2 group-hover:text-teal-600 transition-colors">
+                Play Store Review Automation
+              </h3>
+              <p className="text-sm text-muted-foreground leading-relaxed mb-3">
+                Auto-reply to every Android review within the 350-char limit, in the reviewer&apos;s language, with your brand voice.
+              </p>
+              <span className="text-sm font-medium text-teal-600 inline-flex items-center gap-1">
+                Learn more <ArrowRight className="h-3.5 w-3.5" />
+              </span>
+            </Link>
+            <Link href="/features/google-business-profile" className="group rounded-xl border bg-card p-6 hover:shadow-lg transition-shadow">
+              <MapPin className="h-8 w-8 text-teal-500 mb-3" />
+              <h3 className="font-heading text-lg font-semibold mb-2 group-hover:text-teal-600 transition-colors">
+                Google Business Profile Automation
+              </h3>
+              <p className="text-sm text-muted-foreground leading-relaxed mb-3">
+                Connect your GBP in one click. AI replies, SMS review collection, and smart routing to protect your star rating.
+              </p>
+              <span className="text-sm font-medium text-teal-600 inline-flex items-center gap-1">
+                Learn more <ArrowRight className="h-3.5 w-3.5" />
+              </span>
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ section */}
+      <section className="py-20 sm:py-28 bg-background">
+        <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
+          <h2 className="font-heading text-3xl font-bold text-center mb-10">
+            Frequently Asked Questions
+          </h2>
+          <div className="space-y-6">
+            {FAQ_ITEMS.map((item) => (
+              <div key={item.q} className="rounded-xl border bg-card p-6">
+                <h3 className="font-heading font-semibold text-base mb-2">{item.q}</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">{item.a}</p>
+              </div>
+            ))}
+          </div>
+          <p className="text-center mt-8 text-sm text-muted-foreground">
+            More questions?{" "}
+            <Link href="/docs" className="text-teal-600 hover:underline">Browse the Help Center</Link>
+            {" "}or{" "}
+            <Link href="/demo" className="text-teal-600 hover:underline">book a demo</Link>.
+          </p>
+        </div>
+      </section>
 
       {/* CTA Section */}
       <section className="py-20 sm:py-28 bg-navy-900">
