@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -8,37 +8,114 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
 
+// Common disposable / obviously-fake email domains
+const BLOCKED_DOMAINS = new Set([
+  "mailinator.com", "guerrillamail.com", "guerrillamail.info", "guerrillamail.net",
+  "guerrillamail.org", "guerrillamailblock.com", "grr.la", "sharklasers.com",
+  "spam4.me", "yopmail.com", "yopmail.fr", "cool.fr.nf", "jetable.fr.nf",
+  "nospam.ze.tc", "nomail.xl.cx", "mega.zik.dj", "speed.1s.fr",
+  "trashmail.com", "trashmail.me", "trashmail.net", "trashmail.at",
+  "trashmail.io", "trashmail.xyz", "trash-mail.at", "dispostable.com",
+  "maildrop.cc", "fakeinbox.com", "spamgourmet.com", "spamgourmet.net",
+  "10minutemail.com", "10minutemail.net", "10minutemail.org", "minutemail.com",
+  "discard.email", "mailnull.com", "spamex.com", "throwam.com",
+  "throwaway.email", "tempmail.com", "tempmail.net", "temp-mail.org",
+  "temp-mail.ru", "getairmail.com", "filzmail.com", "ezztt.com",
+  "example.com", "example.net", "example.org", "test.com", "fake.com",
+]);
+
+function isBlockedDomain(email: string): boolean {
+  const parts = email.split("@");
+  if (parts.length !== 2) return false;
+  return BLOCKED_DOMAINS.has(parts[1].toLowerCase());
+}
+
+const RESEND_COOLDOWN_SECONDS = 30;
+
 export default function SignupPage() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Confirmation screen state
+  const [emailSent, setEmailSent] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [resending, setResending] = useState(false);
+
   const router = useRouter();
+
+  // Tick the resend cooldown down every second
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setTimeout(() => setResendCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [resendCooldown]);
 
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+
+    // Frontend domain validation
+    if (isBlockedDomain(email)) {
+      setError("Please use a real email address — disposable or placeholder domains are not accepted.");
+      return;
+    }
+
     setLoading(true);
 
     const supabase = createClient();
-    const { error } = await supabase.auth.signUp({
+    const { data, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: { full_name: fullName },
-        emailRedirectTo: `${window.location.origin}/api/auth/callback/google`,
+        // Points to the general-purpose PKCE callback, not the Google-OAuth-specific one
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
     });
 
-    if (error) {
-      setError(error.message);
+    if (signUpError) {
+      setError(signUpError.message);
       setLoading(false);
       return;
     }
 
+    // session === null means Supabase sent a confirmation email.
+    // Show the "check your inbox" screen instead of pushing to /dashboard.
+    if (!data.session) {
+      setEmailSent(true);
+      setResendCooldown(RESEND_COOLDOWN_SECONDS);
+      setLoading(false);
+      return;
+    }
+
+    // Email confirmation is disabled on this project — session returned immediately.
     router.push("/dashboard");
     router.refresh();
+  }
+
+  async function handleResend() {
+    setError("");
+    setResending(true);
+
+    const supabase = createClient();
+    const { error: resendError } = await supabase.auth.resend({
+      type: "signup",
+      email,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+
+    setResending(false);
+
+    if (resendError) {
+      setError(resendError.message);
+    } else {
+      setResendCooldown(RESEND_COOLDOWN_SECONDS);
+    }
   }
 
   async function handleGoogleSignup() {
@@ -51,6 +128,81 @@ export default function SignupPage() {
     });
   }
 
+  // ── "Check your email" confirmation screen ──────────────────────────────────
+  if (emailSent) {
+    return (
+      <div>
+        <div className="lg:hidden flex items-center gap-2 mb-8">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-500 text-white font-heading font-bold text-sm">
+            RP
+          </div>
+          <span className="font-heading text-xl font-bold">ReviewPilot</span>
+        </div>
+
+        <div className="flex flex-col items-center text-center mt-4">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-teal-50 mb-6">
+            <svg
+              className="h-8 w-8 text-teal-500"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={1.5}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"
+              />
+            </svg>
+          </div>
+
+          <h1 className="font-heading text-2xl font-bold">Check your email</h1>
+          <p className="mt-3 text-sm text-muted-foreground max-w-xs">
+            We sent a confirmation link to{" "}
+            <span className="font-medium text-foreground">{email}</span>. Click
+            it to activate your account.
+          </p>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Didn&apos;t receive it? Check your spam or junk folder.
+          </p>
+
+          {error && (
+            <p className="mt-4 text-sm text-destructive">{error}</p>
+          )}
+
+          <Button
+            className="mt-8 w-full max-w-xs"
+            variant="outline"
+            onClick={handleResend}
+            disabled={resendCooldown > 0 || resending}
+          >
+            {resending
+              ? "Sending…"
+              : resendCooldown > 0
+              ? `Resend in ${resendCooldown}s`
+              : "Resend confirmation email"}
+          </Button>
+
+          <p className="mt-6 text-sm text-muted-foreground">
+            Wrong email?{" "}
+            <button
+              type="button"
+              onClick={() => {
+                setEmailSent(false);
+                setError("");
+                setResendCooldown(0);
+              }}
+              className="text-teal-600 hover:underline font-medium"
+            >
+              Go back
+            </button>
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Normal signup form ───────────────────────────────────────────────────────
   return (
     <div>
       <div className="lg:hidden flex items-center gap-2 mb-8">
@@ -127,7 +279,7 @@ export default function SignupPage() {
           {error && <p className="text-sm text-destructive">{error}</p>}
 
           <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Creating account..." : "Create Account"}
+            {loading ? "Creating account…" : "Create Account"}
           </Button>
         </form>
 
