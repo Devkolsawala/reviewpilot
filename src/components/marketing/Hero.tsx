@@ -10,22 +10,24 @@ export function Hero() {
           <div className="max-w-2xl">
             <div className="inline-flex items-center gap-2 rounded-full bg-teal-500/10 px-3 py-1 text-sm text-teal-600 mb-6">
               <Star className="h-3.5 w-3.5 fill-teal-500 text-teal-500" />
-              AI-Powered Review Management
+              🇮🇳 Made in India · Play Store + Google ready
             </div>
 
             <h1 className="font-heading text-4xl font-bold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
-              Turn Reviews Into{" "}
-              <span className="text-teal-500">Revenue</span>
+              Never lose a customer to a{" "}
+              <span className="text-teal-500">bad review</span> again.
             </h1>
 
             <p className="mt-6 text-lg text-muted-foreground leading-relaxed">
-              Reply to Google Business &amp; Play Store reviews in seconds with
-              AI. Collect more reviews via SMS. Track sentiment with real-time
-              analytics. All at{" "}
+              ReviewPilot is AI review management built for Indian SMBs and app
+              makers — replying to every Google Business Profile and Play Store
+              review in seconds, lifting your rating automatically. From{" "}
+              <span className="font-semibold text-foreground">₹1,500/month</span>
+              , roughly{" "}
               <span className="font-semibold text-foreground">
-                10x lower cost
+                17× cheaper
               </span>{" "}
-              than competitors.
+              than Birdeye or Podium.
             </p>
 
             <div className="mt-8 flex flex-col sm:flex-row gap-4">
@@ -41,7 +43,7 @@ export function Hero() {
             </div>
 
             <p className="mt-4 text-sm text-muted-foreground">
-              7-day free trial. No credit card required.
+              7-day free trial. No credit card required. Setup in under 5 minutes.
             </p>
           </div>
 

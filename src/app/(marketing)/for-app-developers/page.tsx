@@ -13,9 +13,23 @@ import {
 } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "For App Developers",
+  title: "Play Store Review Management for App Developers | ReviewPilot",
   description:
-    "Manage Google Play Store reviews with AI-generated replies. Improve ratings, reduce churn, and save time.",
+    "Reply to every Play Store review with AI. Enforce the 350-char limit, detect known bugs, lift your rating. Built for Indian app developers from ₹1,500/mo.",
+  alternates: { canonical: "/for-app-developers" },
+  openGraph: {
+    title: "Play Store Review Management for App Developers | ReviewPilot",
+    description:
+      "AI replies for Play Store reviews. Enforce 350-char limit, detect known bugs, lift your app rating.",
+    url: "https://www.reviewpilot.co.in/for-app-developers",
+    images: [{ url: "/og-image.svg", width: 1200, height: 630, alt: "ReviewPilot for app developers" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Play Store Review Management | ReviewPilot",
+    description: "AI-powered Play Store review replies for Indian app devs.",
+    images: ["/og-image.svg"],
+  },
 };
 
 const BENEFITS = [

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { DM_Sans, Inter } from "next/font/google";
 import { Toaster } from "@/components/ui/toaster";
 import Script from "next/script";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 const dmSans = DM_Sans({
@@ -92,6 +93,7 @@ export default function RootLayout({
           src="https://checkout.razorpay.com/v1/checkout.js"
           strategy="lazyOnload"
         />
+        <Analytics />
       </body>
     </html>
   );

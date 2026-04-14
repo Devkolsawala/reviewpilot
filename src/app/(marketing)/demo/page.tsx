@@ -3,8 +3,23 @@ import { DemoRequestForm } from "@/components/marketing/DemoRequestForm";
 import { CheckCircle2 } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Request a Demo",
-  description: "See ReviewPilot in action with a personalized demo.",
+  title: "Book a Live Demo — AI Review Management India | ReviewPilot",
+  description:
+    "See ReviewPilot live: AI replies for Google & Play Store reviews, SMS collection, analytics. Book your free 20-minute demo with our India team today.",
+  alternates: { canonical: "/demo" },
+  openGraph: {
+    title: "Book a Live Demo | ReviewPilot",
+    description:
+      "See AI review management in action. Free 20-minute walkthrough with our India team.",
+    url: "https://www.reviewpilot.co.in/demo",
+    images: [{ url: "/og-image.svg", width: 1200, height: 630, alt: "Book a ReviewPilot demo" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Book a ReviewPilot Demo",
+    description: "See AI review management in action. Free walkthrough.",
+    images: ["/og-image.svg"],
+  },
 };
 
 const DEMO_BENEFITS = [

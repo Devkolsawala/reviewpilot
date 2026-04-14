@@ -13,9 +13,23 @@ import {
 } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "For Local Businesses",
+  title: "Google Review Automation for Local Businesses India | ReviewPilot",
   description:
-    "Manage your Google Business Profile reviews with AI auto-replies, SMS review collection, and analytics.",
+    "Reply to Google reviews with AI, collect new reviews via SMS, and track sentiment. Google review automation built for Indian SMBs from ₹1,500/mo.",
+  alternates: { canonical: "/for-local-business" },
+  openGraph: {
+    title: "Google Review Automation for Local Businesses | ReviewPilot",
+    description:
+      "AI replies to Google Business Profile reviews, SMS review collection, sentiment analytics.",
+    url: "https://www.reviewpilot.co.in/for-local-business",
+    images: [{ url: "/og-image.svg", width: 1200, height: 630, alt: "ReviewPilot for local business" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Google Review Automation | ReviewPilot",
+    description: "AI-powered Google review management for Indian local businesses.",
+    images: ["/og-image.svg"],
+  },
 };
 
 const BENEFITS = [

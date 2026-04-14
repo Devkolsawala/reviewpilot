@@ -2,39 +2,92 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowRight } from "lucide-react";
+import { JsonLd, SITE_URL } from "@/components/marketing/JsonLd";
 
 export const metadata: Metadata = {
-  title: "Blog",
+  title: "Review Management Blog — Tips & Guides | ReviewPilot",
   description:
-    "Tips, guides, and insights on review management, local SEO, and app store optimization.",
+    "Expert guides on Google review management, Play Store ratings, AI reply automation, and local SEO for Indian businesses. Practical advice, real templates.",
+  alternates: { canonical: "/blog" },
+  openGraph: {
+    title: "Review Management Blog — Tips & Guides | ReviewPilot",
+    description:
+      "Practical guides on AI review management, Google Business Profile, Play Store ratings, and local SEO for Indian SMBs.",
+    url: `${SITE_URL}/blog`,
+    type: "website",
+    images: [{ url: "/og-image.svg", width: 1200, height: 630, alt: "ReviewPilot Blog — AI Review Management Guides" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "ReviewPilot Blog — Review Management Guides",
+    description: "Tips, templates, and guides for Indian businesses managing Google and Play Store reviews.",
+    images: ["/og-image.svg"],
+  },
+};
+
+const blogListSchema = {
+  "@context": "https://schema.org",
+  "@type": "Blog",
+  name: "ReviewPilot Blog",
+  description:
+    "Expert guides on AI review management, Google Business Profile automation, Play Store rating improvement, and local SEO for Indian businesses.",
+  url: `${SITE_URL}/blog`,
+  publisher: {
+    "@type": "Organization",
+    name: "ReviewPilot",
+    logo: { "@type": "ImageObject", url: `${SITE_URL}/logo.svg` },
+  },
 };
 
 const POSTS = [
   {
-    slug: "how-to-reply-google-reviews",
-    title: "How to Reply to Google Reviews: The Complete Guide (2026)",
+    slug: "how-to-get-more-google-reviews-2026",
+    title: "How to Get More Google Reviews in 2026: A Complete Guide for Indian Businesses",
     excerpt:
-      "Learn the best practices for replying to positive, negative, and neutral Google Business reviews with real examples.",
+      "The highest-converting methods for getting more Google reviews in India — SMS asks, QR codes, WhatsApp, timing, and the automation layer that 10× your volume.",
     category: "Guide",
-    date: "March 25, 2026",
-    readTime: "8 min read",
+    date: "April 2, 2026",
+    author: "Dev Kolsawala",
+    readTime: "11 min read",
   },
   {
-    slug: "play-store-review-management",
-    title: "Play Store Review Management: A Developer's Guide",
+    slug: "how-to-reply-to-negative-google-reviews",
+    title: "How to Reply to Negative Google Reviews (15 Templates That Win Customers Back)",
     excerpt:
-      "How to manage Google Play Store reviews at scale, improve your app rating, and reduce churn through better review responses.",
-    category: "Guide",
-    date: "March 20, 2026",
-    readTime: "6 min read",
+      "15 battle-tested reply templates covering restaurants, salons, apps, hotels, and even fake reviews — plus the 5 principles that turn critics into advocates.",
+    category: "Templates",
+    date: "April 5, 2026",
+    author: "Aditya Raj Singh",
+    readTime: "12 min read",
   },
   {
-    slug: "reviewpilot-vs-competitors",
-    title: "ReviewPilot vs Birdeye vs Podium: Honest Comparison (2026)",
+    slug: "best-review-management-software-india-2026",
+    title: "Best Review Management Software in India 2026: Honest Comparison",
     excerpt:
-      "A detailed comparison of review management platforms for Indian businesses. Features, pricing, and real user experiences.",
+      "Detailed, self-aware comparison of ReviewPilot, Birdeye, Podium, Famepilot, Simplify360, and AppFollow — with scoring on price, GBP, Play Store, and India fit.",
     category: "Comparison",
-    date: "March 15, 2026",
+    date: "April 8, 2026",
+    author: "Dev Kolsawala",
+    readTime: "10 min read",
+  },
+  {
+    slug: "play-store-review-management-2026",
+    title: "Why Play Store Reviews Make or Break Your App (And How to Manage Them at Scale)",
+    excerpt:
+      "Play Store rating is a revenue multiplier. Learn how to manage volume, the 350-char limit, multi-language replies, and the auto-reply strategy that lifts ratings.",
+    category: "App Developers",
+    date: "April 10, 2026",
+    author: "Aditya Raj Singh",
+    readTime: "13 min read",
+  },
+  {
+    slug: "ai-vs-human-review-replies-2026",
+    title: "AI vs Human Review Replies: What Actually Works in 2026",
+    excerpt:
+      "A balanced take on AI vs human replies — quality, speed, detection risk, and the hybrid strategy most successful Indian businesses are quietly using today.",
+    category: "AI",
+    date: "April 12, 2026",
+    author: "Dev Kolsawala",
     readTime: "10 min read",
   },
 ];
@@ -42,11 +95,16 @@ const POSTS = [
 export default function BlogPage() {
   return (
     <div className="py-20 sm:py-28">
+      <JsonLd data={blogListSchema} />
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
+          <div className="inline-flex items-center gap-2 rounded-full bg-teal-500/10 px-3 py-1 text-sm text-teal-600 mb-4">
+            Review Management Guides
+          </div>
           <h1 className="font-heading text-4xl font-bold sm:text-5xl">Blog</h1>
-          <p className="mt-4 text-lg text-muted-foreground">
-            Tips and guides on review management, local SEO, and ASO.
+          <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
+            Practical guides on AI review management, Google Business Profile automation,
+            Play Store ratings, and local SEO — written for Indian businesses.
           </p>
         </div>
 
@@ -54,7 +112,7 @@ export default function BlogPage() {
           {POSTS.map((post) => (
             <Link key={post.slug} href={`/blog/${post.slug}`}>
               <Card className="h-full hover:shadow-lg transition-shadow group">
-                <CardContent className="p-6">
+                <CardContent className="p-6 flex flex-col h-full">
                   <div className="flex items-center gap-2 mb-4">
                     <span className="text-xs font-medium text-teal-600 bg-teal-50 dark:bg-teal-950 px-2 py-0.5 rounded">
                       {post.category}
@@ -63,14 +121,14 @@ export default function BlogPage() {
                       {post.readTime}
                     </span>
                   </div>
-                  <h2 className="font-heading text-lg font-semibold mb-2 group-hover:text-teal-600 transition-colors">
+                  <h2 className="font-heading text-lg font-semibold mb-2 group-hover:text-teal-600 transition-colors line-clamp-2">
                     {post.title}
                   </h2>
-                  <p className="text-sm text-muted-foreground mb-4">
+                  <p className="text-sm text-muted-foreground mb-4 flex-1">
                     {post.excerpt}
                   </p>
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span>{post.date}</span>
+                  <div className="flex items-center justify-between text-xs text-muted-foreground mt-auto">
+                    <span>{post.author} · {post.date}</span>
                     <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
                   </div>
                 </CardContent>
