@@ -43,15 +43,52 @@ export default function SignupPage() {
   const [emailSent, setEmailSent] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
   const [resending, setResending] = useState(false);
+  const [verified, setVerified] = useState(false);
 
   const router = useRouter();
 
-  // Tick the resend cooldown down every second
+  // Tick the resend cooldown down every second (paused once verified)
   useEffect(() => {
-    if (resendCooldown <= 0) return;
+    if (resendCooldown <= 0 || verified) return;
     const timer = setTimeout(() => setResendCooldown((c) => c - 1), 1000);
     return () => clearTimeout(timer);
-  }, [resendCooldown]);
+  }, [resendCooldown, verified]);
+
+  // While waiting for the user to click the email link, watch for a session.
+  // Supabase broadcasts auth state changes across tabs — this flips the UI
+  // the moment the confirmation link creates a session (in any tab).
+  useEffect(() => {
+    if (!emailSent || verified) return;
+
+    const supabase = createClient();
+    let cancelled = false;
+
+    // 1. Immediate check — in case a session already exists when we enter this state
+    supabase.auth.getSession().then(({ data }) => {
+      if (!cancelled && data.session) setVerified(true);
+    });
+
+    // 2. Realtime cross-tab listener (fires via BroadcastChannel / storage event)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (!cancelled && event === "SIGNED_IN" && session) {
+          setVerified(true);
+        }
+      }
+    );
+
+    // 3. Polling fallback — covers browsers where cross-tab broadcast is flaky
+    const poll = setInterval(async () => {
+      const { data } = await supabase.auth.getSession();
+      if (!cancelled && data.session) setVerified(true);
+    }, 3000);
+
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+      clearInterval(poll);
+    };
+  }, [emailSent, verified]);
 
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault();
@@ -126,6 +163,53 @@ export default function SignupPage() {
         redirectTo: `${window.location.origin}/api/auth/callback/google`,
       },
     });
+  }
+
+  // ── "Email verified!" screen — flips here the moment the user clicks the link in another tab ─
+  if (verified) {
+    return (
+      <div>
+        <div className="lg:hidden flex items-center gap-2 mb-8">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-500 text-white font-heading font-bold text-sm">
+            RP
+          </div>
+          <span className="font-heading text-xl font-bold">ReviewPilot</span>
+        </div>
+
+        <div className="flex flex-col items-center text-center mt-4">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-teal-50 mb-6">
+            <svg
+              className="h-8 w-8 text-teal-500"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M4.5 12.75l6 6 9-13.5"
+              />
+            </svg>
+          </div>
+
+          <h1 className="font-heading text-2xl font-bold">Email verified!</h1>
+          <p className="mt-3 text-sm text-muted-foreground max-w-xs">
+            Your account is now active. You may close this page or continue to your dashboard.
+          </p>
+
+          <Button
+            className="mt-8 w-full max-w-xs"
+            onClick={() => {
+              router.push("/dashboard");
+              router.refresh();
+            }}
+          >
+            Continue to Dashboard
+          </Button>
+        </div>
+      </div>
+    );
   }
 
   // ── "Check your email" confirmation screen ──────────────────────────────────
