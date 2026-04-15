@@ -77,10 +77,35 @@ export default function SignupPage() {
       }
     );
 
-    // 3. Polling fallback — covers browsers where cross-tab broadcast is flaky
+    // 3. Polling fallback — two checks:
+    //    (a) local session (same-browser verification)
+    //    (b) server-side DB check via /api/auth/check-verified
+    //        (covers cross-browser / cross-device / cross-profile verification,
+    //         where onAuthStateChange in this tab will never fire because the
+    //         session was created in a different browser context entirely)
     const poll = setInterval(async () => {
+      if (cancelled) return;
+
+      // (a) Same-browser case
       const { data } = await supabase.auth.getSession();
-      if (!cancelled && data.session) setVerified(true);
+      if (!cancelled && data.session) {
+        setVerified(true);
+        return;
+      }
+
+      // (b) Cross-browser case — ask the server
+      try {
+        const res = await fetch("/api/auth/check-verified", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+        });
+        if (!res.ok) return;
+        const result = (await res.json()) as { verified?: boolean };
+        if (!cancelled && result.verified) setVerified(true);
+      } catch {
+        // Network hiccup — will retry on next tick
+      }
     }, 3000);
 
     return () => {
@@ -88,7 +113,7 @@ export default function SignupPage() {
       subscription.unsubscribe();
       clearInterval(poll);
     };
-  }, [emailSent, verified]);
+  }, [emailSent, verified, email]);
 
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault();
@@ -195,17 +220,17 @@ export default function SignupPage() {
 
           <h1 className="font-heading text-2xl font-bold">Email verified!</h1>
           <p className="mt-3 text-sm text-muted-foreground max-w-xs">
-            Your account is now active. You may close this page or continue to your dashboard.
+            Your account is now active. You may close this page or proceed to log in.
           </p>
 
           <Button
             className="mt-8 w-full max-w-xs"
             onClick={() => {
-              router.push("/dashboard");
+              router.push("/login");
               router.refresh();
             }}
           >
-            Continue to Dashboard
+            Proceed to Login
           </Button>
         </div>
       </div>
