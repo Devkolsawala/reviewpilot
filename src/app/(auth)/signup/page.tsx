@@ -71,8 +71,8 @@ export default function SignupPage() {
       password,
       options: {
         data: { full_name: fullName },
-        // Points to the general-purpose PKCE callback, not the Google-OAuth-specific one
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        // After confirming, show the "Email verified" page instead of going to dashboard
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=/verified`,
       },
     });
 
@@ -105,7 +105,7 @@ export default function SignupPage() {
       type: "signup",
       email,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=/verified`,
       },
     });
 
