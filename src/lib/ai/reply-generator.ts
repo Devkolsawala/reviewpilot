@@ -12,6 +12,10 @@ function getXaiClient(): OpenAI | null {
     xaiClient = new OpenAI({
       apiKey: process.env.XAI_API_KEY,
       baseURL: process.env.XAI_BASE_URL || "https://api.x.ai/v1",
+      // Disable built-in auto-retry (default is 2). We have our own
+      // retryWithBackoff wrapper so we don't want SDK silently duplicating
+      // requests — that was causing 2× billing on xAI console.
+      maxRetries: 0,
     });
   }
   return xaiClient;

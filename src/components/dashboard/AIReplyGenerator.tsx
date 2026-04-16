@@ -108,6 +108,9 @@ export function AIReplyGenerator({
   const showAiDraftBadge = isDrafted && review.is_auto_replied;
 
   async function handleGenerate() {
+    // Guard: ignore re-clicks while a request is already in flight.
+    // Prevents duplicate xAI billing if the user mashes the button.
+    if (state === "generating" || state === "posting") return;
     setState("generating");
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 15000);
@@ -394,7 +397,12 @@ export function AIReplyGenerator({
               </button>
             ))}
           </div>
-          <Button onClick={handleGenerate} size="lg" className="px-8">
+          <Button
+            onClick={handleGenerate}
+            size="lg"
+            className="px-8"
+            disabled={state === "generating"}
+          >
             <Bot className="mr-2 h-4 w-4" />
             Generate AI Reply
           </Button>
@@ -480,6 +488,7 @@ export function AIReplyGenerator({
             <Button
               variant="outline"
               onClick={handleGenerate}
+              disabled={state === "generating"}
               className="flex-1 min-w-[120px]"
             >
               <RefreshCw className="mr-2 h-4 w-4" />
