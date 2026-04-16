@@ -1,57 +1,114 @@
 import type { AppContext } from "@/types/database";
 import type { Review } from "@/types/review";
 
-export function buildReplyPrompt(params: {
+export interface ReplyPromptParams {
   appContext: AppContext;
   review: Review;
   source: "google_business" | "play_store";
   toneOverride?: string;
-}): { system: string; user: string } {
+}
+
+export function buildReplyPrompt(params: ReplyPromptParams): {
+  system: string;
+  user: string;
+} {
   const { appContext, review, source, toneOverride } = params;
   const charLimit = source === "play_store" ? 350 : 2000;
-  const tone =
-    toneOverride ||
-    appContext.tone ||
-    "friendly";
+  const tone = toneOverride || appContext?.tone || "friendly";
+  const platformName =
+    source === "play_store" ? "Play Store" : "Google Business Profile";
+  const entityType = source === "play_store" ? "app" : "business";
 
-  const toneLabel =
-    tone === "friendly"
-      ? "warm and approachable"
-      : tone === "professional"
-        ? "polished and formal"
-        : tone === "casual"
-          ? "relaxed and personable"
-          : tone === "apologetic"
-            ? "empathetic; lead with a sincere apology when appropriate"
-            : tone === "custom" && appContext.custom_tone_example
-              ? `match this example style: "${appContext.custom_tone_example}"`
-              : "warm and professional";
+  const businessName = appContext?.description
+    ? extractBusinessName(appContext.description)
+    : source === "play_store"
+      ? "our app"
+      : "our business";
 
-  const system = `You are a customer support representative replying to public store reviews.
+  const toneInstructions: Record<string, string> = {
+    friendly:
+      "Warm and approachable. Write like a friendly human who genuinely cares. Use contractions (we're, you'll, it's).",
+    professional:
+      "Polished and respectful. Well-structured sentences. Avoid slang but still sound human, not robotic.",
+    casual:
+      'Relaxed and conversational. Light contractions are great. Can use phrases like "Hey!" or "Totally get it."',
+    apologetic:
+      "Empathetic and accountable. Lead with understanding. Acknowledge the issue clearly without being defensive.",
+    custom: appContext?.custom_tone_example
+      ? `Match this example tone: "${appContext.custom_tone_example}"`
+      : "Warm and human.",
+  };
 
-${appContext.description ? `ABOUT THIS ${source === "play_store" ? "APP" : "BUSINESS"}:\n${appContext.description}\n` : ""}${appContext.key_features?.length ? `KEY FEATURES:\n${appContext.key_features.map((f) => `- ${f}`).join("\n")}\n` : ""}${appContext.common_questions?.length ? `COMMON CUSTOMER QUESTIONS:\n${appContext.common_questions.map((q) => `- ${q}`).join("\n")}\n` : ""}${appContext.known_issues?.length ? `KNOWN ISSUES (acknowledge if relevant):\n${appContext.known_issues.map((i) => `- ${i}`).join("\n")}\n` : ""}
-REPLY TONE: ${tone} (${toneLabel})
-${appContext.support_url ? `SUPPORT URL: ${appContext.support_url}\n` : ""}
+  const toneGuide = toneInstructions[tone] || toneInstructions.friendly;
+  const contextSection = buildContextSection(appContext, entityType);
 
-RULES:
-- Keep the reply UNDER ${charLimit} characters (strict platform limit).
-- Be specific to this review — never generic "thank you for your feedback" fluff.
-- If the review mentions a known issue, acknowledge it briefly; do not invent fix dates unless provided in context.
-- If they ask a question, answer directly using the context above when possible.
-- Negative (1–2★): empathize → address the specific concern → offer a clear next step.
-- Positive (4–5★): thank them for something concrete they said; keep it warm and brief.
-- Mixed (3★): acknowledge what worked, address concerns, invite improvement ideas.
-- Do not be defensive or argumentative.
-- Avoid corporate buzzphrases like "We value your feedback" or "Thank you for bringing this to our attention."
-- Write like a caring human, not a template.
-- No markdown; plain text only.
-${appContext.additional_instructions ? `ADDITIONAL INSTRUCTIONS: ${appContext.additional_instructions}` : ""}`;
+  const system = `You are responding to a customer review on the ${platformName} on behalf of ${businessName}.
+
+${contextSection}
+
+TONE: ${tone}
+${toneGuide}
+
+HARD RULES — you MUST follow all of these:
+1. Output ONLY the reply text. No preamble, no quotes around the reply, no meta-commentary, no markdown formatting.
+2. Keep reply UNDER ${charLimit} characters. This is a hard platform limit — going over will fail.
+3. Address the reviewer's SPECIFIC concerns. Never write generic "thank you for your feedback" replies.
+4. Write like a real human who cares, not a corporate bot. No phrases like "We value your feedback" or "Thank you for bringing this to our attention" — these are robotic.
+5. Do not include brackets, placeholders, or template variables like [Name] or {business}. Write the final reply ready to publish.
+
+RESPONSE STRATEGY BY RATING:
+- 5 stars: Thank them for the SPECIFIC thing they praised. Be warm. Keep it brief (2-3 sentences max).
+- 4 stars: Thank them, then briefly address what might have kept it from 5 stars if mentioned.
+- 3 stars: Acknowledge both the good and the concern. Ask what you could do better. Be genuine.
+- 2 stars: Empathize first. Address the specific complaint. Offer a concrete next step (support URL, reach out, etc).
+- 1 star: Lead with a sincere apology for their experience. Acknowledge the specific issue. Offer direct help — do not be defensive.
+
+${
+  appContext?.known_issues?.length
+    ? `KNOWN ISSUES — if the review mentions one of these, acknowledge it and mention we're working on a fix:\n${appContext.known_issues.map((i) => `- ${i}`).join("\n")}\n`
+    : ""
+}${
+    appContext?.common_questions?.length
+      ? `COMMON QUESTIONS — if the review asks about any of these, answer directly:\n${appContext.common_questions.map((q) => `- ${q}`).join("\n")}\n`
+      : ""
+  }${appContext?.support_url ? `SUPPORT URL (include when relevant): ${appContext.support_url}\n` : ""}${appContext?.additional_instructions ? `ADDITIONAL INSTRUCTIONS: ${appContext.additional_instructions}\n` : ""}
+Remember: Output ONLY the reply text itself. No "Here's my reply:" prefix. No quotation marks. Just the clean reply ready to publish.`;
+
+  const ratingDisplay =
+    "★".repeat(review.rating) + "☆".repeat(5 - review.rating);
 
   const user = `Review from ${review.author_name}:
-Rating: ${"★".repeat(review.rating)}${"☆".repeat(5 - review.rating)} (${review.rating}/5)
+${ratingDisplay} (${review.rating} of 5 stars)
 "${review.review_text}"
 
-Write a reply:`;
+Write the reply now:`;
 
   return { system, user };
+}
+
+function buildContextSection(
+  appContext: AppContext | undefined,
+  entityType: string
+): string {
+  const parts: string[] = [];
+
+  if (appContext?.description) {
+    parts.push(
+      `ABOUT THIS ${entityType.toUpperCase()}:\n${appContext.description}`
+    );
+  }
+
+  if (appContext?.key_features?.length) {
+    parts.push(
+      `KEY FEATURES:\n${appContext.key_features.map((f) => `- ${f}`).join("\n")}`
+    );
+  }
+
+  return parts.join("\n\n");
+}
+
+function extractBusinessName(description: string): string {
+  const firstSentence = description.split(/[.!?]/)[0];
+  const words = firstSentence.split(" ").slice(0, 4).join(" ");
+  return words || "our business";
 }
