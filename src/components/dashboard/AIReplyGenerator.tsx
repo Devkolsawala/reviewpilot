@@ -397,12 +397,7 @@ export function AIReplyGenerator({
               </button>
             ))}
           </div>
-          <Button
-            onClick={handleGenerate}
-            size="lg"
-            className="px-8"
-            disabled={state === "generating"}
-          >
+          <Button onClick={handleGenerate} size="lg" className="px-8">
             <Bot className="mr-2 h-4 w-4" />
             Generate AI Reply
           </Button>
