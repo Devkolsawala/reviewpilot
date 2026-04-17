@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -89,6 +89,11 @@ export function AIReplyGenerator({
     periodLabel?: string;
   }>({ open: false });
 
+  // Ref-based in-flight guard. React state updates are async and batched,
+  // so two rapid clicks can both see `state === "idle"` before React re-renders.
+  // A ref updates synchronously so the second click sees `true` and bails out.
+  const inFlightRef = useRef(false);
+
   useEffect(() => {
     setReply(review.reply_text || "");
     setState(deriveInitialState(review));
@@ -108,9 +113,12 @@ export function AIReplyGenerator({
   const showAiDraftBadge = isDrafted && review.is_auto_replied;
 
   async function handleGenerate() {
-    // Guard: ignore re-clicks while a request is already in flight.
-    // Prevents duplicate xAI billing if the user mashes the button.
+    // Synchronous guard via ref — blocks duplicate fires even when React
+    // hasn't flushed the "generating" state yet (rapid double-clicks, event
+    // replays, StrictMode dev re-invocation).
+    if (inFlightRef.current) return;
     if (state === "generating" || state === "posting") return;
+    inFlightRef.current = true;
     setState("generating");
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 15000);
@@ -159,6 +167,7 @@ export function AIReplyGenerator({
       }
       setReply(fallbackReply(review));
     } finally {
+      inFlightRef.current = false;
       setState("review");
     }
   }
