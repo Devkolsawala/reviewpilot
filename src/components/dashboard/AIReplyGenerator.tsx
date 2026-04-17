@@ -483,7 +483,6 @@ export function AIReplyGenerator({
             <Button
               variant="outline"
               onClick={handleGenerate}
-              disabled={state === "generating"}
               className="flex-1 min-w-[120px]"
             >
               <RefreshCw className="mr-2 h-4 w-4" />
