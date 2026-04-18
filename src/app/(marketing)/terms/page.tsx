@@ -105,6 +105,20 @@ export default function TermsPage() {
                 consent to the new price.
               </p>
             </Subsection>
+            <Subsection title="4.4 No refunds">
+              <p className="mt-2">
+                Subscription payments are non-refundable. The 7-day free trial is the
+                evaluation period — you can try every feature on any plan before paying,
+                without providing a credit card. If you cancel a paid plan, your
+                subscription remains active with full feature access until the end of
+                the current billing cycle, after which it moves to the free tier. No
+                pro-rata or partial refunds are issued for unused portions of the
+                billing period. This policy lets us keep prices India-first and
+                self-serve. Genuine billing errors (for example, duplicate charges or
+                charges after a confirmed cancellation) are resolved on request —
+                contact support with your registered email and payment date.
+              </p>
+            </Subsection>
           </Section>
 
           <Section title="5. Your Content">

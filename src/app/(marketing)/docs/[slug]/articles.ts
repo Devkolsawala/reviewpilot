@@ -1056,7 +1056,7 @@ Your data (reviews, reply history, analytics) is always preserved regardless of 
 
 ## Cancelling
 
-To cancel, go to **Settings → Billing → Cancel subscription**. Your account will remain active until the end of the current billing period, then move to the free plan. Your data is preserved for 30 days after cancellation. We offer a [full refund within 7 days](/docs/payment-methods-and-invoices) of any payment if you're not satisfied.
+To cancel, go to **Settings → Billing → Cancel subscription**. Your account will remain active until the end of the current billing period — you keep every feature you paid for — then moves to the free plan. Your data is preserved for 30 days after cancellation. We don't offer refunds on subscription payments because every plan includes a [7-day free trial](/pricing) where you evaluate everything before you pay a rupee.
 `,
   },
 
@@ -1104,7 +1104,7 @@ Each team member with a ReviewPilot account under your workspace uses one seat. 
   "payment-methods-and-invoices": {
     title: "Payment Methods and Invoices",
     category: "Billing & Plans",
-    description: "Accepted payment methods, how to download invoices, and how to request a refund.",
+    description: "Accepted payment methods, how to download invoices, and our refund policy.",
     readTime: "2 min read",
     content: `
 ## Accepted payment methods
@@ -1134,7 +1134,16 @@ To change your payment method or update billing address, go to **Settings → Bi
 
 ## Refund policy
 
-We offer a **full refund within 7 days** of any payment, no questions asked. To request a refund, email **dev.kolsawala45@gmail.com** with your registered email address and the payment date. Refunds are processed within 5–7 business days back to the original payment method.
+**We don't offer refunds on subscription payments.** Instead, every plan comes with a **7-day free trial** with full access to every feature — no credit card required to start. That's your evaluation window: connect your Play Store, train the AI on your brand voice, reply to real reviews, and see whether ReviewPilot fits your workflow before you pay anything.
+
+**If you decide ReviewPilot isn't right for you after subscribing:** cancel anytime from **Settings → Billing → Cancel subscription**. Your plan stays active — with full feature access — until the end of the current billing cycle, so you keep every rupee's worth of what you paid for. There's no early-termination penalty, no lock-in, and no annual contract.
+
+**Why no refunds?** Two reasons, both in your favour:
+
+1. The 7-day trial is genuinely full-featured — you know exactly what you're buying before you buy it.
+2. Skipping refund operations lets us keep the Starter plan at ₹1,500/month. Enterprise tools that offer refunds typically charge ₹20,000–₹25,000/month to cover those ops.
+
+**Billing issues or accidental charges?** If you were charged in error (duplicate payment, charge after cancellation, etc.), email **dev.kolsawala45@gmail.com** with your registered email and payment date — we resolve genuine billing errors within 5–7 business days.
 
 ## GST
 

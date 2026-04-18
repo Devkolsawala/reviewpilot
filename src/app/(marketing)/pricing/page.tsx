@@ -86,7 +86,7 @@ const FAQ = [
   },
   {
     q: "Do you offer refunds?",
-    a: "Yes, we offer a full refund within 7 days of purchase if you're not satisfied. No questions asked.",
+    a: "We don't offer refunds on subscription payments — and here's why that's actually good for you. Every plan includes a 7-day free trial with full access to every feature, no credit card required. That's your evaluation window: connect your Play Store, train the AI on your brand voice, reply to real reviews, and see the results before you ever pay. If it's not right for you, simply don't subscribe. By skipping refund processing, we keep prices at ₹1,500/month instead of the ₹25,000+ that enterprise competitors charge. If you cancel a paid plan, it stays active until the end of your current billing cycle — you keep everything you paid for.",
   },
   {
     q: "Can I use ReviewPilot for both Google Business and Play Store?",
