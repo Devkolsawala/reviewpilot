@@ -4,6 +4,7 @@ import { replyToPlayStoreReview } from "@/lib/google/playstore";
 import { publishGBPReply } from "@/lib/google/gbp";
 import { generateReply } from "@/lib/ai/reply-generator";
 import { checkUsageLimit, incrementUsage } from "@/lib/usage";
+import { GBP_ENABLED, GBP_COMING_SOON_MESSAGE } from "@/lib/feature-flags";
 
 export async function POST(request: Request) {
   const supabase = createClient();
@@ -172,11 +173,21 @@ export async function POST(request: Request) {
         { status: 500 }
       );
     }
-  } else if (review.source === "google_business" && connection?.credentials) {
-    published = await publishGBPReply(
-      connection.credentials, "", connection.external_id || "",
-      review.external_review_id, finalReplyText
-    );
+  } else if (review.source === "google_business") {
+    if (!GBP_ENABLED) {
+      return NextResponse.json(
+        { success: false, error: GBP_COMING_SOON_MESSAGE },
+        { status: 503 }
+      );
+    }
+    if (connection?.credentials) {
+      published = await publishGBPReply(
+        connection.credentials, "", connection.external_id || "",
+        review.external_review_id, finalReplyText
+      );
+    } else {
+      published = true;
+    }
   } else {
     published = true;
   }

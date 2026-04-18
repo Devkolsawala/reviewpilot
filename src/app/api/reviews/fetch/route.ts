@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { fetchPlayStoreReviews } from "@/lib/google/playstore";
 import { processAutoReplyForReview } from "@/lib/reviews/auto-reply";
+import { GBP_ENABLED, GBP_COMING_SOON_MESSAGE } from "@/lib/feature-flags";
 import type { AppContext } from "@/types/database";
 
 export async function POST(request: Request) {
@@ -37,6 +38,12 @@ export async function POST(request: Request) {
     );
   }
 
+  if (connection.type === "google_business" && !GBP_ENABLED) {
+    return NextResponse.json(
+      { error: GBP_COMING_SOON_MESSAGE },
+      { status: 503 }
+    );
+  }
   if (connection.type !== "play_store") {
     return NextResponse.json(
       { error: "Only Play Store sync supported currently" },

@@ -90,7 +90,7 @@ const FAQ = [
   },
   {
     q: "Can I use ReviewPilot for both Google Business and Play Store?",
-    a: "Yes! All plans support both platforms. The connection limit determines how many locations or apps you can manage simultaneously.",
+    a: "Google Play Store is live today. Google Business Profile integration is coming soon — we're awaiting API access from Google. All plans are priced to support both platforms once GBP is live.",
   },
 ];
 

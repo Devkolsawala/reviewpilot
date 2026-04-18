@@ -14,6 +14,13 @@ import { toast } from "@/components/ui/use-toast";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { getSyncScheduleLabel } from "@/lib/plans";
+import { GBP_ENABLED, GBP_STATUS_LABEL, GBP_COMING_SOON_MESSAGE } from "@/lib/feature-flags";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import type { Connection } from "@/types/connection";
 
 function timeAgo(iso: string | null | undefined) {
@@ -166,6 +173,7 @@ export default function ConnectionsPage() {
         <div className="space-y-3">
           {connections.map((conn) => {
             const isSyncing = syncingId === conn.id;
+            const isGBPFrozen = conn.type === "google_business" && !GBP_ENABLED;
 
             return (
               <Card key={conn.id} className="transition-shadow hover:shadow-sm">
@@ -193,6 +201,14 @@ export default function ConnectionsPage() {
                               )}
                             >
                               {conn.credentials ? "Own Credentials" : "Invite Email"}
+                            </Badge>
+                          )}
+                          {isGBPFrozen && (
+                            <Badge
+                              variant="secondary"
+                              className="text-[10px] bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400"
+                            >
+                              {GBP_STATUS_LABEL}
                             </Badge>
                           )}
                         </div>
@@ -231,16 +247,39 @@ export default function ConnectionsPage() {
                           )}
                         </Badge>
                       )}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-8 gap-1.5"
-                        onClick={() => doSync(conn.id, false)}
-                        disabled={isSyncing}
-                      >
-                        <RefreshCw className={cn("h-3.5 w-3.5", isSyncing && "animate-spin")} />
-                        {isSyncing ? "Syncing..." : "Sync Now"}
-                      </Button>
+                      {isGBPFrozen ? (
+                        <TooltipProvider delayDuration={150}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span tabIndex={0}>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-8 gap-1.5 opacity-60 cursor-not-allowed"
+                                  disabled
+                                >
+                                  <RefreshCw className="h-3.5 w-3.5" />
+                                  Sync Now
+                                </Button>
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="max-w-xs">
+                              {GBP_COMING_SOON_MESSAGE}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8 gap-1.5"
+                          onClick={() => doSync(conn.id, false)}
+                          disabled={isSyncing}
+                        >
+                          <RefreshCw className={cn("h-3.5 w-3.5", isSyncing && "animate-spin")} />
+                          {isSyncing ? "Syncing..." : "Sync Now"}
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="icon"

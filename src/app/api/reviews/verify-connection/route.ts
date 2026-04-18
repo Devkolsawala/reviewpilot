@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { verifyConnection } from "@/lib/google/playstore";
 import { checkUsageLimit } from "@/lib/usage";
+import { GBP_ENABLED, GBP_COMING_SOON_MESSAGE } from "@/lib/feature-flags";
 
 export async function POST(request: Request) {
   try {
@@ -19,8 +20,14 @@ export async function POST(request: Request) {
     const { type, packageName, appName, connectionMethod, credentials } = body;
     // connectionMethod: 'invite_email' | 'own_service_account'
 
-    // ── Google Business Profile stub ─────────────────────────────────────────
+    // ── Google Business Profile — frozen until API access is granted ─────────
     if (type === "google_business") {
+      if (!GBP_ENABLED) {
+        return NextResponse.json(
+          { valid: false, error: GBP_COMING_SOON_MESSAGE },
+          { status: 503 }
+        );
+      }
       return NextResponse.json({
         valid: true,
         reviewCount: 0,

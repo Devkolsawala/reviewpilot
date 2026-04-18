@@ -1,11 +1,13 @@
 import Link from "next/link";
 
 const PRODUCT_LINKS = [
-  { label: "Features", href: "/#features" },
   { label: "Pricing", href: "/pricing" },
   { label: "How It Works", href: "/how-it-works" },
+  { label: "Play Store Reviews", href: "/features/google-play-reviews" },
+  { label: "Google Business Profile", href: "/features/google-business-profile" },
   { label: "For Businesses", href: "/for-local-business" },
   { label: "For Developers", href: "/for-app-developers" },
+  { label: "Birdeye Alternative", href: "/alternatives/birdeye-alternative" },
   { label: "Blog", href: "/blog" },
 ];
 

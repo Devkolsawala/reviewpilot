@@ -17,6 +17,7 @@ import { useConnections } from "@/hooks/useConnection";
 import { useTeamRole } from "@/hooks/useTeamRole";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
+import { GBP_ENABLED } from "@/lib/feature-flags";
 import type { Review } from "@/types/review";
 
 const MOCK_OVERRIDES_PREFIX = "reviewpilot_mock_overrides";
@@ -57,7 +58,10 @@ export default function InboxPage() {
     return () => window.removeEventListener("reviewpilot:auto-reply-complete", handleAutoReplyComplete);
   }, [refetch]);
 
-  const reviews = localReviews;
+  const reviews = useMemo(
+    () => (GBP_ENABLED ? localReviews : localReviews.filter((r) => r.source !== "google_business")),
+    [localReviews]
+  );
 
   // Reviews scoped to the active app (if app switcher is visible)
   const appScopedReviews = useMemo(() => {
@@ -219,7 +223,9 @@ export default function InboxPage() {
       ]);
       const allReviews = [
         ...mockPlayReviews.map((r) => ({ id: r.id, source: r.source as "play_store" | "google_business", author_name: r.author_name, rating: r.rating, review_text: r.review_text, base_status: r.reply_status as string })),
-        ...mockGBPReviews.map((gbp, idx) => ({ id: `gbp-mock-${idx}`, source: "google_business" as const, author_name: gbp.reviewer.displayName, rating: STAR_MAP[gbp.starRating] ?? 3, review_text: gbp.comment, base_status: gbp.reviewReply ? "published" : "pending" })),
+        ...(GBP_ENABLED
+          ? mockGBPReviews.map((gbp, idx) => ({ id: `gbp-mock-${idx}`, source: "google_business" as const, author_name: gbp.reviewer.displayName, rating: STAR_MAP[gbp.starRating] ?? 3, review_text: gbp.comment, base_status: gbp.reviewReply ? "published" : "pending" }))
+          : []),
       ];
       const [minR, maxR] = appContextConfig.ratingRange;
       const pending = allReviews.filter((r) => {
@@ -375,7 +381,9 @@ export default function InboxPage() {
               </div>
               <div className="flex gap-1 flex-wrap">
                 <FilterChip label="All Sources" active={sourceFilter === "all"} onClick={() => setSourceFilter("all")} />
-                <FilterChip label="Google" active={sourceFilter === "google_business"} onClick={() => setSourceFilter("google_business")} />
+                {GBP_ENABLED && (
+                  <FilterChip label="Google" active={sourceFilter === "google_business"} onClick={() => setSourceFilter("google_business")} />
+                )}
                 <FilterChip label="Play Store" active={sourceFilter === "play_store"} onClick={() => setSourceFilter("play_store")} />
               </div>
               <div className="flex gap-1 flex-wrap">

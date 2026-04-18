@@ -28,6 +28,13 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { GBP_ENABLED, GBP_STATUS_LABEL, GBP_COMING_SOON_MESSAGE } from "@/lib/feature-flags";
 import type { Connection } from "@/types/connection";
 
 // ---------------------------------------------------------------------------
@@ -80,21 +87,46 @@ export function ConnectionWizard({
             </Badge>
           </button>
 
-          <button
-            onClick={() => setMode("gbp")}
-            className="text-left rounded-xl border-2 border-transparent hover:border-teal-500 hover:bg-teal-50/50 dark:hover:bg-teal-950/20 bg-card p-6 transition-all"
-          >
-            <Globe className="h-10 w-10 text-teal-500 mb-4" />
-            <h3 className="font-heading text-base font-semibold mb-1">
-              Google Business Profile
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              Manage local business reviews via Google OAuth.
-            </p>
-            <Badge variant="secondary" className="mt-3 text-xs">
-              OAuth Connection
-            </Badge>
-          </button>
+          <TooltipProvider delayDuration={150}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => GBP_ENABLED && setMode("gbp")}
+                  disabled={!GBP_ENABLED}
+                  aria-disabled={!GBP_ENABLED}
+                  className={cn(
+                    "text-left rounded-xl border-2 border-transparent bg-card p-6 transition-all",
+                    GBP_ENABLED
+                      ? "hover:border-teal-500 hover:bg-teal-50/50 dark:hover:bg-teal-950/20"
+                      : "opacity-60 cursor-not-allowed"
+                  )}
+                >
+                  <Globe className="h-10 w-10 text-teal-500 mb-4" />
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <h3 className="font-heading text-base font-semibold">
+                      Google Business Profile
+                    </h3>
+                    {!GBP_ENABLED && (
+                      <Badge variant="secondary" className="text-[10px] bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400">
+                        {GBP_STATUS_LABEL}
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Manage local business reviews via Google OAuth.
+                  </p>
+                  <Badge variant="secondary" className="mt-3 text-xs">
+                    OAuth Connection
+                  </Badge>
+                </button>
+              </TooltipTrigger>
+              {!GBP_ENABLED && (
+                <TooltipContent side="top" className="max-w-xs">
+                  {GBP_COMING_SOON_MESSAGE}
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
         </div>
       </div>
     );

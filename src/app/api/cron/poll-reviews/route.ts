@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { processAutoReplyForReview } from "@/lib/reviews/auto-reply";
 import { checkUsageLimitAdmin, incrementUsageAdmin } from "@/lib/usage";
+import { GBP_ENABLED } from "@/lib/feature-flags";
 import type { AppContext } from "@/types/database";
 
 function getAdminClient() {
@@ -373,7 +374,11 @@ async function handleCron(request: NextRequest) {
 
           log(`[CRON] New reviews inserted: ${connResult.newReviews}`);
         } else if (connection.type === "google_business") {
-          log(`[CRON] GBP connection — skipping (API not yet active)`);
+          if (!GBP_ENABLED) {
+            log(`[CRON] GBP connection — skipping (GBP_ENABLED=false, awaiting Google API access)`);
+          } else {
+            log(`[CRON] GBP connection — handler not yet implemented`);
+          }
         } else {
           log(`[CRON] Unknown connection type: ${connection.type} — skipping`);
         }

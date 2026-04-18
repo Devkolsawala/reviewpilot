@@ -75,7 +75,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "Does ReviewPilot work with Google Play Store reviews?",
-    a: "Yes. ReviewPilot connects to Google Play Console via a service account and manages Play Store reviews alongside Google Business Profile reviews in a single inbox. It respects the 350-character Play Store reply limit automatically.",
+    a: "Yes. ReviewPilot connects to Google Play Console via a service account and respects the 350-character Play Store reply limit automatically. Google Business Profile support is coming soon — we're awaiting API access from Google.",
   },
   {
     q: "How does ReviewPilot generate AI replies?",
@@ -181,8 +181,11 @@ export default function HomePage() {
             </div>
             <div className="rounded-xl border bg-card p-6">
               <MapPin className="h-8 w-8 text-teal-500 mb-4" />
-              <h3 className="font-heading text-lg font-semibold mb-2">
+              <h3 className="font-heading text-lg font-semibold mb-2 flex items-center gap-2 flex-wrap">
                 Google Business Profile, automated
+                <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400 px-2 py-0.5 text-[10px] font-semibold">
+                  Coming Soon
+                </span>
               </h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
                 One-click GBP connection. AI writes brand-voice replies, SMS
@@ -248,8 +251,11 @@ export default function HomePage() {
             </Link>
             <Link href="/features/google-business-profile" className="group rounded-xl border bg-card p-6 hover:shadow-lg transition-shadow">
               <MapPin className="h-8 w-8 text-teal-500 mb-3" />
-              <h3 className="font-heading text-lg font-semibold mb-2 group-hover:text-teal-600 transition-colors">
+              <h3 className="font-heading text-lg font-semibold mb-2 group-hover:text-teal-600 transition-colors flex items-center gap-2 flex-wrap">
                 Google Business Profile Automation
+                <span className="inline-flex items-center rounded-full bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400 px-2 py-0.5 text-[10px] font-semibold">
+                  Coming Soon
+                </span>
               </h3>
               <p className="text-sm text-muted-foreground leading-relaxed mb-3">
                 Connect your GBP in one click. AI replies, SMS review collection, and smart routing to protect your star rating.
