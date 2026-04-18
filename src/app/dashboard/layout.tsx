@@ -67,6 +67,12 @@ export default function DashboardLayout({
 
  return (
  <div className="flex h-screen overflow-hidden bg-background">
+ <a
+ href="#main-content"
+ className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[60] focus:rounded-lg focus:bg-[linear-gradient(135deg,#6366f1_0%,#8b5cf6_50%,#d946ef_100%)] focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white focus:shadow-[0_0_20px_-4px_hsl(var(--ring)/0.6)]"
+ >
+ Skip to main content
+ </a>
  <Sidebar />
 
  {/* Mobile sidebar */}
@@ -78,7 +84,7 @@ export default function DashboardLayout({
 
  <div className="flex flex-1 flex-col overflow-hidden">
  <TopBar onMenuClick={() => setMobileOpen(true)} />
- <main className="flex-1 overflow-y-auto p-4 sm:p-6">
+ <main id="main-content" className="flex-1 overflow-y-auto p-4 sm:p-6">
  <TrialBanner />
  {children}
  </main>

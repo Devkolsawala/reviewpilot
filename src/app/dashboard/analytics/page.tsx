@@ -66,14 +66,19 @@ export default function AnalyticsPage() {
  )}
 
  <div className="flex items-center justify-between">
- <h1 className="font-sans text- font-semibold tracking-tight">Analytics</h1>
- <div className="flex items-center gap-1 rounded-full bg-secondary p-1">
+ <h1 className="font-sans text-2xl font-semibold tracking-tight">Analytics</h1>
+ <div
+ role="group"
+ aria-label="Select time range"
+ className="flex items-center gap-1 rounded-full bg-secondary p-1"
+ >
  {PERIODS.map((p) => (
  <button
  key={p.value}
  onClick={() => setPeriod(p.value)}
+ aria-pressed={period === p.value}
  className={cn(
- "rounded-full px-4 py-1.5 text-xs font-medium transition-all duration-150",
+ "rounded-full px-4 py-1.5 text-xs font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
  period === p.value
  ? "bg-background shadow-sm text-foreground"
  : "text-muted-foreground hover:text-foreground"
