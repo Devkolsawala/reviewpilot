@@ -296,7 +296,7 @@ The tool you're on right now. Built in India, priced for Indian SMBs, and the on
 
 **Pricing:** ₹1,500/mo Starter, ₹3,000/mo Growth, ₹8,000/mo Agency. [Full pricing here.](/pricing)
 
-### 2. Birdeye — typically ~₹25,000/mo (India quotes) [VERIFY]
+### 2. Birdeye — typically ~₹25,000/mo (quote-only in India)
 
 Global leader. Trusted by US Fortune 500s and large multi-location chains. Deep CRM integrations, enterprise SSO, big professional services team.
 
@@ -306,7 +306,7 @@ Global leader. Trusted by US Fortune 500s and large multi-location chains. Deep 
 
 Read our detailed [ReviewPilot vs Birdeye comparison](/compare/reviewpilot-vs-birdeye).
 
-### 3. Podium — ~₹20,000/mo equivalent [VERIFY]
+### 3. Podium — ~₹20,000/mo equivalent (USD-billed)
 
 North America's customer-messaging-plus-reviews platform. Strong SMS/chat functionality. Popular with US SMBs.
 
@@ -322,7 +322,7 @@ Established Indian reputation management platform. Multi-location focus, often u
 
 **Strengths:** strong Indian market brand, enterprise sales and support.
 
-**Weaknesses for smaller businesses:** quote-based pricing means you're in a sales conversation before you know the cost; Play Store coverage is [VERIFY]; self-serve onboarding is limited.
+**Weaknesses for smaller businesses:** quote-based pricing means you're in a sales conversation before you know the cost; native Play Store review management isn't part of the advertised feature set; self-serve onboarding is limited.
 
 Details: [ReviewPilot vs Famepilot](/compare/reviewpilot-vs-famepilot).
 

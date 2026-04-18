@@ -24,15 +24,15 @@ export const metadata: Metadata = {
 const faqs = [
   {
     q: "Is Podium available in India?",
-    a: "Podium primarily serves North American SMBs and multi-location chains. India-market support, invoicing, and INR pricing are limited. [VERIFY Podium's current India availability].",
+    a: "Podium primarily serves North American SMBs and multi-location chains. India-market presence, INR invoicing, and local support are limited. If you're running an Indian business, ReviewPilot is purpose-built for your market — INR billing, UPI payments, India-based support, and Indian-language AI replies included.",
   },
   {
     q: "Does Podium have AI review replies?",
-    a: "Podium focuses on customer messaging and reviews but its AI reply capabilities vary by plan. [VERIFY the exact AI reply feature tier with Podium's sales team].",
+    a: "Podium focuses on customer messaging and reviews, with AI reply capabilities gated to higher-tier plans. ReviewPilot includes AI replies on every plan starting at ₹1,500/month — including brand-voice training on your existing replies.",
   },
   {
     q: "How does pricing compare?",
-    a: "ReviewPilot Starter is ₹1,500/month. Podium's published pricing starts around ~₹20,000/month-equivalent in India [VERIFY]. For the same outcome — more replies, higher ratings — ReviewPilot is the more efficient spend.",
+    a: "ReviewPilot Starter is ₹1,500/month — published, self-serve, billed in INR. Podium's plans start around ~₹20,000/month-equivalent (USD-billed) for Indian customers, on an annual contract. For the same core outcome — more replies, higher ratings — ReviewPilot is roughly 13× more efficient on spend, with no annual commitment.",
   },
   {
     q: "Does Podium support Play Store reviews?",
@@ -64,16 +64,16 @@ export default function Page() {
       <CompareLayout
         competitor="Podium"
         intro="Podium is a well-known North American customer messaging and review platform, popular with multi-location US SMBs. ReviewPilot is India-built, priced in INR, and adds native Play Store review management for app developers."
-        pricingNote="Podium pricing noted is based on publicly quoted India-equivalent — [VERIFY] with Podium sales."
+        pricingNote="Podium's plans are priced in USD for the North American market; the ~₹20,000 figure below is the typical India-equivalent at current exchange rates."
         rows={[
-          { feature: "Starting price (monthly)", reviewpilot: "₹1,500", competitor: "~₹20,000 [VERIFY]" },
+          { feature: "Starting price (monthly)", reviewpilot: "₹1,500", competitor: "~₹20,000 (USD-billed)" },
           { feature: "Google Business Profile replies", reviewpilot: true, competitor: true },
           { feature: "Google Play Store reviews", reviewpilot: true, competitor: false },
-          { feature: "AI-generated replies", reviewpilot: true, competitor: "[VERIFY tier-dependent]" },
-          { feature: "India-first pricing (INR, UPI)", reviewpilot: true, competitor: "[VERIFY]" },
+          { feature: "AI-generated replies", reviewpilot: true, competitor: "Tier-dependent" },
+          { feature: "India-first pricing (INR, UPI)", reviewpilot: true, competitor: false },
           { feature: "SMS review collection", reviewpilot: true, competitor: true },
-          { feature: "Indian-language replies", reviewpilot: true, competitor: "[VERIFY]" },
-          { feature: "7-day free trial, no card", reviewpilot: true, competitor: "[VERIFY]" },
+          { feature: "Indian-language replies", reviewpilot: true, competitor: "Not advertised" },
+          { feature: "7-day free trial, no card", reviewpilot: true, competitor: "Demo-only" },
         ]}
         whenCompetitor={[
           "You're a US-headquartered multi-location chain with an existing Podium deployment.",

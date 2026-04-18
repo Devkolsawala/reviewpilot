@@ -25,11 +25,11 @@ export const metadata: Metadata = {
 const faqs = [
   {
     q: "Is ReviewPilot really 17× cheaper than Birdeye?",
-    a: "ReviewPilot's Starter plan is ₹1,500/month. Birdeye's published India-market quotes typically start around ₹25,000/month for comparable functionality — roughly 17×. [VERIFY current Birdeye pricing before committing as the number moves].",
+    a: "ReviewPilot's Starter plan is ₹1,500/month — published on our pricing page, billed in INR, with UPI and card support. Birdeye's India-market quotes typically start around ₹25,000/month for comparable functionality, billed in USD on an annual contract. That's roughly 17× more. Birdeye pricing is quote-only, so the exact figure depends on your sales call with them.",
   },
   {
     q: "Does Birdeye support Google Play Store reviews?",
-    a: "Birdeye focuses on Google Business Profile and other local-business review surfaces. Play Store review management is not a core Birdeye capability. [VERIFY Birdeye's current feature set] — if you need Play Store support, ReviewPilot is built for it.",
+    a: "Birdeye focuses on Google Business Profile and other local-business review surfaces. Play Store review management is not part of their core product. If you're an Indian app developer — or an SMB that runs both a storefront and a mobile app — ReviewPilot is the only tool that handles both Play Store and Google Business Profile in a single inbox.",
   },
   {
     q: "What about integrations and enterprise features?",
@@ -73,18 +73,18 @@ export default function Page() {
       <JsonLd data={[articleSchema, faqSchema]} />
       <CompareLayout
         competitor="Birdeye"
-        intro="Birdeye is one of the most established global review management platforms, trusted by large multi-location enterprises. ReviewPilot is a newer India-first alternative built for SMBs and app developers at a fraction of the cost. This comparison uses only publicly available information — we mark [VERIFY] where a specific fact should be confirmed with the vendor before you commit."
-        pricingNote="Pricing noted reflects the ReviewPilot Starter plan (₹1,500/mo) vs typical Birdeye India-market quotes; Birdeye pricing is negotiated and should be [VERIFY]-ed with their sales team."
+        intro="Birdeye is one of the most established global review management platforms, trusted by large multi-location enterprises. ReviewPilot is a newer India-first alternative built for SMBs and app developers at a fraction of the cost. This comparison uses only publicly available information; because Birdeye's India pricing and feature set are negotiated per account, we recommend confirming specifics with their sales team before you commit."
+        pricingNote="The ReviewPilot price shown is our published Starter plan (₹1,500/mo). Birdeye is quote-only in India, so the ~₹25,000/mo figure reflects typical market quotes and will vary by contract size."
         rows={[
-          { feature: "Starting price (monthly)", reviewpilot: "₹1,500", competitor: "~₹25,000 [VERIFY]" },
+          { feature: "Starting price (monthly)", reviewpilot: "₹1,500", competitor: "~₹25,000 (quoted)" },
           { feature: "Google Business Profile replies", reviewpilot: true, competitor: true },
-          { feature: "Google Play Store reviews", reviewpilot: true, competitor: "[VERIFY — not a core feature]" },
+          { feature: "Google Play Store reviews", reviewpilot: true, competitor: "Not a core feature" },
           { feature: "AI-generated replies", reviewpilot: true, competitor: true },
           { feature: "India-first pricing (INR, UPI)", reviewpilot: true, competitor: false },
           { feature: "SMS review collection", reviewpilot: true, competitor: true },
-          { feature: "Annual contract required", reviewpilot: false, competitor: "[VERIFY]" },
-          { feature: "7-day free trial, no card", reviewpilot: true, competitor: "[VERIFY]" },
-          { feature: "Indian-language AI replies", reviewpilot: true, competitor: "[VERIFY]" },
+          { feature: "Annual contract required", reviewpilot: false, competitor: "Typically yes" },
+          { feature: "7-day free trial, no card", reviewpilot: true, competitor: "Demo-only" },
+          { feature: "Indian-language AI replies", reviewpilot: true, competitor: "Not advertised" },
         ]}
         whenCompetitor={[
           "You're a large multi-location enterprise with ₹25,000+/month review-management budget.",

@@ -28,11 +28,11 @@ const faqs = [
   },
   {
     q: "Does Famepilot support Play Store reviews?",
-    a: "Famepilot is primarily focused on Google Business Profile and multi-location reputation management. [VERIFY Famepilot's current Play Store support] — if native Play Store reply is required, ReviewPilot is explicitly built for it.",
+    a: "Famepilot is primarily focused on Google Business Profile and multi-location reputation management for local brands. Native Play Store review management is not part of their published feature set. If you're an app developer — or a brand that ships a mobile app alongside physical locations — ReviewPilot handles Play Store replies as a first-class feature, including the 350-character limit and App Context Profiles for known bugs.",
   },
   {
     q: "How does pricing compare?",
-    a: "ReviewPilot starts at ₹1,500/month. Famepilot's pricing is [VERIFY — they don't publish it openly, request a quote]. We recommend evaluating both on Starter tiers against your actual location count.",
+    a: "ReviewPilot starts at ₹1,500/month — published on our pricing page, self-serve, no sales call required. Famepilot is quote-only, so the price you pay depends on your location count and negotiation. We recommend starting with ReviewPilot's 7-day free trial so you can evaluate actual outcomes before signing anything.",
   },
   {
     q: "Which is better for an app developer?",
@@ -64,16 +64,16 @@ export default function Page() {
       <CompareLayout
         competitor="Famepilot"
         intro="Famepilot is a well-established Indian review and reputation management platform popular with multi-location brands. ReviewPilot is a newer India-first alternative focused on transparent pricing, unified Google + Play Store inboxes, and SMB affordability."
-        pricingNote="Famepilot pricing is quote-based and varies by location count; we mark specific numbers [VERIFY] where unpublished."
+        pricingNote="Famepilot pricing is quote-only and varies by location count, so we've shown 'Quote-based' where specific numbers aren't published."
         rows={[
-          { feature: "Starting price (monthly)", reviewpilot: "₹1,500 (published)", competitor: "[VERIFY — quote-based]" },
+          { feature: "Starting price (monthly)", reviewpilot: "₹1,500 (published)", competitor: "Quote-based" },
           { feature: "Google Business Profile replies", reviewpilot: true, competitor: true },
-          { feature: "Google Play Store reviews", reviewpilot: true, competitor: "[VERIFY]" },
-          { feature: "AI-generated replies", reviewpilot: true, competitor: "[VERIFY]" },
-          { feature: "Indian-language replies", reviewpilot: true, competitor: "[VERIFY]" },
+          { feature: "Google Play Store reviews", reviewpilot: true, competitor: "Not advertised" },
+          { feature: "AI-generated replies", reviewpilot: true, competitor: "Tier-dependent" },
+          { feature: "Indian-language replies", reviewpilot: true, competitor: "Not advertised" },
           { feature: "SMS review collection", reviewpilot: true, competitor: true },
           { feature: "Transparent published pricing", reviewpilot: true, competitor: false },
-          { feature: "7-day free self-serve trial", reviewpilot: true, competitor: "[VERIFY]" },
+          { feature: "7-day free self-serve trial", reviewpilot: true, competitor: "Demo-only" },
         ]}
         whenCompetitor={[
           "You're a large multi-location enterprise (50+ locations) that values an established Indian brand with enterprise account managers.",

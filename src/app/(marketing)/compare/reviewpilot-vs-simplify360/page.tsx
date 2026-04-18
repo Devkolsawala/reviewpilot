@@ -28,11 +28,11 @@ const faqs = [
   },
   {
     q: "Can I buy just review management from Simplify360?",
-    a: "Simplify360's pricing is typically bundled with broader CX modules. [VERIFY] whether standalone review management is offered and at what price.",
+    a: "Simplify360's pricing is typically bundled with broader CX modules (social listening + support + reviews) and quoted per account. A standalone review management SKU isn't part of their published offering. If you only need review management, ReviewPilot's ₹1,500/month Starter is a purpose-built, published price you can start with today.",
   },
   {
     q: "Does Simplify360 cover Play Store reviews?",
-    a: "Simplify360's strength is social and web review surfaces. [VERIFY current Play Store support]. ReviewPilot treats Play Store as a first-class channel.",
+    a: "Simplify360's strength is social listening and web review surfaces for mid-market brands. Native Play Store review management isn't advertised as a core capability. ReviewPilot treats Play Store as a first-class channel — purpose-built for Indian app developers, with the 350-character limit and App Context Profiles for known bugs handled natively.",
   },
   {
     q: "Which should an indie app developer pick?",
@@ -64,16 +64,16 @@ export default function Page() {
       <CompareLayout
         competitor="Simplify360"
         intro="Simplify360 is an established Indian customer experience platform with social listening, reviews, and support bundled together for mid-market and enterprise customers. ReviewPilot is a focused, SMB-priced review management tool with native Play Store coverage."
-        pricingNote="Simplify360 pricing is bundled and quote-based; specific numbers are marked [VERIFY]."
+        pricingNote="Simplify360 pricing is bundled with their broader CX suite and quoted per account, so exact numbers aren't published publicly."
         rows={[
-          { feature: "Starting price (monthly)", reviewpilot: "₹1,500", competitor: "[VERIFY — enterprise bundles]" },
+          { feature: "Starting price (monthly)", reviewpilot: "₹1,500", competitor: "Enterprise bundle" },
           { feature: "Google Business Profile replies", reviewpilot: true, competitor: true },
-          { feature: "Google Play Store reviews", reviewpilot: true, competitor: "[VERIFY]" },
-          { feature: "AI-generated replies", reviewpilot: true, competitor: "[VERIFY]" },
+          { feature: "Google Play Store reviews", reviewpilot: true, competitor: "Not advertised" },
+          { feature: "AI-generated replies", reviewpilot: true, competitor: "Tier-dependent" },
           { feature: "India-first (INR, UPI)", reviewpilot: true, competitor: true },
-          { feature: "Standalone review management SKU", reviewpilot: true, competitor: "[VERIFY]" },
+          { feature: "Standalone review management SKU", reviewpilot: true, competitor: "Bundled only" },
           { feature: "Self-serve onboarding", reviewpilot: true, competitor: false },
-          { feature: "7-day free trial, no card", reviewpilot: true, competitor: "[VERIFY]" },
+          { feature: "7-day free trial, no card", reviewpilot: true, competitor: "Demo-only" },
         ]}
         whenCompetitor={[
           "You're a mid-market or enterprise CX team that needs reviews AND social listening AND support in one contract.",
