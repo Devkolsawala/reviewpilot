@@ -107,7 +107,7 @@ const ROWS: FeatureRow[] = [
 
 function Cell({ value }: { value: boolean | string }) {
   if (value === true)
-    return <CheckCircle2 className="h-5 w-5 text-teal-500 mx-auto" />;
+    return <CheckCircle2 className="h-5 w-5 text-accent mx-auto" />;
   if (value === false)
     return <XCircle className="h-5 w-5 text-red-400/60 mx-auto" />;
   return (
@@ -140,14 +140,14 @@ export default function BirdeyeAlternativePage() {
       <JsonLd data={[articleSchema, faqSchema]} />
 
       {/* Hero */}
-      <section className="py-20 sm:py-28 bg-gradient-to-b from-background to-secondary/30">
+      <section className="py-20 sm:py-28 ">
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 text-center">
-          <div className="inline-flex items-center gap-2 rounded-full bg-teal-500/10 px-3 py-1 text-sm text-teal-600 mb-6">
+          <div className="inline-flex items-center gap-2 rounded-full bg-background/60 border border-border/60 backdrop-blur-sm px-3 py-1 text-sm text-accent mb-6">
             <IndianRupee className="h-3.5 w-3.5" /> Birdeye Alternative India
           </div>
-          <h1 className="font-heading text-4xl font-bold sm:text-5xl lg:text-6xl">
+          <h1 className="font-sans text-4xl font-semibold tracking-tight sm:text-5xl lg:text-6xl">
             The Affordable Birdeye Alternative{" "}
-            <span className="text-teal-500">Built for India</span>
+            <span className="text-accent">Built for India</span>
           </h1>
           <p className="mt-6 text-lg text-muted-foreground leading-relaxed max-w-2xl mx-auto">
             Birdeye charges Indian SMBs ~₹25,000/month. ReviewPilot does the
@@ -174,46 +174,46 @@ export default function BirdeyeAlternativePage() {
       {/* Pricing callout */}
       <section className="py-16 bg-background">
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
-          <h2 className="font-heading text-2xl font-bold text-center mb-10">
+          <h2 className="font-sans text-2xl font-semibold tracking-tight text-center mb-10">
             The Price Gap Is Not Small
           </h2>
           <div className="grid gap-6 md:grid-cols-3">
-            <div className="rounded-xl border-2 border-teal-500 bg-teal-50/30 dark:bg-teal-950/20 p-6 text-center">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-teal-500 text-white font-heading font-bold text-sm mx-auto mb-3">
+            <div className="rounded-2xl border border-border/60-2 border-border/60 bg-card/40 backdrop-blur-sm p-6 text-center">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[linear-gradient(135deg,#6366f1,#8b5cf6,#d946ef)] text-white font-sans font-semibold tracking-tight text-sm mx-auto mb-3">
                 RP
               </div>
-              <p className="font-heading font-bold text-xl mb-1">ReviewPilot</p>
-              <p className="text-3xl font-bold text-teal-600 font-heading">₹1,500</p>
+              <p className="font-sans text-lg font-semibold tracking-tight mb-1">ReviewPilot</p>
+              <p className="text-3xl font-bold text-accent font-sans">₹1,500</p>
               <p className="text-sm text-muted-foreground mt-1">per month · Starter</p>
               <div className="mt-4 space-y-2 text-sm text-left">
-                <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-teal-500 shrink-0" /> GBP + Play Store</div>
-                <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-teal-500 shrink-0" /> Indian languages</div>
-                <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-teal-500 shrink-0" /> UPI / INR billing</div>
-                <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-teal-500 shrink-0" /> No annual contract</div>
+                <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-accent shrink-0" /> GBP + Play Store</div>
+                <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-accent shrink-0" /> Indian languages</div>
+                <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-accent shrink-0" /> UPI / INR billing</div>
+                <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-accent shrink-0" /> No annual contract</div>
               </div>
             </div>
 
-            <div className="rounded-xl border bg-card p-6 text-center opacity-80">
+            <div className="rounded-2xl border border-border/60 bg-card/40 backdrop-blur-sm p-6 text-center opacity-80">
               <Globe className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-              <p className="font-heading font-bold text-xl mb-1">Birdeye</p>
-              <p className="text-3xl font-bold text-foreground font-heading">~₹25,000</p>
+              <p className="font-sans text-lg font-semibold tracking-tight mb-1">Birdeye</p>
+              <p className="text-3xl font-bold text-foreground font-sans">~₹25,000</p>
               <p className="text-sm text-muted-foreground mt-1">per month · quote-only</p>
               <div className="mt-4 space-y-2 text-sm text-left">
-                <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-teal-500 shrink-0" /> GBP reviews</div>
+                <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-accent shrink-0" /> GBP reviews</div>
                 <div className="flex items-center gap-2"><XCircle className="h-4 w-4 text-red-400/60 shrink-0" /> No Play Store</div>
                 <div className="flex items-center gap-2"><XCircle className="h-4 w-4 text-red-400/60 shrink-0" /> USD billing</div>
                 <div className="flex items-center gap-2"><XCircle className="h-4 w-4 text-red-400/60 shrink-0" /> Annual contract</div>
               </div>
             </div>
 
-            <div className="rounded-xl border bg-card p-6 text-center opacity-80">
+            <div className="rounded-2xl border border-border/60 bg-card/40 backdrop-blur-sm p-6 text-center opacity-80">
               <Smartphone className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-              <p className="font-heading font-bold text-xl mb-1">AppFollow</p>
-              <p className="text-3xl font-bold text-foreground font-heading">~₹8,000</p>
+              <p className="font-sans text-lg font-semibold tracking-tight mb-1">AppFollow</p>
+              <p className="text-3xl font-bold text-foreground font-sans">~₹8,000</p>
               <p className="text-sm text-muted-foreground mt-1">per month · USD-billed plans</p>
               <div className="mt-4 space-y-2 text-sm text-left">
                 <div className="flex items-center gap-2"><XCircle className="h-4 w-4 text-red-400/60 shrink-0" /> No GBP reviews</div>
-                <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-teal-500 shrink-0" /> Play Store reviews</div>
+                <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-accent shrink-0" /> Play Store reviews</div>
                 <div className="flex items-center gap-2"><XCircle className="h-4 w-4 text-red-400/60 shrink-0" /> USD billing</div>
                 <div className="flex items-center gap-2"><MinusCircle className="h-4 w-4 text-amber-400 shrink-0" /> Free tier limited</div>
               </div>
@@ -226,24 +226,24 @@ export default function BirdeyeAlternativePage() {
       </section>
 
       {/* Full comparison table */}
-      <section className="py-20 bg-secondary/30">
+      <section className="py-20 bg-muted/20">
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-          <h2 className="font-heading text-3xl font-bold text-center mb-12">
+          <h2 className="font-sans text-3xl font-semibold tracking-tight text-center mb-12">
             Full Feature Comparison
           </h2>
-          <div className="overflow-x-auto rounded-xl border bg-background">
+          <div className="overflow-x-auto rounded-2xl border border-border/60 bg-background">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b">
-                  <th className="text-left p-4 font-heading font-semibold w-1/2">Feature</th>
-                  <th className="p-4 font-heading font-semibold text-teal-600 w-[17%]">ReviewPilot</th>
-                  <th className="p-4 font-heading font-semibold text-muted-foreground w-[17%]">Birdeye</th>
-                  <th className="p-4 font-heading font-semibold text-muted-foreground w-[17%]">AppFollow</th>
+                  <th className="text-left p-4 font-sans font-semibold tracking-tight w-1/2">Feature</th>
+                  <th className="p-4 font-sans font-semibold tracking-tight text-accent w-[17%]">ReviewPilot</th>
+                  <th className="p-4 font-sans font-semibold tracking-tight text-muted-foreground w-[17%]">Birdeye</th>
+                  <th className="p-4 font-sans font-semibold tracking-tight text-muted-foreground w-[17%]">AppFollow</th>
                 </tr>
               </thead>
               <tbody>
                 {ROWS.map((row, i) => (
-                  <tr key={row.feature} className={i % 2 === 0 ? "bg-secondary/20" : ""}>
+                  <tr key={row.feature} className={i % 2 === 0 ? "bg-muted/30" : ""}>
                     <td className="p-4 text-muted-foreground">{row.feature}</td>
                     <td className="p-4"><Cell value={row.reviewpilot} /></td>
                     <td className="p-4"><Cell value={row.birdeye} /></td>
@@ -262,12 +262,12 @@ export default function BirdeyeAlternativePage() {
       {/* When to choose each */}
       <section className="py-20 bg-background">
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-          <h2 className="font-heading text-3xl font-bold text-center mb-12">
+          <h2 className="font-sans text-3xl font-semibold tracking-tight text-center mb-12">
             Which Tool Is Right for You?
           </h2>
           <div className="grid gap-8 md:grid-cols-3">
-            <div className="rounded-xl border-2 border-teal-500 bg-teal-50/30 dark:bg-teal-950/20 p-6">
-              <p className="font-heading font-semibold mb-4 text-teal-700 dark:text-teal-400">
+            <div className="rounded-2xl border border-border/60-2 border-border/60 bg-card/40 backdrop-blur-sm p-6">
+              <p className="font-sans font-semibold tracking-tight mb-4 text-accent">
                 Choose ReviewPilot if…
               </p>
               <ul className="space-y-3">
@@ -280,15 +280,15 @@ export default function BirdeyeAlternativePage() {
                   "Your budget is ₹1,500–₹8,000/month",
                 ].map((item) => (
                   <li key={item} className="flex items-start gap-2 text-sm">
-                    <CheckCircle2 className="h-4 w-4 text-teal-500 mt-0.5 shrink-0" />
+                    <CheckCircle2 className="h-4 w-4 text-accent mt-0.5 shrink-0" />
                     {item}
                   </li>
                 ))}
               </ul>
             </div>
 
-            <div className="rounded-xl border bg-card p-6">
-              <p className="font-heading font-semibold mb-4 text-muted-foreground">
+            <div className="rounded-2xl border border-border/60 bg-card/40 backdrop-blur-sm p-6">
+              <p className="font-sans font-semibold tracking-tight mb-4 text-muted-foreground">
                 Choose Birdeye if…
               </p>
               <ul className="space-y-3">
@@ -307,8 +307,8 @@ export default function BirdeyeAlternativePage() {
               </ul>
             </div>
 
-            <div className="rounded-xl border bg-card p-6">
-              <p className="font-heading font-semibold mb-4 text-muted-foreground">
+            <div className="rounded-2xl border border-border/60 bg-card/40 backdrop-blur-sm p-6">
+              <p className="font-sans font-semibold tracking-tight mb-4 text-muted-foreground">
                 Choose AppFollow if…
               </p>
               <ul className="space-y-3">
@@ -331,15 +331,15 @@ export default function BirdeyeAlternativePage() {
       </section>
 
       {/* FAQs */}
-      <section className="py-20 bg-secondary/30">
+      <section className="py-20 bg-muted/20">
         <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
-          <h2 className="font-heading text-3xl font-bold text-center mb-10">
+          <h2 className="font-sans text-3xl font-semibold tracking-tight text-center mb-10">
             Frequently Asked Questions
           </h2>
           <div className="space-y-5">
             {FAQS.map((faq) => (
-              <div key={faq.q} className="rounded-xl border bg-card p-6">
-                <h3 className="font-heading font-semibold mb-2">{faq.q}</h3>
+              <div key={faq.q} className="rounded-2xl border border-border/60 bg-card/40 backdrop-blur-sm p-6">
+                <h3 className="font-sans font-semibold tracking-tight mb-2">{faq.q}</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">{faq.a}</p>
               </div>
             ))}
@@ -351,25 +351,25 @@ export default function BirdeyeAlternativePage() {
       <section className="py-10 bg-background">
         <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 text-center text-sm text-muted-foreground">
           Also see:{" "}
-          <Link href="/compare/reviewpilot-vs-birdeye" className="text-teal-600 hover:underline">Detailed ReviewPilot vs Birdeye comparison</Link>
+          <Link href="/compare/reviewpilot-vs-birdeye" className="text-accent hover:underline">Detailed ReviewPilot vs Birdeye comparison</Link>
           {" · "}
-          <Link href="/features/google-business-profile" className="text-teal-600 hover:underline">Google Business Profile automation</Link>
+          <Link href="/features/google-business-profile" className="text-accent hover:underline">Google Business Profile automation</Link>
           {" · "}
-          <Link href="/features/google-play-reviews" className="text-teal-600 hover:underline">Play Store review automation</Link>
+          <Link href="/features/google-play-reviews" className="text-accent hover:underline">Play Store review automation</Link>
           {" · "}
-          <Link href="/pricing" className="text-teal-600 hover:underline">ReviewPilot pricing</Link>
+          <Link href="/pricing" className="text-accent hover:underline">ReviewPilot pricing</Link>
           {" · "}
-          <Link href="/blog/best-review-management-software-india-2026" className="text-teal-600 hover:underline">Best review management software India 2026</Link>
+          <Link href="/blog/best-review-management-software-india-2026" className="text-accent hover:underline">Best review management software India 2026</Link>
         </div>
       </section>
 
       {/* CTA */}
-      <section className="py-20 bg-navy-900">
+      <section className="py-20 ">
         <div className="mx-auto max-w-3xl px-4 text-center">
-          <h2 className="font-heading text-3xl font-bold text-white">
+          <h2 className="font-sans text-3xl font-semibold tracking-tight text-white">
             Switch from Birdeye. Keep Your Reviews Answered.
           </h2>
-          <p className="mt-4 text-navy-300">
+          <p className="mt-4 text-muted-foreground">
             Set up takes under 5 minutes. No annual contract. 7-day free trial.
           </p>
           <div className="mt-8 flex justify-center gap-3 flex-wrap">

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import {
   ArrowRight,
   Bot,
@@ -11,6 +10,8 @@ import {
   Zap,
   AlertTriangle,
 } from "lucide-react";
+import { AuroraBackground } from "@/components/ui/aurora-background";
+import { GridPattern } from "@/components/ui/grid-pattern";
 
 export const metadata: Metadata = {
   title: "Play Store Review Management for App Developers | ReviewPilot",
@@ -35,37 +36,37 @@ export const metadata: Metadata = {
 const BENEFITS = [
   {
     icon: Bot,
-    title: "AI Replies That Know Your App",
+    title: "AI replies that know your app",
     description:
       "Set up your App Context Profile once — features, known issues, FAQs. AI generates replies that actually help users.",
   },
   {
     icon: Smartphone,
-    title: "350-Char Limit Enforced",
+    title: "350-char limit enforced",
     description:
       "Play Store has a 350-character reply limit. ReviewPilot enforces this automatically — no more truncated replies.",
   },
   {
     icon: BarChart3,
-    title: "Track Rating Impact",
+    title: "Track rating impact",
     description:
-      "See how your replies affect ratings over time. Identify which issues drive the most negative reviews.",
+      "See how replies affect ratings over time. Identify which issues drive the most negative reviews.",
   },
   {
     icon: Globe,
-    title: "Multi-Language Support",
+    title: "Multi-language support",
     description:
       "Users review in Hindi, Tamil, Telugu, and more. AI replies in the same language as the review.",
   },
   {
     icon: Zap,
-    title: "Auto-Reply to All Ratings",
+    title: "Auto-reply to every rating",
     description:
-      "Set up auto-reply rules: auto-publish replies to 4-5 star reviews, draft-for-approval for 1-3 stars.",
+      "Rules-based: auto-publish 4–5★ drafts, queue 1–3★ for human approval before publish.",
   },
   {
     icon: AlertTriangle,
-    title: "Known Issue Detection",
+    title: "Known-issue detection",
     description:
       "When a review mentions a known bug, AI acknowledges it and tells the user a fix is coming.",
   },
@@ -74,75 +75,100 @@ const BENEFITS = [
 export default function ForAppDevelopersPage() {
   return (
     <>
-      <section className="py-20 sm:py-28 bg-gradient-to-b from-background to-secondary/30">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      {/* Hero */}
+      <section className="relative overflow-hidden py-24 sm:py-32">
+        <AuroraBackground intensity="subtle" />
+        <GridPattern variant="grid" fade className="opacity-[0.3]" />
+        <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 rounded-full bg-teal-500/10 px-3 py-1 text-sm text-teal-600 mb-6">
-              For App Developers
+            <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/60 px-3 py-1 text-xs text-muted-foreground backdrop-blur-sm">
+              <span className="uppercase tracking-[0.15em]">For app developers</span>
             </div>
-            <h1 className="font-heading text-4xl font-bold sm:text-5xl">
-              Turn 1-Star Reviews Into{" "}
-              <span className="text-teal-500">Loyal Users</span>
+            <h1 className="mt-6 font-sans text-4xl font-semibold tracking-tight sm:text-5xl lg:text-6xl">
+              Turn 1-star reviews into{" "}
+              <span className="text-gradient-brand font-serif italic">
+                loyal users
+              </span>
+              .
             </h1>
-            <p className="mt-6 text-lg text-muted-foreground leading-relaxed">
+            <p className="mt-6 max-w-2xl text-lg text-muted-foreground leading-relaxed">
               Play Store reviews make or break your app. ReviewPilot uses AI to
               generate context-aware replies that address bugs, answer questions,
               and thank happy users — all within the 350-character limit.
             </p>
-            <div className="mt-8 flex gap-4">
-              <Button size="lg" asChild>
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:gap-4">
+              <Button variant="gradient" size="xl" asChild>
                 <Link href="/signup">
-                  Start Free Trial
-                  <ArrowRight className="ml-2 h-4 w-4" />
+                  Start free trial
+                  <ArrowRight className="ml-1.5 h-4 w-4" />
                 </Link>
               </Button>
-              <Button size="lg" variant="outline" asChild>
-                <Link href="/pricing">View Pricing</Link>
+              <Button variant="subtle" size="xl" asChild>
+                <Link href="/pricing">View pricing</Link>
               </Button>
             </div>
           </div>
         </div>
       </section>
 
-      <section className="py-20 bg-background">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <h2 className="font-heading text-3xl font-bold text-center mb-12">
-            Built for App Developers
-          </h2>
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      {/* Benefits grid */}
+      <section className="relative py-24 sm:py-32">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+              Built for shippers
+            </p>
+            <h2 className="mt-3 font-sans text-3xl font-semibold tracking-tight sm:text-4xl">
+              Everything an Android team needs.
+            </h2>
+          </div>
+          <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {BENEFITS.map((b) => (
-              <Card key={b.title}>
-                <CardContent className="p-6">
-                  <b.icon className="h-8 w-8 text-teal-500 mb-4" />
-                  <h3 className="font-heading text-lg font-semibold mb-2">
-                    {b.title}
-                  </h3>
-                  <p className="text-sm text-muted-foreground">
-                    {b.description}
-                  </p>
-                </CardContent>
-              </Card>
+              <div
+                key={b.title}
+                className="rounded-2xl border border-border/60 bg-card/40 p-6 backdrop-blur-sm transition-colors hover:border-accent/40"
+              >
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-border/60 bg-background/60 text-accent">
+                  <b.icon className="h-4 w-4" />
+                </div>
+                <h3 className="mt-4 font-sans text-base font-semibold tracking-tight">
+                  {b.title}
+                </h3>
+                <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+                  {b.description}
+                </p>
+              </div>
             ))}
           </div>
         </div>
       </section>
 
       {/* CTA */}
-      <section className="py-20 bg-navy-900">
-        <div className="mx-auto max-w-3xl px-4 text-center">
-          <h2 className="font-heading text-3xl font-bold text-white">
-            Stop Ignoring Your Play Store Reviews
-          </h2>
-          <p className="mt-4 text-navy-300">
-            Join hundreds of developers who use ReviewPilot to maintain a 4+ star
-            rating. Starting at just ₹1,500/month.
-          </p>
-          <Button size="lg" className="mt-8" asChild>
-            <Link href="/signup">
-              Start Free Trial
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Link>
-          </Button>
+      <section className="relative py-24 sm:py-32">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+          <div className="relative overflow-hidden rounded-3xl border border-border/60 bg-[linear-gradient(135deg,rgba(99,102,241,0.12)_0%,rgba(139,92,246,0.08)_50%,rgba(217,70,239,0.12)_100%)] p-12 sm:p-16 text-center">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-0 bg-grid-pattern bg-grid mask-radial-fade opacity-30"
+            />
+            <div className="relative">
+              <h2 className="mx-auto max-w-2xl font-sans text-3xl font-semibold tracking-tight sm:text-4xl">
+                Stop ignoring your Play Store reviews.
+              </h2>
+              <p className="mx-auto mt-4 max-w-xl text-muted-foreground">
+                Join hundreds of developers using ReviewPilot to keep a 4+ rating.
+                From ₹1,500/month.
+              </p>
+              <div className="mt-8 flex justify-center">
+                <Button variant="gradient" size="xl" asChild>
+                  <Link href="/signup">
+                    Start free trial
+                    <ArrowRight className="ml-1.5 h-4 w-4" />
+                  </Link>
+                </Button>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
     </>

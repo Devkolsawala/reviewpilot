@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { CheckCircle2, AlertCircle } from "lucide-react";
 
 export function DemoRequestForm() {
@@ -48,76 +47,85 @@ export function DemoRequestForm() {
 
   if (submitted) {
     return (
-      <Card className="max-w-md mx-auto">
-        <CardContent className="p-8 text-center">
-          <CheckCircle2 className="h-12 w-12 text-teal-500 mx-auto mb-4" />
-          <h3 className="font-heading text-xl font-bold mb-2">
-            Demo Request Received!
-          </h3>
-          <p className="text-sm text-muted-foreground">
-            We&apos;ll reach out within 24 hours to schedule your personalized demo.
-          </p>
-        </CardContent>
-      </Card>
+      <div className="text-center py-6">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[linear-gradient(135deg,rgba(99,102,241,0.15),rgba(217,70,239,0.15))] ring-1 ring-accent/30">
+          <CheckCircle2 className="h-6 w-6 text-accent" />
+        </div>
+        <h3 className="mt-4 font-sans text-xl font-semibold tracking-tight">
+          Demo request received
+        </h3>
+        <p className="mt-2 text-sm text-muted-foreground">
+          We&apos;ll reach out within 24 hours to schedule your personalized demo.
+        </p>
+      </div>
     );
   }
 
   return (
-    <Card className="max-w-md mx-auto">
-      <CardHeader>
-        <h3 className="font-heading text-xl font-bold">Request a Demo</h3>
-        <p className="text-sm text-muted-foreground">
-          See ReviewPilot in action with a personalized walkthrough.
-        </p>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="firstName">First Name</Label>
-              <Input id="firstName" name="firstName" placeholder="Rahul" required />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="lastName">Last Name</Label>
-              <Input id="lastName" name="lastName" placeholder="Sharma" required />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="email">Work Email</Label>
-            <Input
-              id="email"
-              name="email"
-              type="email"
-              placeholder="rahul@company.com"
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="company">Company Name</Label>
-            <Input id="company" name="company" placeholder="Your Business" required />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="message">What are you looking for?</Label>
-            <Textarea
-              id="message"
-              name="message"
-              placeholder="Tell us about your review management needs..."
-              rows={3}
-            />
-          </div>
+    <div>
+      <h3 className="font-sans text-xl font-semibold tracking-tight">
+        Request a demo
+      </h3>
+      <p className="mt-1 text-sm text-muted-foreground">
+        See ReviewPilot in action with a personalized walkthrough.
+      </p>
 
-          {error && (
-            <div className="flex items-start gap-2 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-              <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
-              <span>{error}</span>
-            </div>
-          )}
+      <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="firstName" className="text-xs font-medium">
+              First name
+            </Label>
+            <Input id="firstName" name="firstName" placeholder="Rahul" required />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="lastName" className="text-xs font-medium">
+              Last name
+            </Label>
+            <Input id="lastName" name="lastName" placeholder="Sharma" required />
+          </div>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="email" className="text-xs font-medium">
+            Work email
+          </Label>
+          <Input
+            id="email"
+            name="email"
+            type="email"
+            placeholder="rahul@company.in"
+            required
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="company" className="text-xs font-medium">
+            Company name
+          </Label>
+          <Input id="company" name="company" placeholder="Your business" required />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="message" className="text-xs font-medium">
+            What are you looking for?
+          </Label>
+          <Textarea
+            id="message"
+            name="message"
+            placeholder="Tell us about your review-management needs…"
+            rows={3}
+          />
+        </div>
 
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Submitting..." : "Request Demo"}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+        {error && (
+          <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
+            <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
+
+        <Button type="submit" variant="gradient" className="w-full" disabled={loading}>
+          {loading ? "Submitting…" : "Request demo"}
+        </Button>
+      </form>
+    </div>
   );
 }

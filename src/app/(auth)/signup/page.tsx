@@ -32,6 +32,19 @@ function isBlockedDomain(email: string): boolean {
 
 const RESEND_COOLDOWN_SECONDS = 30;
 
+function BrandLogo() {
+  return (
+    <div className="lg:hidden flex items-center gap-2 mb-10">
+      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[linear-gradient(135deg,#6366f1,#8b5cf6,#d946ef)] text-xs font-bold text-white shadow-[0_0_20px_-4px_rgba(139,92,246,0.5)]">
+        RP
+      </div>
+      <span className="font-sans text-[15px] font-semibold tracking-tight">
+        ReviewPilot
+      </span>
+    </div>
+  );
+}
+
 export default function SignupPage() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -39,7 +52,6 @@ export default function SignupPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Confirmation screen state
   const [emailSent, setEmailSent] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
   const [resending, setResending] = useState(false);
@@ -47,28 +59,22 @@ export default function SignupPage() {
 
   const router = useRouter();
 
-  // Tick the resend cooldown down every second (paused once verified)
   useEffect(() => {
     if (resendCooldown <= 0 || verified) return;
     const timer = setTimeout(() => setResendCooldown((c) => c - 1), 1000);
     return () => clearTimeout(timer);
   }, [resendCooldown, verified]);
 
-  // While waiting for the user to click the email link, watch for a session.
-  // Supabase broadcasts auth state changes across tabs — this flips the UI
-  // the moment the confirmation link creates a session (in any tab).
   useEffect(() => {
     if (!emailSent || verified) return;
 
     const supabase = createClient();
     let cancelled = false;
 
-    // 1. Immediate check — in case a session already exists when we enter this state
     supabase.auth.getSession().then(({ data }) => {
       if (!cancelled && data.session) setVerified(true);
     });
 
-    // 2. Realtime cross-tab listener (fires via BroadcastChannel / storage event)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         if (!cancelled && event === "SIGNED_IN" && session) {
@@ -77,23 +83,15 @@ export default function SignupPage() {
       }
     );
 
-    // 3. Polling fallback — two checks:
-    //    (a) local session (same-browser verification)
-    //    (b) server-side DB check via /api/auth/check-verified
-    //        (covers cross-browser / cross-device / cross-profile verification,
-    //         where onAuthStateChange in this tab will never fire because the
-    //         session was created in a different browser context entirely)
     const poll = setInterval(async () => {
       if (cancelled) return;
 
-      // (a) Same-browser case
       const { data } = await supabase.auth.getSession();
       if (!cancelled && data.session) {
         setVerified(true);
         return;
       }
 
-      // (b) Cross-browser case — ask the server
       try {
         const res = await fetch("/api/auth/check-verified", {
           method: "POST",
@@ -104,7 +102,7 @@ export default function SignupPage() {
         const result = (await res.json()) as { verified?: boolean };
         if (!cancelled && result.verified) setVerified(true);
       } catch {
-        // Network hiccup — will retry on next tick
+        // Network hiccup — retry next tick
       }
     }, 3000);
 
@@ -119,9 +117,8 @@ export default function SignupPage() {
     e.preventDefault();
     setError("");
 
-    // Frontend domain validation
     if (isBlockedDomain(email)) {
-      setError("Please use a real email address — disposable or placeholder domains are not accepted.");
+      setError("Please use a real email — disposable or placeholder domains are not accepted.");
       return;
     }
 
@@ -133,7 +130,6 @@ export default function SignupPage() {
       password,
       options: {
         data: { full_name: fullName },
-        // After confirming, show the "Email verified" page instead of going to dashboard
         emailRedirectTo: `${window.location.origin}/auth/callback?next=/verified`,
       },
     });
@@ -144,8 +140,6 @@ export default function SignupPage() {
       return;
     }
 
-    // session === null means Supabase sent a confirmation email.
-    // Show the "check your inbox" screen instead of pushing to /dashboard.
     if (!data.session) {
       setEmailSent(true);
       setResendCooldown(RESEND_COOLDOWN_SECONDS);
@@ -153,7 +147,6 @@ export default function SignupPage() {
       return;
     }
 
-    // Email confirmation is disabled on this project — session returned immediately.
     router.push("/dashboard");
     router.refresh();
   }
@@ -190,21 +183,14 @@ export default function SignupPage() {
     });
   }
 
-  // ── "Email verified!" screen — flips here the moment the user clicks the link in another tab ─
   if (verified) {
     return (
       <div>
-        <div className="lg:hidden flex items-center gap-2 mb-8">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-500 text-white font-heading font-bold text-sm">
-            RP
-          </div>
-          <span className="font-heading text-xl font-bold">ReviewPilot</span>
-        </div>
-
+        <BrandLogo />
         <div className="flex flex-col items-center text-center mt-4">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-teal-50 mb-6">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[linear-gradient(135deg,rgba(99,102,241,0.15),rgba(217,70,239,0.15))] mb-6 ring-1 ring-accent/30">
             <svg
-              className="h-8 w-8 text-teal-500"
+              className="h-7 w-7 text-accent"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -217,41 +203,36 @@ export default function SignupPage() {
               />
             </svg>
           </div>
-
-          <h1 className="font-heading text-2xl font-bold">Email verified!</h1>
-          <p className="mt-3 text-sm text-muted-foreground max-w-xs">
-            Your account is now active. You may close this page or proceed to log in.
+          <h1 className="font-sans text-2xl font-semibold tracking-tight">
+            Email verified
+          </h1>
+          <p className="mt-3 max-w-xs text-sm text-muted-foreground leading-relaxed">
+            Your account is active. You may close this page or proceed to log in.
           </p>
 
           <Button
+            variant="gradient"
             className="mt-8 w-full max-w-xs"
             onClick={() => {
               router.push("/login");
               router.refresh();
             }}
           >
-            Proceed to Login
+            Proceed to log in
           </Button>
         </div>
       </div>
     );
   }
 
-  // ── "Check your email" confirmation screen ──────────────────────────────────
   if (emailSent) {
     return (
       <div>
-        <div className="lg:hidden flex items-center gap-2 mb-8">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-500 text-white font-heading font-bold text-sm">
-            RP
-          </div>
-          <span className="font-heading text-xl font-bold">ReviewPilot</span>
-        </div>
-
+        <BrandLogo />
         <div className="flex flex-col items-center text-center mt-4">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-teal-50 mb-6">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[linear-gradient(135deg,rgba(99,102,241,0.15),rgba(217,70,239,0.15))] mb-6 ring-1 ring-accent/30">
             <svg
-              className="h-8 w-8 text-teal-500"
+              className="h-7 w-7 text-accent"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -265,23 +246,27 @@ export default function SignupPage() {
             </svg>
           </div>
 
-          <h1 className="font-heading text-2xl font-bold">Check your email</h1>
-          <p className="mt-3 text-sm text-muted-foreground max-w-xs">
+          <h1 className="font-sans text-2xl font-semibold tracking-tight">
+            Check your email
+          </h1>
+          <p className="mt-3 max-w-xs text-sm text-muted-foreground leading-relaxed">
             We sent a confirmation link to{" "}
-            <span className="font-medium text-foreground">{email}</span>. Click
-            it to activate your account.
+            <span className="font-medium text-foreground">{email}</span>. Click it
+            to activate your account.
           </p>
-          <p className="mt-2 text-xs text-muted-foreground">
-            Didn&apos;t receive it? Check your spam or junk folder.
+          <p className="mt-2 text-[11px] text-muted-foreground">
+            Didn&apos;t receive it? Check spam or junk.
           </p>
 
           {error && (
-            <p className="mt-4 text-sm text-destructive">{error}</p>
+            <p className="mt-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+              {error}
+            </p>
           )}
 
           <Button
+            variant="subtle"
             className="mt-8 w-full max-w-xs"
-            variant="outline"
             onClick={handleResend}
             disabled={resendCooldown > 0 || resending}
           >
@@ -301,7 +286,7 @@ export default function SignupPage() {
                 setError("");
                 setResendCooldown(0);
               }}
-              className="text-teal-600 hover:underline font-medium"
+              className="font-medium text-accent hover:underline"
             >
               Go back
             </button>
@@ -311,26 +296,23 @@ export default function SignupPage() {
     );
   }
 
-  // ── Normal signup form ───────────────────────────────────────────────────────
   return (
     <div>
-      <div className="lg:hidden flex items-center gap-2 mb-8">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-500 text-white font-heading font-bold text-sm">
-          RP
-        </div>
-        <span className="font-heading text-xl font-bold">ReviewPilot</span>
-      </div>
+      <BrandLogo />
 
-      <h1 className="font-heading text-2xl font-bold">Create your account</h1>
+      <h1 className="font-sans text-2xl font-semibold tracking-tight sm:text-3xl">
+        Create your account
+      </h1>
       <p className="mt-2 text-sm text-muted-foreground">
         Start your 7-day free trial. No credit card required.
       </p>
 
       <div className="mt-8">
         <Button
-          variant="outline"
+          variant="subtle"
           className="w-full"
           onClick={handleGoogleSignup}
+          type="button"
         >
           <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
             <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4" />
@@ -343,16 +325,20 @@ export default function SignupPage() {
 
         <div className="relative my-6">
           <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t" />
+            <div className="w-full border-t border-border/60" />
           </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-background px-2 text-muted-foreground">or</span>
+          <div className="relative flex justify-center text-[10px] uppercase tracking-[0.2em]">
+            <span className="bg-background px-3 text-muted-foreground">
+              or sign up with email
+            </span>
           </div>
         </div>
 
         <form onSubmit={handleSignup} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="fullName">Full Name</Label>
+            <Label htmlFor="fullName" className="text-xs font-medium">
+              Full name
+            </Label>
             <Input
               id="fullName"
               placeholder="Rahul Sharma"
@@ -362,18 +348,22 @@ export default function SignupPage() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="email">Work Email</Label>
+            <Label htmlFor="email" className="text-xs font-medium">
+              Work email
+            </Label>
             <Input
               id="email"
               type="email"
-              placeholder="rahul@company.com"
+              placeholder="rahul@company.in"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password" className="text-xs font-medium">
+              Password
+            </Label>
             <Input
               id="password"
               type="password"
@@ -385,16 +375,28 @@ export default function SignupPage() {
             />
           </div>
 
-          {error && <p className="text-sm text-destructive">{error}</p>}
+          {error && (
+            <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+              {error}
+            </p>
+          )}
 
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Creating account…" : "Create Account"}
+          <Button
+            type="submit"
+            variant="gradient"
+            className="w-full"
+            disabled={loading}
+          >
+            {loading ? "Creating account…" : "Create account"}
           </Button>
         </form>
 
         <p className="mt-6 text-center text-sm text-muted-foreground">
           Already have an account?{" "}
-          <Link href="/login" className="text-teal-600 hover:underline font-medium">
+          <Link
+            href="/login"
+            className="font-medium text-accent hover:underline"
+          >
             Log in
           </Link>
         </p>

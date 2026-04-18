@@ -71,7 +71,7 @@ function renderMarkdown(md: string): React.ReactNode {
             const m = lm.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
             if (m) {
               return (
-                <Link key={j} href={m[2]} className="text-teal-600 hover:underline">
+                <Link key={j} href={m[2]} className="text-accent hover:underline">
                   {m[1]}
                 </Link>
               );
@@ -92,7 +92,7 @@ function renderMarkdown(md: string): React.ReactNode {
     if (line.startsWith("## ")) {
       flushParagraph();
       nodes.push(
-        <h2 key={nodes.length} className="font-heading text-2xl font-bold mt-10 mb-4">
+        <h2 key={nodes.length} className="font-sans text-2xl font-semibold tracking-tight mt-10 mb-4">
           {line.replace("## ", "")}
         </h2>
       );
@@ -101,7 +101,7 @@ function renderMarkdown(md: string): React.ReactNode {
     if (line.startsWith("### ")) {
       flushParagraph();
       nodes.push(
-        <h3 key={nodes.length} className="font-heading text-xl font-semibold mt-6 mb-3">
+        <h3 key={nodes.length} className="font-sans text-xl font-semibold tracking-tight mt-6 mb-3">
           {line.replace("### ", "")}
         </h3>
       );
@@ -112,7 +112,7 @@ function renderMarkdown(md: string): React.ReactNode {
       nodes.push(
         <blockquote
           key={nodes.length}
-          className="border-l-4 border-teal-500 pl-4 my-4 italic text-muted-foreground"
+          className="border-l-2 border-accent pl-4 my-4 italic text-muted-foreground"
         >
           {renderInline(line.slice(2))}
         </blockquote>
@@ -165,13 +165,13 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
   };
 
   return (
-    <div className="py-20">
+    <div className="py-24 sm:py-28">
       <JsonLd data={blogSchema} />
       <article className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
         <Button variant="ghost" size="sm" className="mb-8" asChild>
           <Link href="/blog">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Blog
+            Back to blog
           </Link>
         </Button>
 
@@ -179,18 +179,18 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
           {post.tags.map((t) => (
             <span
               key={t}
-              className="text-xs font-medium text-teal-600 bg-teal-50 dark:bg-teal-950 px-2 py-0.5 rounded"
+              className="rounded-full border border-border/60 bg-background/60 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-foreground/80 backdrop-blur-sm"
             >
               {t}
             </span>
           ))}
         </div>
 
-        <h1 className="font-heading text-3xl font-bold sm:text-4xl mb-4">
+        <h1 className="font-sans text-3xl font-semibold tracking-tight sm:text-4xl lg:text-5xl mb-5">
           {post.title}
         </h1>
 
-        <div className="flex items-center gap-3 text-sm text-muted-foreground mb-10">
+        <div className="flex items-center gap-3 text-[13px] text-muted-foreground mb-12">
           <span>By {post.author}</span>
           <span aria-hidden="true">·</span>
           <time dateTime={post.datePublished}>{post.dateDisplay}</time>
@@ -202,22 +202,28 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
           {renderMarkdown(post.content)}
         </div>
 
-        <div className="mt-16 rounded-xl border-2 border-teal-500 bg-teal-50/40 dark:bg-teal-950/20 p-8 text-center">
-          <h3 className="font-heading text-xl font-bold mb-2">
-            Ready to automate your reviews?
-          </h3>
-          <p className="text-sm text-muted-foreground mb-6">
-            Start your free 7-day trial. No credit card. Plans from ₹1,500/mo.
-          </p>
-          <div className="flex flex-wrap justify-center gap-3">
-            <Button asChild>
-              <Link href="/signup">
-                Start Free Trial <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
-            <Button variant="outline" asChild>
-              <Link href="/how-it-works">See How It Works</Link>
-            </Button>
+        <div className="mt-16 relative overflow-hidden rounded-3xl border border-border/60 bg-[linear-gradient(135deg,rgba(99,102,241,0.12)_0%,rgba(139,92,246,0.08)_50%,rgba(217,70,239,0.12)_100%)] p-10 text-center">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 bg-grid-pattern bg-grid mask-radial-fade opacity-30"
+          />
+          <div className="relative">
+            <h3 className="font-sans text-2xl font-semibold tracking-tight">
+              Ready to automate your reviews?
+            </h3>
+            <p className="mt-3 text-sm text-muted-foreground">
+              7-day free trial. No credit card. From ₹1,500/mo.
+            </p>
+            <div className="mt-6 flex flex-wrap justify-center gap-3">
+              <Button variant="gradient" size="lg" asChild>
+                <Link href="/signup">
+                  Start free trial <ArrowRight className="ml-1.5 h-4 w-4" />
+                </Link>
+              </Button>
+              <Button variant="subtle" size="lg" asChild>
+                <Link href="/how-it-works">See how it works</Link>
+              </Button>
+            </div>
           </div>
         </div>
       </article>

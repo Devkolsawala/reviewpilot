@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Link2, Brain, SlidersHorizontal, CheckCircle2, BarChart3, MessageSquareText } from "lucide-react";
+import { AuroraBackground } from "@/components/ui/aurora-background";
+import { GridPattern } from "@/components/ui/grid-pattern";
 import { JsonLd, SITE_URL } from "@/components/marketing/JsonLd";
 
 export const metadata: Metadata = {
@@ -27,37 +29,37 @@ export const metadata: Metadata = {
 const STEPS = [
   {
     icon: Link2,
-    title: "1. Connect Google Play Store (Google Business Profile launching soon)",
+    title: "Connect Google Play Store",
     body:
-      "Upload a Play Console service account JSON — or simply invite our service account email — and our 3-step wizard walks you through permissions. Most Indian app developers are connected in under two minutes and pulling Play Store reviews on the first sync. Google Business Profile review automation for Indian local businesses is launching soon.",
+      "Upload a Play Console service account JSON — or simply invite our service account email — and our 3-step wizard walks you through permissions. Most Indian app developers are connected in under two minutes and pulling Play Store reviews on the first sync. Google Business Profile review automation is launching soon.",
   },
   {
     icon: Brain,
-    title: "2. AI learns your brand voice",
+    title: "AI learns your brand voice",
     body:
       "Point ReviewPilot at existing replies, upload an App Context Profile, or paste a short tone guide. The AI absorbs your vocabulary, signature phrases, known issues, and escalation preferences. Every future reply sounds like you, not a generic chatbot.",
   },
   {
     icon: SlidersHorizontal,
-    title: "3. Set reply rules & auto-reply thresholds",
+    title: "Set reply rules & auto-reply thresholds",
     body:
-      "Choose which stars auto-publish and which land in draft. A common setup: auto-publish 4–5 star replies, hold 1–3 stars for human approval, escalate mentions of refunds or safety. You can change rules per location or per app at any time.",
+      "Choose which stars auto-publish and which land in draft. A common setup: auto-publish 4–5 star replies, hold 1–3 stars for human approval, escalate mentions of refunds or safety. Rules can change per location or per app at any time.",
   },
   {
     icon: CheckCircle2,
-    title: "4. Approve replies — or run full auto-mode",
+    title: "Approve replies — or run full auto-mode",
     body:
       "Every morning, open the inbox and one-click approve pre-drafted replies. Trust the AI? Flip on full auto-mode and ReviewPilot publishes directly to Google or Play. You stay in control of how much oversight you want.",
   },
   {
     icon: BarChart3,
-    title: "5. Monitor sentiment dashboard",
+    title: "Monitor the sentiment dashboard",
     body:
       "Track rating trends, sentiment shifts, top keywords, and which replies are moving the needle. Spot a cluster of 1-star reviews about a new release in under an hour, not next week. Export to CSV for your ops team.",
   },
   {
     icon: MessageSquareText,
-    title: "6. Collect new reviews via SMS",
+    title: "Collect new reviews via SMS",
     body:
       "After a happy visit or transaction, fire an SMS from your list with a smart link. Happy customers route straight to Google; unhappy ones route to private feedback first, protecting your rating. More reviews, higher stars, on autopilot.",
   },
@@ -81,36 +83,64 @@ export default function HowItWorksPage() {
   return (
     <>
       <JsonLd data={howToSchema} />
-      <section className="py-20 sm:py-28 bg-gradient-to-b from-background to-secondary/30">
-        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 text-center">
-          <div className="inline-flex items-center gap-2 rounded-full bg-teal-500/10 px-3 py-1 text-sm text-teal-600 mb-6">
-            How It Works
+
+      {/* Hero */}
+      <section className="relative overflow-hidden py-24 sm:py-32">
+        <AuroraBackground intensity="subtle" />
+        <GridPattern variant="grid" fade className="opacity-[0.3]" />
+        <div className="relative mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 text-center">
+          <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/60 px-3 py-1 text-xs text-muted-foreground backdrop-blur-sm">
+            <span className="uppercase tracking-[0.15em]">How it works</span>
           </div>
-          <h1 className="font-heading text-4xl font-bold sm:text-5xl">
-            How AI Review Management Works — From Zero to Auto-Reply in 10 Minutes
+          <h1 className="mt-6 font-sans text-4xl font-semibold tracking-tight sm:text-5xl lg:text-6xl">
+            From zero to auto-reply in{" "}
+            <span className="text-gradient-brand font-serif italic">
+              10 minutes
+            </span>
+            .
           </h1>
-          <p className="mt-6 text-lg text-muted-foreground leading-relaxed">
+          <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground leading-relaxed">
             ReviewPilot turns review management from a daily chore into a
-            background process. Here&apos;s the full setup walkthrough — whether
-            you&apos;re running one restaurant, a 15-city franchise, or a Play Store
-            app with 40 new reviews a day.
+            background process. Here&apos;s the full walkthrough — whether you run one
+            restaurant, a 15-city franchise, or a Play Store app with 40 new
+            reviews a day.
           </p>
         </div>
       </section>
 
-      <section className="py-20 bg-background">
+      {/* Steps */}
+      <section className="relative py-24 sm:py-32">
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
-          <div className="space-y-16">
-            {STEPS.map((step) => (
-              <div key={step.title} className="grid gap-6 md:grid-cols-[auto,1fr] items-start">
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-teal-500 text-white shadow-lg shadow-teal-500/25">
-                  <step.icon className="h-6 w-6" />
+          <div className="relative space-y-14 sm:space-y-16">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute left-5 top-2 bottom-2 w-px bg-gradient-to-b from-accent/40 via-border/60 to-transparent sm:left-7"
+            />
+            {STEPS.map((step, i) => (
+              <div
+                key={step.title}
+                className="relative grid gap-6 sm:grid-cols-[auto,1fr] sm:items-start"
+              >
+                <div className="relative flex h-10 w-10 items-center justify-center rounded-full border border-border/60 bg-background shadow-sm sm:h-14 sm:w-14">
+                  <div
+                    aria-hidden
+                    className="absolute inset-0 rounded-full bg-[linear-gradient(135deg,rgba(99,102,241,0.15),rgba(217,70,239,0.15))]"
+                  />
+                  <span className="relative font-mono text-xs font-semibold text-accent sm:text-sm">
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
                 </div>
                 <div>
-                  <h2 className="font-heading text-2xl font-bold mb-3">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <step.icon className="h-4 w-4 text-accent" />
+                    <span className="font-mono text-[10px] uppercase tracking-[0.2em]">
+                      Step {i + 1}
+                    </span>
+                  </div>
+                  <h2 className="mt-2 font-sans text-2xl font-semibold tracking-tight sm:text-3xl">
                     {step.title}
                   </h2>
-                  <p className="text-muted-foreground leading-relaxed">
+                  <p className="mt-3 text-base text-muted-foreground leading-relaxed">
                     {step.body}
                   </p>
                 </div>
@@ -120,24 +150,34 @@ export default function HowItWorksPage() {
         </div>
       </section>
 
-      <section className="py-20 bg-navy-900">
-        <div className="mx-auto max-w-3xl px-4 text-center">
-          <h2 className="font-heading text-3xl font-bold text-white">
-            Ready to see it in your own dashboard?
-          </h2>
-          <p className="mt-4 text-navy-300">
-            Free 7-day trial. No credit card. Most teams have AI replies live in under 10 minutes.
-          </p>
-          <div className="mt-8 flex justify-center gap-3">
-            <Button size="lg" asChild>
-              <Link href="/signup">
-                Start Free Trial
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
-            <Button size="lg" variant="outline" asChild>
-              <Link href="/demo">Book a Demo</Link>
-            </Button>
+      {/* CTA */}
+      <section className="relative py-24 sm:py-32">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+          <div className="relative overflow-hidden rounded-3xl border border-border/60 bg-[linear-gradient(135deg,rgba(99,102,241,0.12)_0%,rgba(139,92,246,0.08)_50%,rgba(217,70,239,0.12)_100%)] p-12 sm:p-16 text-center">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-0 bg-grid-pattern bg-grid mask-radial-fade opacity-30"
+            />
+            <div className="relative">
+              <h2 className="mx-auto max-w-2xl font-sans text-3xl font-semibold tracking-tight sm:text-4xl">
+                Ready to see it in your own dashboard?
+              </h2>
+              <p className="mx-auto mt-4 max-w-xl text-muted-foreground">
+                Free 7-day trial. No credit card. Most teams have AI replies live in
+                under 10 minutes.
+              </p>
+              <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
+                <Button variant="gradient" size="xl" asChild>
+                  <Link href="/signup">
+                    Start free trial
+                    <ArrowRight className="ml-1.5 h-4 w-4" />
+                  </Link>
+                </Button>
+                <Button variant="subtle" size="xl" asChild>
+                  <Link href="/demo">Book a demo</Link>
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       </section>

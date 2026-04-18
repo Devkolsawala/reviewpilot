@@ -22,7 +22,7 @@ export default function TermsPage() {
     <div className="py-20 sm:py-28">
       <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
         <div className="mb-10">
-          <h1 className="font-heading text-4xl font-bold mb-3">Terms of Service</h1>
+          <h1 className="font-sans text-4xl font-semibold tracking-tight sm:text-5xl mb-3">Terms of Service</h1>
           <p className="text-sm text-muted-foreground">Last updated: {LAST_UPDATED}</p>
         </div>
 
@@ -230,7 +230,7 @@ export default function TermsPage() {
             </p>
             <p className="mt-3">
               We encourage you to contact us first at{" "}
-              <a href="mailto:dev.kolsawala45@gmail.com" className="text-teal-600 hover:underline">
+              <a href="mailto:dev.kolsawala45@gmail.com" className="text-accent hover:underline">
                 dev.kolsawala45@gmail.com
               </a>{" "}
               to resolve any dispute informally before initiating legal proceedings.
@@ -251,18 +251,18 @@ export default function TermsPage() {
               <p>Attn: Dev Kolsawala</p>
               <p>
                 Email:{" "}
-                <a href="mailto:dev.kolsawala45@gmail.com" className="text-teal-600 hover:underline">
+                <a href="mailto:dev.kolsawala45@gmail.com" className="text-accent hover:underline">
                   dev.kolsawala45@gmail.com
                 </a>
               </p>
-              <p>Website: <Link href="/" className="text-teal-600 hover:underline">reviewpilot.co.in</Link></p>
+              <p>Website: <Link href="/" className="text-accent hover:underline">reviewpilot.co.in</Link></p>
             </address>
           </Section>
 
         </div>
 
         <div className="mt-12 pt-8 border-t border-border flex flex-col sm:flex-row gap-3">
-          <Link href="/privacy" className="text-sm text-teal-600 hover:underline">
+          <Link href="/privacy" className="text-sm text-accent hover:underline">
             Privacy Policy →
           </Link>
           <Link href="/" className="text-sm text-muted-foreground hover:text-foreground">
@@ -277,7 +277,7 @@ export default function TermsPage() {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section>
-      <h2 className="font-heading text-xl font-bold text-foreground mb-3">{title}</h2>
+      <h2 className="font-sans text-xl font-semibold tracking-tight text-foreground mb-3">{title}</h2>
       {children}
     </section>
   );
@@ -286,7 +286,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 function Subsection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="mt-4">
-      <h3 className="font-heading text-base font-semibold text-foreground mb-1">{title}</h3>
+      <h3 className="font-sans text-base font-semibold tracking-tight text-foreground mb-1">{title}</h3>
       {children}
     </div>
   );

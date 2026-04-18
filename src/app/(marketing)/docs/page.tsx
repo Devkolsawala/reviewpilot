@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Card, CardContent } from "@/components/ui/card";
 import {
   BookOpen,
   Link2,
@@ -35,7 +34,7 @@ export const metadata: Metadata = {
 const GUIDES = [
   {
     icon: Link2,
-    title: "Getting Started",
+    title: "Getting started",
     description: "Create your account, connect your first platform, and set up AI replies in under 5 minutes.",
     articles: [
       { label: "Create your ReviewPilot account", slug: "create-your-reviewpilot-account" },
@@ -46,7 +45,7 @@ const GUIDES = [
   },
   {
     icon: Bot,
-    title: "AI Reply Configuration",
+    title: "AI reply configuration",
     description: "Set up your App Context Profile and customize AI reply behavior.",
     articles: [
       { label: "Create an App Context Profile", slug: "create-app-context-profile" },
@@ -57,7 +56,7 @@ const GUIDES = [
   },
   {
     icon: MessageSquareText,
-    title: "Review Management",
+    title: "Review management",
     description: "Learn to use the review inbox, bulk actions, and reply workflow.",
     articles: [
       { label: "Navigate the review inbox", slug: "navigate-review-inbox" },
@@ -68,7 +67,7 @@ const GUIDES = [
   },
   {
     icon: BarChart3,
-    title: "Analytics & Reports",
+    title: "Analytics & reports",
     description: "Understand your analytics dashboard and track your reputation growth.",
     articles: [
       { label: "Read the analytics dashboard", slug: "read-analytics-dashboard" },
@@ -79,7 +78,7 @@ const GUIDES = [
   },
   {
     icon: MessageSquareText,
-    title: "SMS & Email Campaigns",
+    title: "SMS & email campaigns",
     description: "Collect more reviews from happy customers via SMS and email campaigns.",
     articles: [
       { label: "Create an SMS campaign", slug: "create-sms-campaign" },
@@ -90,7 +89,7 @@ const GUIDES = [
   },
   {
     icon: CreditCard,
-    title: "Billing & Plans",
+    title: "Billing & plans",
     description: "Manage your subscription, upgrade plans, and understand usage limits.",
     articles: [
       { label: "Choose the right plan", slug: "choose-right-plan" },
@@ -103,59 +102,72 @@ const GUIDES = [
 
 export default function DocsPage() {
   return (
-    <div className="py-20 sm:py-28">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-16">
-          <div className="inline-flex items-center gap-2 mb-4">
-            <BookOpen className="h-5 w-5 text-teal-500" />
-            <span className="text-sm font-medium text-teal-600">Help Center</span>
+    <div className="py-24 sm:py-32">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+        <div className="text-center">
+          <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/60 px-3 py-1 text-xs text-muted-foreground backdrop-blur-sm">
+            <BookOpen className="h-3.5 w-3.5 text-accent" />
+            <span className="uppercase tracking-[0.15em]">Help center</span>
           </div>
-          <h1 className="font-heading text-4xl font-bold sm:text-5xl">
-            How Can We Help?
+          <h1 className="mt-6 font-sans text-4xl font-semibold tracking-tight sm:text-5xl">
+            How can we{" "}
+            <span className="text-gradient-brand font-serif italic">help</span>?
           </h1>
-          <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
-            Find guides, tutorials, and answers to common questions about ReviewPilot.
+          <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground leading-relaxed">
+            Guides, tutorials, and answers to common questions about ReviewPilot.
           </p>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 max-w-6xl mx-auto">
+        <div className="mt-16 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
           {GUIDES.map((guide) => (
-            <Card key={guide.title} className="hover:shadow-lg transition-shadow">
-              <CardContent className="p-6">
-                <guide.icon className="h-8 w-8 text-teal-500 mb-4" />
-                <h2 className="font-heading text-lg font-semibold mb-2">{guide.title}</h2>
-                <p className="text-sm text-muted-foreground mb-4">{guide.description}</p>
-                <ul className="space-y-2">
-                  {guide.articles.map((article) => (
-                    <li key={article.slug}>
-                      <Link
-                        href={`/docs/${article.slug}`}
-                        className="flex items-center justify-between group text-sm text-teal-600 hover:text-teal-700"
-                      >
-                        <span className="hover:underline">{article.label}</span>
-                        <ArrowRight className="h-3.5 w-3.5 shrink-0 opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
+            <div
+              key={guide.title}
+              className="rounded-2xl border border-border/60 bg-card/40 p-6 backdrop-blur-sm transition-colors hover:border-accent/40"
+            >
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-border/60 bg-background/60 text-accent">
+                <guide.icon className="h-4 w-4" />
+              </div>
+              <h2 className="mt-4 font-sans text-base font-semibold tracking-tight">
+                {guide.title}
+              </h2>
+              <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+                {guide.description}
+              </p>
+              <ul className="mt-5 space-y-2">
+                {guide.articles.map((article) => (
+                  <li key={article.slug}>
+                    <Link
+                      href={`/docs/${article.slug}`}
+                      className="group flex items-center justify-between text-sm text-foreground/80 hover:text-accent"
+                    >
+                      <span>{article.label}</span>
+                      <ArrowRight className="h-3.5 w-3.5 shrink-0 opacity-0 transition-all group-hover:translate-x-0.5 group-hover:opacity-100" />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
           ))}
         </div>
 
         {/* Contact strip */}
-        <div className="mt-16 max-w-2xl mx-auto text-center rounded-xl border bg-secondary/40 p-8">
-          <h2 className="font-heading text-xl font-bold mb-2">Can&apos;t find what you need?</h2>
-          <p className="text-muted-foreground text-sm mb-4">
+        <div className="mx-auto mt-16 max-w-2xl rounded-2xl border border-border/60 bg-card/40 p-8 text-center backdrop-blur-sm">
+          <h2 className="font-sans text-xl font-semibold tracking-tight">
+            Can&apos;t find what you need?
+          </h2>
+          <p className="mt-2 text-sm text-muted-foreground">
             Email us at{" "}
-            <a href="mailto:dev.kolsawala45@gmail.com" className="text-teal-600 hover:underline">
+            <a
+              href="mailto:dev.kolsawala45@gmail.com"
+              className="text-accent hover:underline"
+            >
               dev.kolsawala45@gmail.com
             </a>{" "}
             or book a demo and we&apos;ll walk you through it live.
           </p>
           <Link
             href="/demo"
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-teal-600 hover:underline"
+            className="mt-5 inline-flex items-center gap-1.5 text-sm font-medium text-accent hover:underline"
           >
             Book a live demo <ArrowRight className="h-4 w-4" />
           </Link>

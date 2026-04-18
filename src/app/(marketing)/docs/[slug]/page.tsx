@@ -95,7 +95,7 @@ function renderMarkdown(md: string): React.ReactNode[] {
       }
       const m = p.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
       if (m) {
-        return <Link key={i} href={m[2]} className="text-teal-600 hover:underline">{m[1]}</Link>;
+        return <Link key={i} href={m[2]} className="text-accent hover:underline">{m[1]}</Link>;
       }
       return <span key={i}>{p}</span>;
     });
@@ -116,18 +116,18 @@ function renderMarkdown(md: string): React.ReactNode[] {
 
     if (line.startsWith("## ")) {
       flushList();
-      nodes.push(<h2 key={nodes.length} className="font-heading text-xl font-bold mt-10 mb-3 text-foreground">{line.slice(3)}</h2>);
+      nodes.push(<h2 key={nodes.length} className="font-sans text-xl font-semibold tracking-tight mt-10 mb-3 text-foreground">{line.slice(3)}</h2>);
       continue;
     }
     if (line.startsWith("### ")) {
       flushList();
-      nodes.push(<h3 key={nodes.length} className="font-heading text-base font-semibold mt-6 mb-2 text-foreground">{line.slice(4)}</h3>);
+      nodes.push(<h3 key={nodes.length} className="font-sans text-base font-semibold tracking-tight mt-6 mb-2 text-foreground">{line.slice(4)}</h3>);
       continue;
     }
     if (line.startsWith("> ")) {
       flushList();
       nodes.push(
-        <blockquote key={nodes.length} className="border-l-4 border-teal-500 pl-4 my-4 italic text-muted-foreground bg-teal-50/40 dark:bg-teal-950/20 py-2 pr-4 rounded-r">
+        <blockquote key={nodes.length} className="border-l-2 border-accent pl-4 my-4 italic text-muted-foreground bg-card/40 py-2 pr-4 rounded-r">
           {renderInline(line.slice(2))}
         </blockquote>
       );
@@ -177,14 +177,14 @@ export default function DocArticlePage({ params }: { params: { slug: string } })
 
         {/* Category badge */}
         <div className="flex items-center gap-2 mb-3">
-          <BookOpen className="h-4 w-4 text-teal-500" />
-          <span className="text-sm text-teal-600 font-medium">{article.category}</span>
+          <BookOpen className="h-4 w-4 text-accent" />
+          <span className="text-sm text-accent font-medium">{article.category}</span>
           <span className="text-muted-foreground/40">·</span>
           <span className="text-sm text-muted-foreground">{article.readTime}</span>
         </div>
 
         {/* Title */}
-        <h1 className="font-heading text-3xl font-bold sm:text-4xl mb-4">
+        <h1 className="font-sans text-3xl font-semibold tracking-tight sm:text-4xl mb-4">
           {article.title}
         </h1>
         <p className="text-lg text-muted-foreground mb-10 leading-relaxed">
@@ -201,19 +201,19 @@ export default function DocArticlePage({ params }: { params: { slug: string } })
         {/* Related articles */}
         {related.length > 0 && (
           <div className="mt-16 pt-10 border-t border-border">
-            <h2 className="font-heading text-lg font-semibold mb-4">Related articles</h2>
+            <h2 className="font-sans text-lg font-semibold tracking-tight mb-4">Related articles</h2>
             <ul className="space-y-3">
               {related.map(([slug, a]) => (
                 <li key={slug}>
                   <Link
                     href={`/docs/${slug}`}
-                    className="flex items-center justify-between group rounded-lg border bg-card p-4 hover:shadow-md transition-shadow"
+                    className="flex items-center justify-between group rounded-2xl border border-border/60 bg-card/40 p-4 backdrop-blur-sm hover:border-accent/40 transition-colors"
                   >
                     <div>
-                      <p className="text-sm font-medium group-hover:text-teal-600 transition-colors">{a.title}</p>
+                      <p className="text-sm font-medium group-hover:text-accent transition-colors">{a.title}</p>
                       <p className="text-xs text-muted-foreground mt-0.5">{a.readTime}</p>
                     </div>
-                    <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-teal-600 group-hover:translate-x-1 transition-all" />
+                    <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-accent group-hover:translate-x-1 transition-all" />
                   </Link>
                 </li>
               ))}
@@ -222,20 +222,20 @@ export default function DocArticlePage({ params }: { params: { slug: string } })
         )}
 
         {/* CTA */}
-        <div className="mt-12 rounded-xl border-2 border-teal-500 bg-teal-50/40 dark:bg-teal-950/20 p-8 text-center">
-          <h3 className="font-heading text-lg font-bold mb-2">Still have questions?</h3>
+        <div className="relative mt-12 overflow-hidden rounded-3xl border border-border/60 bg-[linear-gradient(135deg,rgba(99,102,241,0.12)_0%,rgba(139,92,246,0.08)_50%,rgba(217,70,239,0.12)_100%)] p-8 text-center">
+          <h3 className="font-sans text-lg font-semibold tracking-tight mb-2">Still have questions?</h3>
           <p className="text-sm text-muted-foreground mb-5">
             Email us at{" "}
-            <a href="mailto:dev.kolsawala45@gmail.com" className="text-teal-600 hover:underline">
+            <a href="mailto:dev.kolsawala45@gmail.com" className="text-accent hover:underline">
               dev.kolsawala45@gmail.com
             </a>{" "}
             or book a live demo and we&apos;ll walk you through it.
           </p>
           <div className="flex flex-wrap justify-center gap-3">
-            <Button asChild>
+            <Button variant="gradient" asChild>
               <Link href="/demo">Book a Demo <ArrowRight className="ml-2 h-4 w-4" /></Link>
             </Button>
-            <Button variant="outline" asChild>
+            <Button variant="subtle" asChild>
               <Link href="/docs">Back to Help Center</Link>
             </Button>
           </div>

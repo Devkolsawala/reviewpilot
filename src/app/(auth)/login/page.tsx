@@ -45,23 +45,28 @@ export default function LoginPage() {
 
   return (
     <div>
-      <div className="lg:hidden flex items-center gap-2 mb-8">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-500 text-white font-heading font-bold text-sm">
+      <div className="lg:hidden flex items-center gap-2 mb-10">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[linear-gradient(135deg,#6366f1,#8b5cf6,#d946ef)] text-xs font-bold text-white shadow-[0_0_20px_-4px_rgba(139,92,246,0.5)]">
           RP
         </div>
-        <span className="font-heading text-xl font-bold">ReviewPilot</span>
+        <span className="font-sans text-[15px] font-semibold tracking-tight">
+          ReviewPilot
+        </span>
       </div>
 
-      <h1 className="font-heading text-2xl font-bold">Welcome back</h1>
+      <h1 className="font-sans text-2xl font-semibold tracking-tight sm:text-3xl">
+        Welcome back
+      </h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        Log in to your ReviewPilot account
+        Log in to your ReviewPilot account.
       </p>
 
       <div className="mt-8">
         <Button
-          variant="outline"
+          variant="subtle"
           className="w-full"
           onClick={handleGoogleLogin}
+          type="button"
         >
           <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
             <path
@@ -86,27 +91,33 @@ export default function LoginPage() {
 
         <div className="relative my-6">
           <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t" />
+            <div className="w-full border-t border-border/60" />
           </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-background px-2 text-muted-foreground">or</span>
+          <div className="relative flex justify-center text-[10px] uppercase tracking-[0.2em]">
+            <span className="bg-background px-3 text-muted-foreground">
+              or continue with email
+            </span>
           </div>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email" className="text-xs font-medium">
+              Email
+            </Label>
             <Input
               id="email"
               type="email"
-              placeholder="you@company.com"
+              placeholder="you@company.in"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password" className="text-xs font-medium">
+              Password
+            </Label>
             <Input
               id="password"
               type="password"
@@ -117,17 +128,27 @@ export default function LoginPage() {
           </div>
 
           {error && (
-            <p className="text-sm text-destructive">{error}</p>
+            <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+              {error}
+            </p>
           )}
 
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Logging in..." : "Log in"}
+          <Button
+            type="submit"
+            variant="gradient"
+            className="w-full"
+            disabled={loading}
+          >
+            {loading ? "Logging in…" : "Log in"}
           </Button>
         </form>
 
         <p className="mt-6 text-center text-sm text-muted-foreground">
           Don&apos;t have an account?{" "}
-          <Link href="/signup" className="text-teal-600 hover:underline font-medium">
+          <Link
+            href="/signup"
+            className="font-medium text-accent hover:underline"
+          >
             Sign up free
           </Link>
         </p>

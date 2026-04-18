@@ -4,19 +4,19 @@ import { Button } from "@/components/ui/button";
 export default function EmailVerifiedPage() {
   return (
     <div>
-      {/* Mobile logo */}
-      <div className="lg:hidden flex items-center gap-2 mb-8">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-500 text-white font-heading font-bold text-sm">
+      <div className="lg:hidden flex items-center gap-2 mb-10">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[linear-gradient(135deg,#6366f1,#8b5cf6,#d946ef)] text-xs font-bold text-white shadow-[0_0_20px_-4px_rgba(139,92,246,0.5)]">
           RP
         </div>
-        <span className="font-heading text-xl font-bold">ReviewPilot</span>
+        <span className="font-sans text-[15px] font-semibold tracking-tight">
+          ReviewPilot
+        </span>
       </div>
 
       <div className="flex flex-col items-center text-center mt-4">
-        {/* Success icon */}
-        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-teal-50 mb-6">
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[linear-gradient(135deg,rgba(99,102,241,0.15),rgba(217,70,239,0.15))] mb-6 ring-1 ring-accent/30">
           <svg
-            className="h-8 w-8 text-teal-500"
+            className="h-7 w-7 text-accent"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -30,16 +30,18 @@ export default function EmailVerifiedPage() {
           </svg>
         </div>
 
-        <h1 className="font-heading text-2xl font-bold">Email verified!</h1>
-        <p className="mt-3 text-sm text-muted-foreground max-w-xs">
-          Your account is now active. You may close this tab or proceed to log in.
+        <h1 className="font-sans text-2xl font-semibold tracking-tight">
+          Email verified
+        </h1>
+        <p className="mt-3 max-w-xs text-sm text-muted-foreground leading-relaxed">
+          Your account is active. You may close this tab or proceed to log in.
         </p>
 
-        <Button asChild className="mt-8 w-full max-w-xs">
-          <Link href="/login">Proceed to Login</Link>
+        <Button asChild variant="gradient" className="mt-8 w-full max-w-xs">
+          <Link href="/login">Proceed to log in</Link>
         </Button>
 
-        <p className="mt-4 text-xs text-muted-foreground">
+        <p className="mt-4 text-[11px] text-muted-foreground">
           Opened this on another device? You can safely close this tab.
         </p>
       </div>

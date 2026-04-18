@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { DemoRequestForm } from "@/components/marketing/DemoRequestForm";
 import { CheckCircle2 } from "lucide-react";
+import { AuroraBackground } from "@/components/ui/aurora-background";
+import { GridPattern } from "@/components/ui/grid-pattern";
 
 export const metadata: Metadata = {
   title: "Book a Live Demo — AI Review Management India | ReviewPilot",
@@ -32,30 +34,41 @@ const DEMO_BENEFITS = [
 
 export default function DemoPage() {
   return (
-    <div className="py-20 sm:py-28">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="grid gap-12 lg:grid-cols-2 items-start">
+    <section className="relative overflow-hidden py-24 sm:py-32">
+      <AuroraBackground intensity="subtle" />
+      <GridPattern variant="grid" fade className="opacity-[0.3]" />
+      <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+        <div className="grid items-start gap-12 lg:grid-cols-2">
           <div>
-            <h1 className="font-heading text-4xl font-bold sm:text-5xl">
-              See ReviewPilot in Action
+            <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/60 px-3 py-1 text-xs text-muted-foreground backdrop-blur-sm">
+              <span className="uppercase tracking-[0.15em]">Live demo</span>
+            </div>
+            <h1 className="mt-6 font-sans text-4xl font-semibold tracking-tight sm:text-5xl">
+              See ReviewPilot{" "}
+              <span className="text-gradient-brand font-serif italic">
+                in action
+              </span>
+              .
             </h1>
-            <p className="mt-6 text-lg text-muted-foreground">
-              Get a personalized demo tailored to your business. Our team will
-              show you exactly how ReviewPilot can transform your review
-              management workflow.
+            <p className="mt-6 text-lg text-muted-foreground leading-relaxed">
+              Get a personalized demo tailored to your business. Our team will show
+              you exactly how ReviewPilot can transform your review-management
+              workflow.
             </p>
             <ul className="mt-8 space-y-4">
               {DEMO_BENEFITS.map((b) => (
-                <li key={b} className="flex items-center gap-3">
-                  <CheckCircle2 className="h-5 w-5 text-teal-500 shrink-0" />
-                  <span className="text-sm">{b}</span>
+                <li key={b} className="flex items-start gap-3">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+                  <span className="text-sm text-foreground/85">{b}</span>
                 </li>
               ))}
             </ul>
           </div>
-          <DemoRequestForm />
+          <div className="rounded-2xl border border-border/60 bg-card/40 p-6 backdrop-blur-sm sm:p-8">
+            <DemoRequestForm />
+          </div>
         </div>
       </div>
-    </div>
+    </section>
   );
 }
