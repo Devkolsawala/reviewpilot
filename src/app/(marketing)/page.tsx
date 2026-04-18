@@ -75,7 +75,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "Does ReviewPilot work with Google Play Store reviews?",
-    a: "Yes. ReviewPilot connects to Google Play Console via a service account and respects the 350-character Play Store reply limit automatically. Google Business Profile support is coming soon — we're awaiting API access from Google.",
+    a: "Yes. ReviewPilot connects to Google Play Console via a service account and respects the 350-character Play Store reply limit automatically. Google Business Profile review automation for Indian local businesses (restaurants, clinics, salons, retail) is launching soon and will be included in every plan.",
   },
   {
     q: "How does ReviewPilot generate AI replies?",

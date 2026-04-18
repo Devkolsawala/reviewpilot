@@ -90,7 +90,7 @@ const FAQ = [
   },
   {
     q: "Can I use ReviewPilot for both Google Business and Play Store?",
-    a: "Google Play Store is live today. Google Business Profile integration is coming soon — we're awaiting API access from Google. All plans are priced to support both platforms once GBP is live.",
+    a: "Google Play Store review management is live today. Google Business Profile automation for Indian local businesses is launching soon and will be included in every plan at no extra cost — Starter, Growth, and Agency subscribers get both platforms as soon as GBP goes live.",
   },
 ];
 

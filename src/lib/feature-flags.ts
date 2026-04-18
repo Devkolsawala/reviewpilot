@@ -4,4 +4,4 @@
 export const GBP_ENABLED = false;
 export const GBP_STATUS_LABEL = "Coming Soon";
 export const GBP_COMING_SOON_MESSAGE =
-  "Google Business Profile integration is coming soon. We're awaiting API access from Google.";
+  "Google Business Profile review automation is launching soon. Google Play Store is live today.";

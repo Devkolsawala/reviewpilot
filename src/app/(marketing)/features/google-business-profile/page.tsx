@@ -86,7 +86,7 @@ export default function GoogleBusinessProfilePage() {
       <div className="bg-amber-50 dark:bg-amber-950/20 border-b border-amber-200 dark:border-amber-800">
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-3 text-center">
           <p className="text-sm text-amber-800 dark:text-amber-300">
-            <span className="font-semibold">Coming Soon.</span> Google Business Profile integration is on our roadmap — we&apos;re awaiting API access from Google. <Link href="/features/google-play-reviews" className="underline font-medium">Google Play Store is live today.</Link>
+            <span className="font-semibold">Launching Soon.</span> AI-powered Google Business Profile review automation for Indian local businesses is launching soon. <Link href="/features/google-play-reviews" className="underline font-medium">Google Play Store review management is live today</Link> — reply to every Android review with AI in minutes.
           </p>
         </div>
       </div>

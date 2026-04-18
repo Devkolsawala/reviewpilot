@@ -1,0 +1,15 @@
+# *
+User-agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /api/
+Disallow: /auth/
+Disallow: /login
+Disallow: /signup
+Disallow: /review-page/
+
+# Host
+Host: https://www.reviewpilot.co.in
+
+# Sitemaps
+Sitemap: https://www.reviewpilot.co.in/sitemap.xml

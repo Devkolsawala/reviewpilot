@@ -88,7 +88,7 @@ export default function ForLocalBusinessPage() {
       <div className="bg-amber-50 dark:bg-amber-950/20 border-b border-amber-200 dark:border-amber-800">
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-3 text-center">
           <p className="text-sm text-amber-800 dark:text-amber-300">
-            <span className="font-semibold">Coming Soon.</span> Google Business Profile automation is on our roadmap — we&apos;re awaiting API access from Google.
+            <span className="font-semibold">Launching Soon.</span> AI-powered Google Business Profile review automation for Indian restaurants, clinics, salons, and local businesses is launching soon. Google Play Store review management is live today.
           </p>
         </div>
       </div>

@@ -27,9 +27,9 @@ export const metadata: Metadata = {
 const STEPS = [
   {
     icon: Link2,
-    title: "1. Connect Google Play Store (Google Business Profile coming soon)",
+    title: "1. Connect Google Play Store (Google Business Profile launching soon)",
     body:
-      "Upload a Play Console service account JSON — or simply invite our service account email — and our 3-step wizard walks you through permissions. Most users are connected in under two minutes and pulling Play Store reviews on the first sync. Google Business Profile support is on the roadmap once Google approves our API access.",
+      "Upload a Play Console service account JSON — or simply invite our service account email — and our 3-step wizard walks you through permissions. Most Indian app developers are connected in under two minutes and pulling Play Store reviews on the first sync. Google Business Profile review automation for Indian local businesses is launching soon.",
   },
   {
     icon: Brain,
