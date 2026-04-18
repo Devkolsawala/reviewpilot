@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Menu, X, Search, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { CommandMenu } from "./CommandMenu";
@@ -179,7 +178,6 @@ export function Navbar() {
                 ⌘K
               </kbd>
             </button>
-            <ThemeToggle />
             <Button variant="ghost" size="sm" asChild>
               <Link href="/login">Log in</Link>
             </Button>
@@ -189,7 +187,6 @@ export function Navbar() {
           </div>
 
           <div className="md:hidden flex items-center gap-1">
-            <ThemeToggle />
             <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon" aria-label="Open menu">

@@ -18,7 +18,7 @@ import {
 export function Hero() {
   return (
     <MotionProvider>
-      <section className="relative isolate overflow-hidden pt-20 pb-24 sm:pt-28 sm:pb-32 lg:pt-32 lg:pb-40">
+      <section className="relative isolate overflow-hidden pt-20 pb-16 sm:pt-28 sm:pb-20 lg:pt-32 lg:pb-24">
         {/* Decorative background */}
         <GridPattern className="[--grid-size:56px] opacity-60" fade />
         <AuroraBackground intensity="normal" className="-z-10" />
