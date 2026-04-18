@@ -4,48 +4,62 @@
 
 @layer base {
   :root {
-    --background: 40 33% 98%;
-    --foreground: 222 47% 11%;
+    /* Light mode — polished neutral base with brand accent */
+    --background: 0 0% 100%;
+    --foreground: 240 10% 8%;
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 240 10% 8%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
-    --primary: 174 84% 40%;
+    --popover-foreground: 240 10% 8%;
+    --primary: 243 75% 59%; /* brand-500 indigo */
     --primary-foreground: 0 0% 100%;
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222 47% 11%;
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
-    --accent: 210 40% 96%;
-    --accent-foreground: 222 47% 11%;
-    --destructive: 0 84% 60%;
+    --secondary: 240 5% 96%;
+    --secondary-foreground: 240 10% 8%;
+    --muted: 240 5% 96%;
+    --muted-foreground: 240 4% 46%;
+    --accent: 243 75% 59%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 174 84% 40%;
-    --radius: 0.5rem;
+    --border: 240 6% 90%;
+    --input: 240 6% 90%;
+    --ring: 243 75% 59%;
+    --positive: 160 84% 39%;
+    --positive-foreground: 0 0% 100%;
+    --negative: 350 89% 60%;
+    --negative-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 10%;
+    --radius: 0.75rem;
   }
 
   .dark {
-    --background: 222 47% 11%;
-    --foreground: 210 40% 98%;
-    --card: 222 47% 14%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222 47% 14%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 174 84% 40%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 217 33% 17%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217 33% 17%;
-    --muted-foreground: 215 20% 65%;
-    --accent: 217 33% 17%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 63% 31%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217 33% 17%;
-    --input: 217 33% 17%;
-    --ring: 174 84% 40%;
+    /* Dark mode — zinc-950 base, brand accent pops */
+    --background: 240 10% 4%;
+    --foreground: 0 0% 98%;
+    --card: 240 8% 7%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 8% 7%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 243 75% 65%;
+    --primary-foreground: 240 10% 4%;
+    --secondary: 240 6% 12%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 6% 12%;
+    --muted-foreground: 240 5% 65%;
+    --accent: 243 75% 65%;
+    --accent-foreground: 240 10% 4%;
+    --destructive: 0 72% 55%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 6% 16%;
+    --input: 240 6% 16%;
+    --ring: 243 75% 65%;
+    --positive: 160 84% 45%;
+    --positive-foreground: 240 10% 4%;
+    --negative: 350 89% 65%;
+    --negative-foreground: 240 10% 4%;
+    --warning: 38 92% 55%;
+    --warning-foreground: 240 10% 4%;
   }
 }
 
@@ -53,11 +67,67 @@
   * {
     @apply border-border;
   }
-  body {
-    @apply bg-background text-foreground font-body;
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
   }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11", "ss01";
+    text-rendering: optimizeLegibility;
+  }
+
   h1, h2, h3, h4, h5, h6 {
-    @apply font-heading;
+    @apply font-sans tracking-tight;
+  }
+
+  ::selection {
+    background-color: hsl(var(--ring) / 0.25);
+    color: hsl(var(--foreground));
+  }
+
+  /* Custom scrollbar — thin, neutral, hover accent */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--border));
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--ring) / 0.6);
+    background-clip: padding-box;
+  }
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border)) transparent;
+  }
+
+  /* Focus rings — accent, offset, visible */
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+    border-radius: calc(var(--radius) - 4px);
+  }
+
+  /* Reduced motion — kill decorative animations */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }
 
@@ -68,5 +138,69 @@
   }
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
+  }
+
+  /* Brand gradient text */
+  .text-gradient-brand {
+    background-image: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #d946ef 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Grid backgrounds with radial fade mask */
+  .bg-grid {
+    background-image: var(--tw-gradient-from, linear-gradient(to right, hsl(var(--border) / 0.5) 1px, transparent 1px)),
+      linear-gradient(to bottom, hsl(var(--border) / 0.5) 1px, transparent 1px);
+    background-size: 48px 48px;
+  }
+
+  .mask-radial-fade {
+    mask-image: radial-gradient(ellipse at center, black 40%, transparent 75%);
+    -webkit-mask-image: radial-gradient(ellipse at center, black 40%, transparent 75%);
+  }
+
+  .mask-b-fade {
+    mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
+  }
+
+  /* Aurora blob — used behind hero sections */
+  .bg-aurora {
+    background: radial-gradient(
+        ellipse 60% 50% at 20% 30%,
+        rgba(99, 102, 241, 0.35),
+        transparent 60%
+      ),
+      radial-gradient(
+        ellipse 50% 50% at 80% 20%,
+        rgba(139, 92, 246, 0.3),
+        transparent 60%
+      ),
+      radial-gradient(
+        ellipse 60% 40% at 50% 80%,
+        rgba(217, 70, 239, 0.25),
+        transparent 60%
+      );
+    filter: blur(60px);
+  }
+
+  /* Glass surface */
+  .glass {
+    background-color: hsl(var(--background) / 0.7);
+    backdrop-filter: saturate(180%) blur(14px);
+    -webkit-backdrop-filter: saturate(180%) blur(14px);
+  }
+
+  /* Shimmer placeholder */
+  .shimmer {
+    background-image: linear-gradient(
+      90deg,
+      transparent,
+      hsl(var(--foreground) / 0.08),
+      transparent
+    );
+    background-size: 200% 100%;
+    animation: shimmer 2.2s linear infinite;
   }
 }
