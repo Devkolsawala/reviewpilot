@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Hero } from "@/components/marketing/Hero";
+import { TrustBar } from "@/components/marketing/TrustBar";
 import { FeatureGrid } from "@/components/marketing/FeatureGrid";
 import { HowItWorks } from "@/components/marketing/HowItWorks";
 import { ComparisonTable } from "@/components/marketing/ComparisonTable";
@@ -102,6 +103,7 @@ export default function HomePage() {
     <>
       <JsonLd data={[organizationSchema, softwareSchema, websiteSchema, faqSchema]} />
       <Hero />
+      <TrustBar />
 
       {/* Problem statement */}
       <section className="py-20 sm:py-28 bg-background">
