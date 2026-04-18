@@ -58,10 +58,10 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
 
   return (
     <>
-      <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b bg-card/80 backdrop-blur-sm px-4 sm:px-6">
+      <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-border/60 bg-background/70 backdrop-blur-xl px-4 sm:px-6">
         <div className="flex items-center gap-3">
           <button
-            className="lg:hidden p-2 -ml-2 rounded-lg hover:bg-secondary transition-colors"
+            className="lg:hidden p-2 -ml-2 rounded-lg hover:bg-muted/50 transition-colors"
             onClick={onMenuClick}
             aria-label="Toggle sidebar"
           >
@@ -70,7 +70,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
           <SearchTrigger onClick={() => setSearchOpen(true)} />
         </div>
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1">
           <ThemeToggle />
 
           {/* Notifications */}
@@ -79,24 +79,24 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
               <Button variant="ghost" size="icon" className="relative h-9 w-9">
                 <Bell className="h-4 w-4" />
                 {unreadCount > 0 && (
-                  <span className="absolute top-1 right-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-orange-500 px-1 text-[9px] font-bold text-white">
+                  <span className="absolute top-1 right-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-accent px-1 text-[9px] font-semibold text-accent-foreground">
                     {unreadCount}
                   </span>
                 )}
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-80">
+            <DropdownMenuContent align="end" className="w-80 rounded-xl border-border/60">
               <div className="flex items-center justify-between px-3 py-2">
-                <span className="text-sm font-semibold">Notifications</span>
+                <span className="font-sans text-sm font-semibold tracking-tight">Notifications</span>
                 {unreadCount > 0 && (
-                  <button onClick={markAllRead} className="text-[11px] text-teal-600 hover:underline flex items-center gap-1">
+                  <button onClick={markAllRead} className="text-[11px] text-accent hover:underline flex items-center gap-1">
                     <Check className="h-3 w-3" /> Mark all read
                   </button>
                 )}
               </div>
-              <DropdownMenuSeparator />
+              <DropdownMenuSeparator className="bg-border/60" />
               {notifications.length === 0 ? (
-                <div className="py-6 text-center text-xs text-muted-foreground">
+                <div className="py-8 text-center text-xs text-muted-foreground">
                   No notifications yet
                 </div>
               ) : (
@@ -109,9 +109,9 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
                       <p className={cn("text-xs leading-snug", n.unread ? "font-medium" : "text-muted-foreground")}>
                         {n.text}
                       </p>
-                      <span className="text-[10px] text-muted-foreground">{n.time}</span>
+                      <span className="text-[10px] text-muted-foreground font-mono">{n.time}</span>
                     </div>
-                    {n.unread && <span className="h-2 w-2 rounded-full bg-teal-500 mt-1.5 shrink-0" />}
+                    {n.unread && <span className="h-2 w-2 rounded-full bg-accent mt-1.5 shrink-0" />}
                   </DropdownMenuItem>
                 ))
               )}
@@ -122,8 +122,8 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-9 w-9 rounded-full">
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback className="bg-gradient-to-br from-teal-400 to-teal-600 text-white text-xs font-bold">
+                <Avatar className="h-8 w-8 ring-1 ring-border/60">
+                  <AvatarFallback className="bg-[linear-gradient(135deg,#6366f1_0%,#8b5cf6_50%,#d946ef_100%)] text-white text-xs font-semibold">
                     {profile.full_name
                       ? profile.full_name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()
                       : "?"}
@@ -131,18 +131,18 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuContent align="end" className="w-56 rounded-xl border-border/60">
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col gap-1">
                   <p className="text-sm font-medium">{profile.full_name || "Your Account"}</p>
                   <p className="text-xs text-muted-foreground">{profile.email || ""}</p>
-                  <span className="inline-flex items-center gap-1 mt-1 text-[10px] font-medium text-teal-600 dark:text-teal-400">
-                    <span className="h-1.5 w-1.5 rounded-full bg-teal-500" />
+                  <span className="inline-flex items-center gap-1 mt-1 text-[10px] font-medium text-accent">
+                    <span className="h-1.5 w-1.5 rounded-full bg-accent" />
                     {plan.name} Plan
                   </span>
                 </div>
               </DropdownMenuLabel>
-              <DropdownMenuSeparator />
+              <DropdownMenuSeparator className="bg-border/60" />
               <DropdownMenuItem asChild>
                 <Link href="/dashboard/settings">
                   <User className="mr-2 h-4 w-4" />
@@ -155,8 +155,8 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
                   Settings
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleLogout} className="text-red-600 dark:text-red-400">
+              <DropdownMenuSeparator className="bg-border/60" />
+              <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
                 <LogOut className="mr-2 h-4 w-4" />
                 Log out
               </DropdownMenuItem>

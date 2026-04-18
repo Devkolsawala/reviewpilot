@@ -3,6 +3,7 @@ import { DM_Sans, Inter, Instrument_Serif } from "next/font/google";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 import { Toaster } from "@/components/ui/toaster";
+import { SonnerToaster } from "@/components/ui/sonner";
 import Script from "next/script";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
@@ -114,6 +115,7 @@ export default function RootLayout({
       <body className="antialiased">
         {children}
         <Toaster />
+        <SonnerToaster />
         <Script
           src="https://checkout.razorpay.com/v1/checkout.js"
           strategy="lazyOnload"

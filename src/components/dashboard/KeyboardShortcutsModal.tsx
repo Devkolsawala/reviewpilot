@@ -50,21 +50,21 @@ export function KeyboardShortcutsModal() {
     <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        className="absolute inset-0 bg-background/60 backdrop-blur-md"
         onClick={() => setOpen(false)}
       />
 
       {/* Modal */}
-      <div className="relative bg-card rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+      <div className="relative bg-card/95 backdrop-blur-xl border border-border/60 rounded-2xl shadow-[0_24px_64px_-16px_rgba(0,0,0,0.6)] w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-150">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border/60">
           <div>
-            <h2 className="font-heading font-bold text-base">Keyboard Shortcuts</h2>
+            <h2 className="font-sans text-base font-semibold tracking-tight">Keyboard shortcuts</h2>
             <p className="text-xs text-muted-foreground mt-0.5">Move faster without touching the mouse</p>
           </div>
           <button
             onClick={() => setOpen(false)}
-            className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+            className="p-1.5 rounded-lg hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors"
           >
             <X className="h-4 w-4" />
           </button>
@@ -74,20 +74,20 @@ export function KeyboardShortcutsModal() {
         <div className="p-4 space-y-5 max-h-[60vh] overflow-y-auto">
           {GROUPS.map((group) => (
             <div key={group}>
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60 mb-2 px-1">
+              <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground/60 mb-2 px-1">
                 {group}
               </p>
-              <div className="space-y-1.5">
+              <div className="space-y-1">
                 {SHORTCUTS.filter((s) => s.group === group).map((shortcut) => (
                   <div
                     key={shortcut.label + shortcut.keys.join("")}
-                    className="flex items-center justify-between rounded-lg hover:bg-secondary/50 px-3 py-2 transition-colors"
+                    className="flex items-center justify-between rounded-lg hover:bg-muted/40 px-3 py-2 transition-colors"
                   >
-                    <span className="text-sm">{shortcut.label}</span>
+                    <span className="text-sm text-foreground/85">{shortcut.label}</span>
                     <div className="flex items-center gap-1">
                       {shortcut.keys.map((k, i) => (
                         <span key={i} className="flex items-center gap-0.5">
-                          <kbd className="inline-flex items-center justify-center rounded bg-secondary border shadow-sm px-1.5 py-0.5 text-[11px] font-mono font-medium min-w-[22px] text-foreground">
+                          <kbd className="inline-flex items-center justify-center rounded bg-muted/60 border border-border/60 px-1.5 py-0.5 text-[11px] font-mono font-medium min-w-[22px] text-foreground">
                             {k}
                           </kbd>
                           {i < shortcut.keys.length - 1 && (
@@ -104,10 +104,10 @@ export function KeyboardShortcutsModal() {
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-3 border-t bg-secondary/30 text-center">
+        <div className="px-6 py-3 border-t border-border/60 bg-muted/20 text-center">
           <p className="text-xs text-muted-foreground">
-            Press <kbd className="px-1.5 py-0.5 rounded bg-background border text-[10px] font-mono">Esc</kbd> or{" "}
-            <kbd className="px-1.5 py-0.5 rounded bg-background border text-[10px] font-mono">?</kbd> to close
+            Press <kbd className="px-1.5 py-0.5 rounded bg-card border border-border/60 text-[10px] font-mono">Esc</kbd> or{" "}
+            <kbd className="px-1.5 py-0.5 rounded bg-card border border-border/60 text-[10px] font-mono">?</kbd> to close
           </p>
         </div>
       </div>
@@ -123,7 +123,7 @@ export function ShortcutsHintButton({ onClick }: { onClick?: () => void }) {
       className="flex items-center gap-2 text-[11px] text-muted-foreground/60 hover:text-muted-foreground transition-colors w-full px-3 py-1.5"
     >
       Press{" "}
-      <kbd className="px-1 py-0.5 rounded bg-secondary text-[10px] font-mono">?</kbd>{" "}
+      <kbd className="px-1 py-0.5 rounded bg-muted/60 text-[10px] font-mono">?</kbd>{" "}
       for shortcuts
     </button>
   );

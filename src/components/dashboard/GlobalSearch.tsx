@@ -49,7 +49,7 @@ export function GlobalSearch({ open, onOpenChange }: { open: boolean; onOpenChan
             title: r.author_name,
             subtitle: r.review_text.slice(0, 80) + "...",
             href: "/dashboard/inbox",
-            icon: <Star className={cn("h-4 w-4", r.rating >= 4 ? "text-green-500" : r.rating <= 2 ? "text-red-500" : "text-amber-500")} />,
+            icon: <Star className={cn("h-4 w-4", r.rating >= 4 ? "text-accent" : r.rating <= 2 ? "text-destructive" : "text-amber-500")} />,
             rating: r.rating,
           })),
       ]
@@ -101,31 +101,37 @@ export function GlobalSearch({ open, onOpenChange }: { open: boolean; onOpenChan
   return (
     <div className="fixed inset-0 z-50">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setOpen(false)} />
+      <div className="absolute inset-0 bg-background/60 backdrop-blur-md" onClick={() => setOpen(false)} />
 
       {/* Modal */}
-      <div className="relative mx-auto mt-[15vh] w-full max-w-lg">
-        <div className="rounded-xl border bg-card shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
+      <div className="relative mx-auto mt-[12vh] w-full max-w-xl px-4">
+        <div className="relative rounded-2xl border border-border/60 bg-card/95 shadow-[0_24px_64px_-16px_rgba(0,0,0,0.6)] overflow-hidden backdrop-blur-xl animate-in fade-in slide-in-from-top-2 duration-150">
+          {/* Gradient edge glow */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,hsl(var(--ring)/0.4),transparent)]"
+          />
+
           {/* Search input */}
-          <div className="flex items-center gap-3 px-4 border-b">
+          <div className="flex items-center gap-3 px-4 border-b border-border/60">
             <Search className="h-4 w-4 text-muted-foreground shrink-0" />
             <input
               ref={inputRef}
               value={query}
               onChange={(e) => { setQuery(e.target.value); setActiveIdx(0); }}
               onKeyDown={handleInputKey}
-              placeholder="Search reviews, pages..."
-              className="flex-1 bg-transparent py-3.5 text-sm outline-none placeholder:text-muted-foreground"
+              placeholder="Search reviews, pages…"
+              className="flex-1 bg-transparent py-4 text-sm outline-none placeholder:text-muted-foreground"
             />
-            <button onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground">
+            <button onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors">
               <X className="h-4 w-4" />
             </button>
           </div>
 
           {/* Results */}
-          <div className="max-h-72 overflow-y-auto py-2">
+          <div className="max-h-80 overflow-y-auto py-2">
             {results.length === 0 ? (
-              <p className="py-6 text-center text-sm text-muted-foreground">No results found</p>
+              <p className="py-8 text-center text-sm text-muted-foreground">No results found</p>
             ) : (
               results.map((result, i) => (
                 <button
@@ -134,12 +140,13 @@ export function GlobalSearch({ open, onOpenChange }: { open: boolean; onOpenChan
                   onMouseEnter={() => setActiveIdx(i)}
                   className={cn(
                     "flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors",
-                    activeIdx === i ? "bg-teal-50 dark:bg-teal-950/30" : "hover:bg-secondary/50"
+                    activeIdx === i ? "bg-accent/10" : "hover:bg-muted/40"
                   )}
                 >
                   <div className={cn(
-                    "rounded-lg p-1.5",
-                    result.type === "review" ? "bg-amber-50 dark:bg-amber-950/30" : "bg-secondary"
+                    "rounded-lg p-1.5 ring-1 ring-border/60",
+                    result.type === "review" ? "bg-amber-500/10" : "bg-muted/40",
+                    activeIdx === i && "ring-accent/40"
                   )}>
                     {result.icon}
                   </div>
@@ -148,7 +155,7 @@ export function GlobalSearch({ open, onOpenChange }: { open: boolean; onOpenChan
                     <p className="text-xs text-muted-foreground truncate">{result.subtitle}</p>
                   </div>
                   {result.rating && (
-                    <span className="text-xs font-medium text-muted-foreground">{result.rating}★</span>
+                    <span className="font-mono text-xs font-medium text-muted-foreground">{result.rating}★</span>
                   )}
                 </button>
               ))
@@ -156,10 +163,10 @@ export function GlobalSearch({ open, onOpenChange }: { open: boolean; onOpenChan
           </div>
 
           {/* Footer hints */}
-          <div className="flex items-center gap-4 border-t px-4 py-2 text-[11px] text-muted-foreground">
-            <span><kbd className="px-1 py-0.5 rounded bg-secondary font-mono text-[10px]">↑↓</kbd> navigate</span>
-            <span><kbd className="px-1 py-0.5 rounded bg-secondary font-mono text-[10px]">↵</kbd> open</span>
-            <span><kbd className="px-1 py-0.5 rounded bg-secondary font-mono text-[10px]">esc</kbd> close</span>
+          <div className="flex items-center gap-4 border-t border-border/60 bg-muted/20 px-4 py-2 text-[11px] text-muted-foreground">
+            <span className="flex items-center gap-1.5"><kbd className="px-1 py-0.5 rounded bg-card border border-border/60 font-mono text-[10px]">↑↓</kbd> navigate</span>
+            <span className="flex items-center gap-1.5"><kbd className="px-1 py-0.5 rounded bg-card border border-border/60 font-mono text-[10px]">↵</kbd> open</span>
+            <span className="flex items-center gap-1.5"><kbd className="px-1 py-0.5 rounded bg-card border border-border/60 font-mono text-[10px]">esc</kbd> close</span>
           </div>
         </div>
       </div>
@@ -171,11 +178,11 @@ export function SearchTrigger({ onClick }: { onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className="hidden sm:flex items-center gap-2 h-9 rounded-lg border bg-secondary/50 px-3 text-sm text-muted-foreground hover:bg-secondary transition-colors w-64"
+      className="hidden sm:flex items-center gap-2 h-9 rounded-lg border border-border/60 bg-muted/30 px-3 text-sm text-muted-foreground hover:bg-muted/50 hover:border-accent/30 transition-colors w-64"
     >
       <Search className="h-3.5 w-3.5" />
-      <span className="flex-1 text-left text-xs">Search...</span>
-      <kbd className="pointer-events-none inline-flex items-center gap-0.5 rounded border bg-card px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+      <span className="flex-1 text-left text-xs">Search…</span>
+      <kbd className="pointer-events-none inline-flex items-center gap-0.5 rounded border border-border/60 bg-card px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
         <span className="text-[11px]">⌘</span>K
       </kbd>
     </button>

@@ -91,15 +91,15 @@ export function FeedbackDialog({ collapsed }: { collapsed?: boolean }) {
       <DialogContent className="sm:max-w-md">
         {status === "success" ? (
           <div className="flex flex-col items-center justify-center py-8 gap-3">
-            <div className="h-12 w-12 rounded-full bg-teal-100 dark:bg-teal-900/40 flex items-center justify-center">
-              <Check className="h-6 w-6 text-teal-600 dark:text-teal-400" />
+            <div className="h-12 w-12 rounded-full bg-[linear-gradient(135deg,rgba(99,102,241,0.15),rgba(217,70,239,0.15))] ring-1 ring-accent/30 flex items-center justify-center">
+              <Check className="h-6 w-6 text-accent" />
             </div>
             <p className="text-sm font-medium">Thank you! We&apos;ve received your feedback.</p>
           </div>
         ) : (
           <>
             <DialogHeader>
-              <DialogTitle className="text-lg">Share your feedback about ReviewPilot</DialogTitle>
+              <DialogTitle className="font-sans text-lg font-semibold tracking-tight">Share your feedback about ReviewPilot</DialogTitle>
               <p className="text-sm text-muted-foreground">Help us improve — we read every message</p>
             </DialogHeader>
 
@@ -113,8 +113,8 @@ export function FeedbackDialog({ collapsed }: { collapsed?: boolean }) {
                     className={cn(
                       "rounded-full px-3 py-1.5 text-xs font-medium border transition-colors",
                       type === t.value
-                        ? "bg-teal-50 border-teal-300 text-teal-700 dark:bg-teal-950/40 dark:border-teal-700 dark:text-teal-300"
-                        : "border-border text-muted-foreground hover:border-teal-300 hover:text-foreground"
+                        ? "bg-accent/10 border-accent/40 text-accent"
+                        : "border-border/60 text-muted-foreground hover:border-accent/30 hover:text-foreground"
                     )}
                   >
                     {t.label}
@@ -162,7 +162,7 @@ export function FeedbackDialog({ collapsed }: { collapsed?: boolean }) {
                 <Button
                   onClick={handleSubmit}
                   disabled={status === "sending" || message.trim().length < 10}
-                  className="bg-teal-500 hover:bg-teal-600 text-white"
+                  variant="gradient"
                   size="sm"
                 >
                   {status === "sending" ? (
