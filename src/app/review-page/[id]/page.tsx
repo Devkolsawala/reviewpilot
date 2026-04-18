@@ -31,8 +31,8 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
   if (submitted) {
     return (
       <PageContainer>
-        <CheckCircle2 className="h-16 w-16 text-teal-500 mx-auto mb-6" />
-        <h2 className="font-heading text-2xl font-bold mb-2">Thank You!</h2>
+        <CheckCircle2 className="h-16 w-16 text-accent mx-auto mb-6" />
+        <h2 className="font-sans text-2xl font-semibold tracking-tight mb-2">Thank You!</h2>
         <p className="text-muted-foreground">
           Your feedback has been received. We appreciate you taking the time to share your thoughts.
         </p>
@@ -54,7 +54,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
             />
           ))}
         </div>
-        <h2 className="font-heading text-2xl font-bold mb-2">
+        <h2 className="font-sans text-2xl font-semibold tracking-tight mb-2">
           We&apos;re Glad You&apos;re Happy!
         </h2>
         <p className="text-muted-foreground mb-6">
@@ -89,7 +89,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
             />
           ))}
         </div>
-        <h2 className="font-heading text-2xl font-bold mb-2">
+        <h2 className="font-sans text-2xl font-semibold tracking-tight mb-2">
           We&apos;re Sorry to Hear That
         </h2>
         <p className="text-muted-foreground mb-6">
@@ -112,7 +112,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
   // Rate step
   return (
     <PageContainer>
-      <h2 className="font-heading text-2xl font-bold mb-2">How Was Your Experience?</h2>
+      <h2 className="font-sans text-2xl font-semibold tracking-tight mb-2">How Was Your Experience?</h2>
       <p className="text-muted-foreground mb-8">
         Tap a star to rate us. Your feedback helps us improve!
       </p>
@@ -138,7 +138,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
       </div>
       <p className="text-sm text-muted-foreground">
         Powered by{" "}
-        <span className="font-heading font-semibold text-teal-600">ReviewPilot</span>
+        <span className="font-sans font-semibold tracking-tight text-accent">ReviewPilot</span>
       </p>
     </PageContainer>
   );
@@ -149,7 +149,7 @@ function PageContainer({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen flex items-center justify-center bg-background p-6">
       <div className="w-full max-w-md text-center">
         <div className="flex items-center justify-center gap-2 mb-8">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-500 text-white font-heading font-bold text-sm">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[linear-gradient(135deg,#6366f1_0%,#8b5cf6_50%,#d946ef_100%)] text-white font-sans font-semibold tracking-tight text-sm">
             RP
           </div>
         </div>
