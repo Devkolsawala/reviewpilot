@@ -1,17 +1,17 @@
 /**
- * sync_cadence controls automated cron behaviour:
- *  - 'daily_8am'   : once per day at 8 AM                      (Free)
- *  - 'twice_daily' : twice per day at 8 AM + 8 PM              (Starter / Growth)
- *  - 'thrice_daily': three times per day at 8 AM, 2 PM + 8 PM  (Agency)
+ * sync_cadence — all plans now sync every 2 hours via Vercel cron.
+ * The legacy 'daily_8am' / 'twice_daily' / 'thrice_daily' string types are kept
+ * only so older DB rows and any in-flight code don't break during deploy; the
+ * runtime always treats every plan as every-2-hours.
  */
-export type SyncCadence = 'daily_8am' | 'twice_daily' | 'thrice_daily';
+export type SyncCadence = 'every_2h' | 'daily_8am' | 'twice_daily' | 'thrice_daily';
 
 export const PLANS = {
   free: {
     name: 'Free',
     price_inr: 0,
     price_usd: 0,
-    sync_cadence: 'daily_8am' as SyncCadence,   // once at 8 AM
+    sync_cadence: 'every_2h' as SyncCadence,   // every 2 hours (all plans)
     limits: {
       ai_replies_per_period: 10,
       sms_per_period: 5,
@@ -40,7 +40,7 @@ export const PLANS = {
     name: 'Starter',
     price_inr: 1500,
     price_usd: 19,
-    sync_cadence: 'twice_daily' as SyncCadence,  // 8 AM + 8 PM
+    sync_cadence: 'every_2h' as SyncCadence,   // every 2 hours (all plans)
     limits: {
       ai_replies_per_period: 100,
       sms_per_period: 50,
@@ -69,7 +69,7 @@ export const PLANS = {
     name: 'Growth',
     price_inr: 3000,
     price_usd: 39,
-    sync_cadence: 'twice_daily' as SyncCadence,  // 8 AM + 8 PM
+    sync_cadence: 'every_2h' as SyncCadence,   // every 2 hours (all plans)
     limits: {
       ai_replies_per_period: 500,
       sms_per_period: 200,
@@ -98,7 +98,7 @@ export const PLANS = {
     name: 'Agency',
     price_inr: 8000,
     price_usd: 99,
-    sync_cadence: 'thrice_daily' as SyncCadence, // 8 AM + 2 PM + 8 PM
+    sync_cadence: 'every_2h' as SyncCadence,   // every 2 hours (all plans)
     limits: {
       ai_replies_per_period: -1, // -1 = unlimited
       sms_per_period: 1000,
@@ -229,43 +229,18 @@ export function getSyncCadence(planId: string): SyncCadence {
 }
 
 /** Human-readable label shown on the Connections page */
-export function getSyncScheduleLabel(planId: string): string {
-  const cadence = getSyncCadence(planId);
-  if (cadence === 'daily_8am')   return 'Auto-syncs once daily at 8 AM';
-  if (cadence === 'twice_daily') return 'Auto-syncs twice daily (8 AM & 8 PM)';
-  return 'Auto-syncs 3× daily (8 AM, 2 PM & 8 PM)';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function getSyncScheduleLabel(_planId: string): string {
+  // All plans now sync approximately every 2 hours via the Vercel cron.
+  return 'Auto-syncs every 2 hours';
 }
 
 /**
- * Returns true if the automated cron should process this connection right now.
- * Only called for GET (Cloudflare cron) requests — manual POST always proceeds.
- *
- * Each cadence uses a ±30 min window so the hourly Worker always hits at least one window:
- *   daily_8am   → 07:30–08:30
- *   twice_daily → 07:30–08:30 or 19:30–20:30
- *   thrice_daily→ 07:30–08:30 or 13:30–14:30 or 19:30–20:30
- *
- * @param planId   user's plan id
- * @param timezone IANA timezone string (e.g. "Asia/Kolkata"). Defaults to IST.
+ * Whether the automated cron should process this connection right now.
+ * Kept as a function for backwards-compat with existing callers, but every
+ * plan now runs on the same 2-hour Vercel cron, so this always returns true.
  */
-export function isCronSyncAllowed(planId: string, timezone?: string | null): boolean {
-  const cadence = getSyncCadence(planId);
-  const tz = timezone || 'Asia/Kolkata';
-
-  let minuteOfDay: number;
-  try {
-    const nowLocal = new Date(new Date().toLocaleString('en-US', { timeZone: tz }));
-    minuteOfDay = nowLocal.getHours() * 60 + nowLocal.getMinutes();
-  } catch {
-    minuteOfDay = new Date().getUTCHours() * 60 + new Date().getUTCMinutes();
-  }
-
-  const W = 30; // ±30 min window
-  const at8AM  = Math.abs(minuteOfDay - 8  * 60) <= W;
-  const at2PM  = Math.abs(minuteOfDay - 14 * 60) <= W;
-  const at8PM  = Math.abs(minuteOfDay - 20 * 60) <= W;
-
-  if (cadence === 'daily_8am')   return at8AM;
-  if (cadence === 'twice_daily') return at8AM || at8PM;
-  /* thrice_daily */             return at8AM || at2PM || at8PM;
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function isCronSyncAllowed(_planId: string, _timezone?: string | null): boolean {
+  return true;
 }

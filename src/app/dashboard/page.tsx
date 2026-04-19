@@ -261,10 +261,12 @@ export default function DashboardPage() {
 
  {/* Stat cards */}
  <StatsCards
- totalReviews={analytics.total_reviews}
- avgRating={analytics.avg_rating}
- responseRate={analytics.response_rate}
+ totalReviews={analytics.totals.total_reviews}
+ avgRating={analytics.totals.avg_rating}
+ responseRate={analytics.totals.response_rate}
  pendingCount={pendingReviews.length}
+ previousTotals={analytics.previousPeriodTotals.total_reviews}
+ previousAvgRating={analytics.previousPeriodTotals.avg_rating}
  />
 
  {/* Two-column layout */}

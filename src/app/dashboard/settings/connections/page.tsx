@@ -22,6 +22,7 @@ import {
  TooltipTrigger,
 } from "@/components/ui/tooltip";
 import type { Connection } from "@/types/connection";
+import { FirstSyncWelcomeCard } from "@/components/connections/first-sync-welcome-card";
 
 function timeAgo(iso: string | null | undefined) {
  if (!iso) return "Never";
@@ -32,6 +33,14 @@ function timeAgo(iso: string | null | undefined) {
  const hours = Math.floor(mins / 60);
  if (hours < 24) return `${hours}h ago`;
  return `${Math.floor(hours / 24)}d ago`;
+}
+
+// Sync cadence is ~every 2 hours. Flag as overdue past 150 minutes.
+const SYNC_OVERDUE_MINUTES = 150;
+function isSyncOverdue(iso: string | null | undefined): boolean {
+ if (!iso) return false;
+ const mins = (Date.now() - new Date(iso).getTime()) / 60000;
+ return mins > SYNC_OVERDUE_MINUTES;
 }
 
 export default function ConnectionsPage() {
@@ -299,6 +308,21 @@ export default function ConnectionsPage() {
  <span className="font-medium text-foreground ml-0.5">
  {timeAgo(conn.last_synced_at)}
  </span>
+ {isSyncOverdue(conn.last_synced_at) && (
+ <TooltipProvider delayDuration={150}>
+ <Tooltip>
+ <TooltipTrigger asChild>
+ <span
+ className="ml-1.5 inline-block h-2 w-2 rounded-full bg-amber-500"
+ aria-label="Sync overdue"
+ />
+ </TooltipTrigger>
+ <TooltipContent side="top" className="max-w-xs">
+ Sync is overdue — click Sync Now
+ </TooltipContent>
+ </Tooltip>
+ </TooltipProvider>
+ )}
  </span>
  <span>
  Reviews:{" "}
@@ -316,14 +340,43 @@ export default function ConnectionsPage() {
  </div>
  )}
 
+ {/* First-sync welcome cards for Play Store connections */}
+ {!loading && connections
+ .filter((c) => c.type === "play_store")
+ .map((c) => (
+ <FirstSyncWelcomeCard
+ key={`welcome-${c.id}`}
+ connectionId={c.id}
+ initialSyncCompletedAt={c.initial_sync_completed_at}
+ />
+ ))}
+
+ {/* About Play Store sync — always-available expandable */}
+ {!loading && connections.some((c) => c.type === "play_store") && (
+ <details className="rounded-lg border bg-card p-4 text-sm">
+ <summary className="cursor-pointer font-medium">About Play Store sync</summary>
+ <div className="mt-3 text-muted-foreground space-y-2">
+ <p>
+ Google&apos;s Play Developer API only exposes reviews from the last 7 days — this is
+ a platform-wide limit Google applies to every tool. Older reviews aren&apos;t fetchable
+ through any API.
+ </p>
+ <p>
+ From the moment you connect, every review you receive is captured and kept in
+ ReviewPilot permanently — you&apos;ll never lose another review.
+ </p>
+ </div>
+ </details>
+ )}
+
  <Card className="bg-secondary/30 border-dashed">
  <CardContent className="p-4">
  <p className="text-xs font-medium mb-1">How review syncing works</p>
  <ul className="text-xs text-muted-foreground space-y-1">
- <li>• Reviews sync automatically in the background based on your plan schedule</li>
- <li>• Use &ldquo;Sync Now&rdquo; any time to fetch the latest reviews immediately</li>
- <li>• New reviews appear in your inbox within seconds of syncing</li>
- <li>• If auto-reply is enabled in AI Config, replies are generated automatically</li>
+ <li>• Reviews sync automatically approximately every 2 hours</li>
+ <li>• Use &ldquo;Sync Now&rdquo; anytime to fetch the latest immediately</li>
+ <li>• Every synced review is saved to your inbox permanently — you&apos;ll never lose a review</li>
+ <li>• If auto-reply is enabled, drafts are generated automatically</li>
  </ul>
  </CardContent>
  </Card>

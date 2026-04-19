@@ -3,6 +3,6 @@ main = "src/index.ts"
 compatibility_date = "2024-09-23"
 
 [triggers]
-# Runs every hour — adjust to taste (CF free tier: up to 3 cron triggers)
+# All plans sync every 2 hours (previously every hour with plan-gated windows).
 # Cron syntax: minute hour day-of-month month day-of-week
-crons = ["0 * * * *"]
+crons = ["0 */2 * * *"]

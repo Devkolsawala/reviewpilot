@@ -9,4 +9,5 @@ export interface Connection {
   last_synced_at?: string | null;
   review_count?: number;
   created_at: string;
+  initial_sync_completed_at?: string | null;
 }

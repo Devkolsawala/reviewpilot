@@ -2,7 +2,11 @@
   "permissions": {
     "allow": [
       "Bash(claude remote-control:*)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(ln -s ../../../node_modules node_modules)",
+      "Bash(kill %1)",
+      "Bash(powershell.exe -Command \"cmd /c mklink /J node_modules ..\\\\..\\\\..\\\\node_modules\")",
+      "Bash(npx next *)"
     ]
   }
 }

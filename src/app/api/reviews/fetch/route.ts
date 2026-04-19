@@ -103,27 +103,48 @@ export async function POST(request: Request) {
   let autoDrafted = 0;
   let autoPublished = 0;
 
+  const nowIso = new Date().toISOString();
+
   for (const review of fetchedReviews) {
     const { data: existing } = await supabase
       .from("reviews")
-      .select("id, review_text")
+      .select("id, review_text, author_name, reply_status, reply_text, reply_published_at, is_auto_replied")
       .eq("connection_id", connectionId)
       .eq("external_review_id", review.external_review_id)
       .maybeSingle();
 
     if (existing) {
+      // Re-seeing a stored review. Update only Google-sourced fields that can
+      // legitimately change. NEVER overwrite our own derived/drafted fields:
+      // sentiment, keywords, is_read, or a reply_text we drafted ourselves.
+      const update: Record<string, unknown> = { last_seen_in_api_at: nowIso };
+      let changed = false;
       if (existing.review_text !== review.review_text) {
-        await supabase
-          .from("reviews")
-          .update({
-            review_text: review.review_text,
-            rating: review.rating,
-            review_created_at: review.review_created_at,
-          })
-          .eq("id", existing.id);
-        updatedCount++;
-        console.log(`[FETCH] Updated review ${review.external_review_id} (text changed)`);
+        update.review_text = review.review_text;
+        update.rating = review.rating;
+        update.review_created_at = review.review_created_at;
+        changed = true;
       }
+      if (existing.author_name !== review.author_name && review.author_name) {
+        update.author_name = review.author_name;
+        changed = true;
+      }
+      // Only pull in Google-side reply changes if WE didn't draft/publish it ourselves.
+      const ourDraftOrReply = existing.reply_status === "drafted"
+        || (existing.reply_status === "published" && existing.is_auto_replied);
+      if (!ourDraftOrReply) {
+        if (review.reply_text && review.reply_text !== existing.reply_text) {
+          update.reply_text = review.reply_text;
+          update.reply_status = review.reply_status;
+          update.reply_published_at = review.reply_published_at ?? null;
+          changed = true;
+        }
+      }
+      await supabase
+        .from("reviews")
+        .update(update)
+        .eq("id", existing.id);
+      if (changed) updatedCount++;
       continue;
     }
 
@@ -147,6 +168,7 @@ export async function POST(request: Request) {
         reply_text: review.reply_text ?? null,
         reply_published_at: review.reply_published_at ?? null,
         is_read: review.is_read ?? false,
+        last_seen_in_api_at: nowIso,
       })
       .select(
         "id, source, external_review_id, author_name, rating, review_text, review_language, sentiment, keywords, review_created_at, reply_status"
@@ -230,15 +252,22 @@ export async function POST(request: Request) {
   }
 
   // ── Step 4: Update connection metadata ───────────────────────────────────────
+  const connectionUpdate: Record<string, unknown> = {
+    last_synced_at: nowIso,
+    review_count: (connection.review_count ?? 0) + newUnansweredCount,
+  };
+  // Stamp first-sync timestamp once, on the first successful full sweep.
+  if (!connection.initial_sync_completed_at && !syncError) {
+    connectionUpdate.initial_sync_completed_at = nowIso;
+  }
   await supabase
     .from("connections")
-    .update({
-      last_synced_at: new Date().toISOString(),
-      review_count: (connection.review_count ?? 0) + newUnansweredCount,
-    })
+    .update(connectionUpdate)
     .eq("id", connectionId);
 
-  console.log(`[FETCH] Sync complete: ${fetchedReviews.length} fetched from Play Store, ${newUnansweredCount} new unanswered, ${alreadyRepliedCount} already replied on Play Store, ${updatedCount} updated, ${autoDrafted} auto-drafted, ${autoPublished} auto-published`);
+  console.log(
+    `[play_store_sync] connection=${connectionId} reviews_seen=${fetchedReviews.length} new=${newUnansweredCount} updated=${updatedCount} auto_drafted=${autoDrafted} auto_published=${autoPublished}`
+  );
 
   // Return sync error only if nothing was processed at all
   if (syncError && newUnansweredCount === 0 && autoDrafted === 0 && autoPublished === 0) {

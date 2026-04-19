@@ -154,6 +154,12 @@ Toggle on the apps you want ReviewPilot to manage. Each app counts as one connec
 - **"Invalid JSON" error:** Make sure you uploaded the full JSON key file downloaded from Google Cloud Console, not a screenshot or renamed file.
 - **App not appearing in the list:** The service account must be linked to the Google Cloud Project that is associated with your Play Console account.
 
+## Why only recent reviews on first connect?
+
+Google's Play Developer API only exposes reviews from the last 7 days — this is a platform-wide limit Google applies to every tool, not something specific to ReviewPilot. Reviews older than about a week can't be fetched through any API.
+
+The good news: from the moment you connect, every review you receive is captured and kept in ReviewPilot permanently, even after it rolls off Google's public feed. Your review history starts building from day one and you'll never lose another review.
+
 ## What's next?
 
 Once your app is connected, [create an App Context Profile](/docs/create-app-context-profile) so the AI knows your known bugs, brand tone, and FAQ answers.
