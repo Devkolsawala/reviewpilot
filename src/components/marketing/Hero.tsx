@@ -49,10 +49,10 @@ export function Hero() {
             {/* Headline */}
             <m.h1
               variants={fadeUp}
-              className="mt-6 max-w-4xl text-balance font-sans text-4xl font-semibold tracking-tight text-foreground sm:text-5xl lg:text-6xl lg:leading-[1.05]"
+              className="mt-6 max-w-4xl text-balance font-sans text-4xl font-semibold tracking-tight text-foreground leading-[1.1] sm:text-5xl lg:text-6xl lg:leading-[1.05]"
             >
               Turn{" "}
-              <span className="font-serif italic font-normal text-transparent bg-clip-text bg-[linear-gradient(135deg,#6366f1_0%,#8b5cf6_50%,#d946ef_100%)]">
+              <span className="text-gradient-brand font-serif italic font-normal">
                 every review
               </span>{" "}
               into revenue.

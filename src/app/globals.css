@@ -83,6 +83,12 @@
     @apply font-sans tracking-tight;
   }
 
+  /* Prevent raster images from overflowing narrow containers. */
+  img, video {
+    max-width: 100%;
+    height: auto;
+  }
+
   ::selection {
     background-color: hsl(var(--ring) / 0.25);
     color: hsl(var(--foreground));
@@ -140,12 +146,17 @@
     display: none;
   }
 
-  /* Brand gradient text */
+  /* Brand gradient text — inline-block + padding prevents italic/serif
+     glyph clipping when combined with background-clip:text. */
   .text-gradient-brand {
     background-image: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #d946ef 100%);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
+    display: inline-block;
+    padding-right: 0.12em;
+    padding-bottom: 0.08em;
+    line-height: 1.1;
   }
 
   /* Grid backgrounds with radial fade mask */
