@@ -70,7 +70,7 @@ export function InteractiveDemo() {
             {/* Side nav */}
             <nav
               aria-label="Demo steps"
-              className="flex flex-row gap-2 overflow-x-auto lg:flex-col lg:overflow-visible"
+              className="grid grid-cols-2 gap-2 lg:flex lg:flex-col"
             >
               {STEPS.map((s) => {
                 const Icon = s.icon;
@@ -80,8 +80,7 @@ export function InteractiveDemo() {
                     key={s.key}
                     onClick={() => setActive(s.key)}
                     className={cn(
-                      "relative flex shrink-0 items-start gap-3 rounded-xl border border-border/60 bg-card/40 p-3 text-left transition-colors",
-                      "lg:shrink",
+                      "relative flex items-start gap-3 rounded-xl border border-border/60 bg-card/40 p-3 text-left transition-colors",
                       isActive
                         ? "border-accent/50 bg-card"
                         : "hover:border-border hover:bg-card/60",
@@ -99,8 +98,8 @@ export function InteractiveDemo() {
                         isActive ? "text-accent" : "text-muted-foreground",
                       )}
                     />
-                    <div>
-                      <p className="text-sm font-medium">{s.label}</p>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium leading-snug">{s.label}</p>
                       <p className="mt-0.5 hidden text-xs text-muted-foreground lg:block">
                         {s.caption}
                       </p>
