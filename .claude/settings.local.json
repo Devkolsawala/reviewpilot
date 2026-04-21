@@ -6,7 +6,13 @@
       "Bash(ln -s ../../../node_modules node_modules)",
       "Bash(kill %1)",
       "Bash(powershell.exe -Command \"cmd /c mklink /J node_modules ..\\\\..\\\\..\\\\node_modules\")",
-      "Bash(npx next *)"
+      "Bash(npx next *)",
+      "Bash(pnpm build *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(npx tsc *)",
+      "Bash(NODE_OPTIONS=\"--max-old-space-size=4096\" npm run build)"
     ]
   }
 }

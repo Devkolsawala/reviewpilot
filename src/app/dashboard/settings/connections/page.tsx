@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import Link from "next/link";
 import { ConnectionWizard } from "@/components/dashboard/ConnectionWizard";
 import { useConnections } from "@/hooks/useConnection";
 import { usePlan } from "@/hooks/usePlan";
@@ -209,7 +210,16 @@ export default function ConnectionsPage() {
  </div>
  <div>
  <div className="flex items-center gap-2 flex-wrap">
+ {conn.type === "whatsapp" ? (
+ <Link
+ href={`/dashboard/settings/connections/${conn.id}`}
+ className="text-sm font-semibold hover:text-accent hover:underline transition-colors"
+ >
+ {conn.name}
+ </Link>
+ ) : (
  <p className="text-sm font-semibold">{conn.name}</p>
+ )}
  {conn.type === "play_store" && (
  <Badge
  variant="secondary"
@@ -292,6 +302,27 @@ export default function ConnectionsPage() {
  </TooltipContent>
  </Tooltip>
  </TooltipProvider>
+ ) : conn.type === "whatsapp" ? (
+ <TooltipProvider delayDuration={150}>
+ <Tooltip>
+ <TooltipTrigger asChild>
+ <span tabIndex={0}>
+ <Button
+ variant="outline"
+ size="sm"
+ className="h-8 gap-1.5 opacity-60 cursor-not-allowed"
+ disabled
+ >
+ <RefreshCw className="h-3.5 w-3.5" />
+ Realtime
+ </Button>
+ </span>
+ </TooltipTrigger>
+ <TooltipContent side="top" className="max-w-xs">
+ WhatsApp messages arrive in realtime via webhook — no manual sync needed.
+ </TooltipContent>
+ </Tooltip>
+ </TooltipProvider>
  ) : (
  <Button
  variant="outline"
@@ -317,6 +348,12 @@ export default function ConnectionsPage() {
 
  {/* Last synced + auto-sync schedule */}
  <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 border-t pt-3 text-xs text-muted-foreground">
+ {conn.type === "whatsapp" ? (
+ <span className="flex items-center gap-1">
+ <Clock className="h-3 w-3" />
+ <span className="font-medium text-foreground">Realtime via webhook</span>
+ </span>
+ ) : (
  <span className="flex items-center gap-1">
  <Clock className="h-3 w-3" />
  Last synced:{" "}
@@ -339,14 +376,17 @@ export default function ConnectionsPage() {
  </TooltipProvider>
  )}
  </span>
+ )}
  <span>
  Reviews:{" "}
  <span className="font-medium text-foreground">{conn.review_count ?? 0}</span>
  </span>
+ {conn.type !== "whatsapp" && (
  <span className="flex items-center gap-1 text-accent dark:text-accent">
  <CalendarClock className="h-3 w-3" />
  {syncLabel}
  </span>
+ )}
  </div>
  </CardContent>
  </Card>

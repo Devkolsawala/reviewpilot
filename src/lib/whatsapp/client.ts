@@ -123,6 +123,98 @@ export async function verifyWhatsAppCredentials(creds: {
   }
 }
 
+// ── Message templates (list + create) ───────────────────────────────────────
+export interface WhatsAppTemplate {
+  id: string;
+  name: string;
+  category: "UTILITY" | "MARKETING" | "AUTHENTICATION";
+  status: "PENDING" | "APPROVED" | "REJECTED" | "PAUSED";
+  language: string;
+  components: unknown[];
+}
+
+export async function fetchTemplates(creds: {
+  wabaId: string;
+  accessToken: string;
+}): Promise<WhatsAppTemplate[]> {
+  const res = await fetch(
+    `${GRAPH}/${creds.wabaId}/message_templates?fields=id,name,category,status,language,components&limit=100`,
+    { headers: { Authorization: `Bearer ${creds.accessToken}` } }
+  );
+  if (!res.ok) throw new Error(`fetchTemplates failed: ${await res.text()}`);
+  const data = (await res.json()) as { data?: WhatsAppTemplate[] };
+  return data.data || [];
+}
+
+export async function createTemplate(
+  creds: { wabaId: string; accessToken: string },
+  template: {
+    name: string;
+    category: "UTILITY" | "MARKETING" | "AUTHENTICATION";
+    language: string;
+    bodyText: string;
+  }
+): Promise<{ id: string; status: string; category: string }> {
+  const res = await fetch(`${GRAPH}/${creds.wabaId}/message_templates`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${creds.accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      name: template.name,
+      category: template.category,
+      language: template.language,
+      components: [{ type: "BODY", text: template.bodyText }],
+    }),
+  });
+  if (!res.ok) throw new Error(`createTemplate failed: ${await res.text()}`);
+  return res.json();
+}
+
+// ── Business profile (fetch + update) ───────────────────────────────────────
+export interface WhatsAppBusinessProfile {
+  description?: string;
+  about?: string;
+  email?: string;
+  address?: string;
+  websites?: string[];
+  vertical?: string;
+  profile_picture_url?: string;
+}
+
+export async function fetchBusinessProfile(creds: {
+  phoneNumberId: string;
+  accessToken: string;
+}): Promise<WhatsAppBusinessProfile> {
+  const res = await fetch(
+    `${GRAPH}/${creds.phoneNumberId}/whatsapp_business_profile?fields=description,about,email,address,websites,vertical,profile_picture_url`,
+    { headers: { Authorization: `Bearer ${creds.accessToken}` } }
+  );
+  if (!res.ok) throw new Error(`fetchProfile failed: ${await res.text()}`);
+  const data = (await res.json()) as { data?: WhatsAppBusinessProfile[] };
+  return (data.data && data.data[0]) || {};
+}
+
+export async function updateBusinessProfile(
+  creds: { phoneNumberId: string; accessToken: string },
+  profile: { description?: string; about?: string; email?: string; address?: string }
+): Promise<{ success: boolean }> {
+  const res = await fetch(
+    `${GRAPH}/${creds.phoneNumberId}/whatsapp_business_profile`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${creds.accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ messaging_product: "whatsapp", ...profile }),
+    }
+  );
+  if (!res.ok) throw new Error(`updateProfile failed: ${await res.text()}`);
+  return res.json();
+}
+
 // ── Validate Meta webhook signature (X-Hub-Signature-256) ───────────────────
 export function verifyWebhookSignature(
   rawBody: string,
