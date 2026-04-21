@@ -24,7 +24,7 @@ function getXaiClient(): OpenAI | null {
 export interface GenerateReplyParams {
   appContext: AppContext | Record<string, unknown>;
   review: Review;
-  source: "google_business" | "play_store";
+  source: "google_business" | "play_store" | "whatsapp";
   tone?: string;
 }
 
@@ -49,8 +49,9 @@ export async function generateReply(params: GenerateReplyParams): Promise<string
     // Respect local RPM cap before calling the API
     await waitForRateLimit();
 
+    const ratingLabel = params.review.rating != null ? `${params.review.rating}★` : params.source;
     console.log(
-      `[AI] Calling xAI (${model}) for review by ${params.review.author_name} (${params.review.rating}★)`
+      `[AI] Calling xAI (${model}) for review by ${params.review.author_name} (${ratingLabel})`
     );
 
     // retryWithBackoff handles 429 responses (reads Retry-After header + exponential backoff).
@@ -144,11 +145,15 @@ function truncateAtSentenceBoundary(text: string, maxLength: number): string {
 
 function generateMockReply(review: Review): string {
   const name = review.author_name?.split(" ")[0] || "there";
+  const rating = review.rating ?? 0;
 
-  if (review.rating >= 4) {
-    return `Thank you so much for your wonderful ${review.rating}-star review, ${name}! We're thrilled you're enjoying the experience. Your support means the world to us and motivates us to keep improving!`;
+  if (review.source === "whatsapp" || review.rating == null) {
+    return `Hi ${name}, thanks for reaching out! We've got your message and a teammate will follow up shortly. In the meantime, is there anything specific we can help you with?`;
   }
-  if (review.rating === 3) {
+  if (rating >= 4) {
+    return `Thank you so much for your wonderful ${rating}-star review, ${name}! We're thrilled you're enjoying the experience. Your support means the world to us and motivates us to keep improving!`;
+  }
+  if (rating === 3) {
     return `Thanks for your honest feedback, ${name}. We appreciate you sharing your thoughts. We're constantly working to improve — could you tell us a bit more about what we could do better? We'd love to earn that 5-star rating from you!`;
   }
   return `We're really sorry about your experience, ${name}. This isn't the standard we aim for and we want to make it right. Could you please reach out to our support team? We'd love to resolve this for you personally.`;

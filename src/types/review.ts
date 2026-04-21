@@ -1,13 +1,20 @@
+export type ReviewSource = "google_business" | "play_store" | "whatsapp";
+
 export interface Review {
   id: string;
   connection_id?: string;
-  source: "google_business" | "play_store";
+  source: ReviewSource;
   external_review_id: string;
   author_name: string;
-  rating: number;
+  /** Nullable — WhatsApp messages have no rating */
+  rating: number | null;
   review_text: string;
   review_language: string;
   device_info?: Record<string, unknown>;
+  /** For WhatsApp, the customer's phone number in E.164 format (e.g. +919812345678) */
+  author_id?: string | null;
+  /** When true, skip the AI auto-reply for this row (e.g. non-text WhatsApp messages) */
+  skip_auto_reply?: boolean;
   reply_text?: string;
   reply_status: "pending" | "drafted" | "approved" | "published" | "failed";
   reply_published_at?: string;
@@ -20,7 +27,7 @@ export interface Review {
 }
 
 export interface ReviewFilter {
-  source?: "google_business" | "play_store" | "all";
+  source?: ReviewSource | "all";
   rating?: number | "all";
   status?: "pending" | "drafted" | "published" | "all";
   search?: string;

@@ -4,7 +4,7 @@ import type { Review } from "@/types/review";
 export interface ReplyPromptParams {
   appContext: AppContext;
   review: Review;
-  source: "google_business" | "play_store";
+  source: "google_business" | "play_store" | "whatsapp";
   toneOverride?: string;
 }
 
@@ -13,11 +13,21 @@ export function buildReplyPrompt(params: ReplyPromptParams): {
   user: string;
 } {
   const { appContext, review, source, toneOverride } = params;
-  const charLimit = source === "play_store" ? 350 : 2000;
+  const charLimit =
+    source === "play_store" ? 350 : source === "whatsapp" ? 1024 : 2000;
   const tone = toneOverride || appContext?.tone || "friendly";
   const platformName =
-    source === "play_store" ? "Play Store" : "Google Business Profile";
-  const entityType = source === "play_store" ? "app" : "business";
+    source === "play_store"
+      ? "Play Store"
+      : source === "whatsapp"
+        ? "WhatsApp"
+        : "Google Business Profile";
+  const entityType =
+    source === "play_store"
+      ? "app"
+      : source === "whatsapp"
+        ? "business"
+        : "business";
 
   const businessName = appContext?.description
     ? extractBusinessName(appContext.description)
@@ -42,7 +52,27 @@ export function buildReplyPrompt(params: ReplyPromptParams): {
   const toneGuide = toneInstructions[tone] || toneInstructions.friendly;
   const contextSection = buildContextSection(appContext, entityType);
 
-  const system = `You are responding to a customer review on the ${platformName} on behalf of ${businessName}.
+  const roleLine =
+    source === "whatsapp"
+      ? `You are a customer support assistant replying to an incoming WhatsApp message on behalf of ${businessName}.`
+      : `You are responding to a customer review on the ${platformName} on behalf of ${businessName}.`;
+
+  const ratingStrategySection =
+    source === "whatsapp"
+      ? `RESPONSE STRATEGY:
+- This is a free-form chat message — there is no star rating. Infer sentiment and intent from the text.
+- If it's a question, answer directly and concretely.
+- If it's a complaint, acknowledge it, apologize, and offer a concrete next step (human handoff, support URL).
+- If it's positive feedback, thank them warmly and keep it brief.
+- Keep replies conversational — this is a chat, not a formal review response.`
+      : `RESPONSE STRATEGY BY RATING:
+- 5 stars: Thank them for the SPECIFIC thing they praised. Be warm. Keep it brief (2-3 sentences max).
+- 4 stars: Thank them, then briefly address what might have kept it from 5 stars if mentioned.
+- 3 stars: Acknowledge both the good and the concern. Ask what you could do better. Be genuine.
+- 2 stars: Empathize first. Address the specific complaint. Offer a concrete next step (support URL, reach out, etc).
+- 1 star: Lead with a sincere apology for their experience. Acknowledge the specific issue. Offer direct help — do not be defensive.`;
+
+  const system = `${roleLine}
 
 ${contextSection}
 
@@ -64,12 +94,7 @@ HARD RULES — you MUST follow all of these:
    - If the review mixes two languages (e.g. Spanglish, Tanglish, Tamil + English), match that same code-mix.
    Do NOT translate the review into English and reply in English — match the reviewer's own language and style exactly. This makes the reply feel personal, not automated.
 
-RESPONSE STRATEGY BY RATING:
-- 5 stars: Thank them for the SPECIFIC thing they praised. Be warm. Keep it brief (2-3 sentences max).
-- 4 stars: Thank them, then briefly address what might have kept it from 5 stars if mentioned.
-- 3 stars: Acknowledge both the good and the concern. Ask what you could do better. Be genuine.
-- 2 stars: Empathize first. Address the specific complaint. Offer a concrete next step (support URL, reach out, etc).
-- 1 star: Lead with a sincere apology for their experience. Acknowledge the specific issue. Offer direct help — do not be defensive.
+${ratingStrategySection}
 
 ${
   appContext?.known_issues?.length
@@ -82,11 +107,15 @@ ${
   }${appContext?.support_url ? `SUPPORT URL (include when relevant): ${appContext.support_url}\n` : ""}${appContext?.additional_instructions ? `ADDITIONAL INSTRUCTIONS: ${appContext.additional_instructions}\n` : ""}
 Remember: Output ONLY the reply text itself. No "Here's my reply:" prefix. No quotation marks. Just the clean reply ready to publish.`;
 
-  const ratingDisplay =
-    "★".repeat(review.rating) + "☆".repeat(5 - review.rating);
+  const rating = review.rating ?? 0;
+  const user =
+    source === "whatsapp"
+      ? `Incoming WhatsApp message from ${review.author_name}:
+"${review.review_text}"
 
-  const user = `Review from ${review.author_name}:
-${ratingDisplay} (${review.rating} of 5 stars)
+Write the reply now:`
+      : `Review from ${review.author_name}:
+${"★".repeat(rating)}${"☆".repeat(5 - rating)} (${rating} of 5 stars)
 "${review.review_text}"
 
 Write the reply now:`;

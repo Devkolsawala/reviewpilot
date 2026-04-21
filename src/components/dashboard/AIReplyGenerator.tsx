@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import {
- Star, Bot, RefreshCw, Send, Globe, Smartphone, Copy, Check,
+ Star, Bot, RefreshCw, Send, Globe, Smartphone, MessageCircle, Copy, Check,
  Save, Trash2, CheckCircle2, Loader2, AlertTriangle, Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -55,9 +55,10 @@ const AVATAR_COLORS: Record<string, string> = {
 
 function fallbackReply(review: Review): string {
  const firstName = review.author_name.split(" ")[0];
- if (review.rating >= 4) {
+ const rating = review.rating ?? 0;
+ if (rating >= 4) {
  return `Thank you for your wonderful review, ${firstName}! We're thrilled you're enjoying the experience. Your support means a lot to us!`;
- } else if (review.rating === 3) {
+ } else if (rating === 3) {
  return `Thank you for your feedback, ${firstName}. We appreciate your thoughts and are always looking to improve. Could you share more about what we could do better?`;
  }
  return `We're sorry to hear about your experience, ${firstName}. This isn't the standard we aim for. Please reach out to our support team so we can resolve this for you.`;
@@ -301,6 +302,14 @@ export function AIReplyGenerator({
  <Badge variant="secondary" className="text-[10px]">
  <Smartphone className="mr-1 h-3 w-3" /> Play Store
  </Badge>
+ ) : review.source === "whatsapp" ? (
+ <Badge
+ variant="secondary"
+ className="text-[10px] text-white"
+ style={{ backgroundColor: "#25D366" }}
+ >
+ <MessageCircle className="mr-1 h-3 w-3" /> WhatsApp
+ </Badge>
  ) : (
  <Badge variant="secondary" className="text-[10px]">
  <Globe className="mr-1 h-3 w-3" /> Google Business
@@ -327,15 +336,19 @@ export function AIReplyGenerator({
  </div>
  <div className="flex items-center gap-2 mt-1">
  <div className="flex gap-0.5">
- {[1, 2, 3, 4, 5].map((i) => (
+ {review.rating == null ? (
+ <span className="text-xs text-muted-foreground">—</span>
+ ) : (
+ [1, 2, 3, 4, 5].map((i) => (
  <Star
  key={i}
  className={cn(
  "h-4 w-4",
- i <= review.rating ? starColor(review.rating) : "text-muted-foreground/20"
+ i <= (review.rating ?? 0) ? starColor(review.rating ?? 0) : "text-muted-foreground/20"
  )}
  />
- ))}
+ ))
+ )}
  </div>
  <span className="text-xs text-muted-foreground">{timeAgo(review.review_created_at)}</span>
  <Badge variant="secondary" className={cn("text-[10px] capitalize", sentimentColor[review.sentiment])}>
@@ -421,7 +434,7 @@ export function AIReplyGenerator({
  <div>
  <h3 className="font-semibold text-base mb-1">Generating reply...</h3>
  <p className="text-sm text-muted-foreground">
- AI is crafting a {tone} response for {review.rating}★ review.
+ AI is crafting a {tone} response for {review.rating != null ? `${review.rating}★` : "this"} review.
  </p>
  </div>
  </div>
@@ -560,7 +573,7 @@ export function AIReplyGenerator({
  <div>
  <h3 className="font-semibold text-base mb-1">Posting reply...</h3>
  <p className="text-sm text-muted-foreground">
- Submitting to {review.source === "play_store" ? "Google Play Store" : "Google Business Profile"}…
+ Submitting to {review.source === "play_store" ? "Google Play Store" : review.source === "whatsapp" ? "WhatsApp" : "Google Business Profile"}…
  </p>
  </div>
  </div>

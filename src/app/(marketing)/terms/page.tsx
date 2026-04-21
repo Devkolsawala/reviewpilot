@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   robots: { index: true, follow: false },
 };
 
-const LAST_UPDATED = "April 14, 2026";
+const LAST_UPDATED = "April 21, 2026";
 
 export default function TermsPage() {
   return (
@@ -146,6 +146,50 @@ export default function TermsPage() {
               functionality, we will make reasonable efforts to adapt, but we are not liable for
               any resulting loss of functionality.
             </p>
+
+            <Subsection title="6.1 WhatsApp Business Platform">
+              <p className="mt-2">
+                Your use of ReviewPilot to send and receive WhatsApp messages is also governed by:
+              </p>
+              <ul className="list-disc ml-6 space-y-1 mt-2">
+                <li>
+                  Meta&apos;s WhatsApp Business Platform Terms:{" "}
+                  <a
+                    href="https://www.whatsapp.com/legal/business-platform-terms"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-accent hover:underline break-all"
+                  >
+                    https://www.whatsapp.com/legal/business-platform-terms
+                  </a>
+                </li>
+                <li>
+                  Meta&apos;s WhatsApp Business Messaging Policy:{" "}
+                  <a
+                    href="https://www.whatsapp.com/legal/business-policy"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-accent hover:underline break-all"
+                  >
+                    https://www.whatsapp.com/legal/business-policy
+                  </a>
+                </li>
+              </ul>
+              <p className="mt-3">
+                By connecting a WhatsApp Business Account to ReviewPilot, you confirm that:
+              </p>
+              <ul className="list-disc ml-6 space-y-1 mt-2">
+                <li>You own or are authorized to manage the connected phone number</li>
+                <li>You have obtained appropriate consent from recipients before messaging them</li>
+                <li>You will not use ReviewPilot to send spam, unsolicited bulk messages, or content prohibited by the WhatsApp Business Messaging Policy</li>
+                <li>You will respect the 24-hour customer service window and use pre-approved Message Templates for any business-initiated conversations outside that window</li>
+              </ul>
+              <p className="mt-3">
+                ReviewPilot is a technology provider registered with Meta. We send messages on your
+                behalf using credentials you authorize. You remain solely responsible for the
+                content of all messages sent from your connected WhatsApp Business Account.
+              </p>
+            </Subsection>
           </Section>
 
           <Section title="7. AI-Generated Replies">

@@ -9,7 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Globe, Smartphone, Trash2, RefreshCw, CheckCircle2, AlertCircle, Clock, CalendarClock } from "lucide-react";
+import { Plus, Globe, Smartphone, MessageCircle, Trash2, RefreshCw, CheckCircle2, AlertCircle, Clock, CalendarClock } from "lucide-react";
+
+const WHATSAPP_GREEN = "#25D366";
 import { toast } from "@/components/ui/use-toast";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
@@ -189,9 +191,18 @@ export default function ConnectionsPage() {
  <CardContent className="p-4">
  <div className="flex items-start justify-between gap-3">
  <div className="flex items-center gap-3">
- <div className="rounded-lg p-2.5 bg-accent/10 dark:bg-accent/10">
+ <div
+ className="rounded-lg p-2.5 bg-accent/10 dark:bg-accent/10"
+ style={
+ conn.type === "whatsapp"
+ ? { backgroundColor: `${WHATSAPP_GREEN}22` }
+ : undefined
+ }
+ >
  {conn.type === "play_store" ? (
  <Smartphone className="h-5 w-5 text-accent dark:text-accent" />
+ ) : conn.type === "whatsapp" ? (
+ <MessageCircle className="h-5 w-5" style={{ color: WHATSAPP_GREEN }} />
  ) : (
  <Globe className="h-5 w-5 text-accent dark:text-accent" />
  )}
@@ -222,7 +233,11 @@ export default function ConnectionsPage() {
  )}
  </div>
  <p className="text-xs text-muted-foreground capitalize">
- {conn.type === "play_store" ? "Google Play Store" : "Google Business Profile"}
+ {conn.type === "play_store"
+ ? "Google Play Store"
+ : conn.type === "whatsapp"
+ ? "WhatsApp Business"
+ : "Google Business Profile"}
  {conn.external_id && (
  <span className="ml-1 font-mono">· {conn.external_id}</span>
  )}

@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import {
  Globe,
  Smartphone,
+ MessageCircle,
  ArrowRight,
  ArrowLeft,
  CheckCircle2,
@@ -36,12 +37,14 @@ import {
 } from "@/components/ui/tooltip";
 import { GBP_ENABLED, GBP_STATUS_LABEL, GBP_COMING_SOON_MESSAGE } from "@/lib/feature-flags";
 import type { Connection } from "@/types/connection";
+import { WhatsAppConnectWizard } from "@/components/dashboard/WhatsAppConnectWizard";
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-type Mode = "choose" | "playstore" | "gbp";
+type Mode = "choose" | "playstore" | "gbp" | "whatsapp";
+const WHATSAPP_GREEN = "#25D366";
 type PSMethod = "invite_email" | "own_service_account";
 
 interface VerifyState {
@@ -70,7 +73,7 @@ export function ConnectionWizard({
  Choose where your reviews come from.
  </p>
  </div>
- <div className="grid gap-4 sm:grid-cols-2">
+ <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
  <button
  onClick={() => setMode("playstore")}
  className="text-left rounded-xl border-2 border-transparent hover:border-accent/40 hover:bg-accent/10 dark:hover:bg-accent/15 bg-card p-6 transition-all"
@@ -127,6 +130,37 @@ export function ConnectionWizard({
  )}
  </Tooltip>
  </TooltipProvider>
+
+ <button
+ onClick={() => setMode("whatsapp")}
+ className="text-left rounded-xl border-2 border-transparent bg-card p-6 transition-all hover:bg-[color:var(--wa-bg)]"
+ style={
+ {
+ ["--wa-bg" as string]: `${WHATSAPP_GREEN}14`,
+ } as React.CSSProperties
+ }
+ >
+ <MessageCircle
+ className="h-10 w-10 mb-4"
+ style={{ color: WHATSAPP_GREEN }}
+ />
+ <h3 className="font-sans tracking-tight text-base font-semibold mb-1">
+ WhatsApp Business
+ </h3>
+ <p className="text-sm text-muted-foreground">
+ Manage incoming WhatsApp customer messages with AI replies.
+ </p>
+ <Badge
+ variant="secondary"
+ className="mt-3 text-xs"
+ style={{
+ backgroundColor: `${WHATSAPP_GREEN}22`,
+ color: WHATSAPP_GREEN,
+ }}
+ >
+ Cloud API
+ </Badge>
+ </button>
  </div>
  </div>
  );
@@ -134,6 +168,15 @@ export function ConnectionWizard({
 
  if (mode === "gbp") {
  return <GBPWizard onBack={() => setMode("choose")} onComplete={onComplete} />;
+ }
+
+ if (mode === "whatsapp") {
+ return (
+ <WhatsAppConnectWizard
+ onBack={() => setMode("choose")}
+ onComplete={onComplete}
+ />
+ );
  }
 
  return (

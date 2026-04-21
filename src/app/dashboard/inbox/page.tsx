@@ -230,7 +230,7 @@ export default function InboxPage() {
  const [minR, maxR] = appContextConfig.ratingRange;
  const pending = allReviews.filter((r) => {
  const status = (overrides[r.id] as { reply_status?: string } | undefined)?.reply_status ?? r.base_status;
- return status === "pending" && r.rating >= minR && r.rating <= maxR;
+ return status === "pending" && r.rating != null && r.rating >= minR && r.rating <= maxR;
  });
 
  if (pending.length === 0) {
@@ -257,7 +257,7 @@ export default function InboxPage() {
  const data = await res.json() as { reply?: string };
  if (!data.reply) continue;
 
- const safetyDraft = appContextConfig.draftLowSafety && review.rating <= 2 && appContextConfig.replyMode === "full";
+ const safetyDraft = appContextConfig.draftLowSafety && review.rating != null && review.rating <= 2 && appContextConfig.replyMode === "full";
  const newStatus = (appContextConfig.replyMode === "semi" || safetyDraft) ? "drafted" : "published";
  updatedOverrides[review.id] = { ...(updatedOverrides[review.id] ?? {}), reply_text: data.reply, reply_status: newStatus, is_auto_replied: true, ...(newStatus === "published" ? { reply_published_at: new Date().toISOString() } : {}) };
  if (newStatus === "drafted") drafted++; else published++;

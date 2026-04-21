@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { replyToPlayStoreReview } from "@/lib/google/playstore";
 import { publishGBPReply } from "@/lib/google/gbp";
+import { sendWhatsAppText, decryptToken } from "@/lib/whatsapp/client";
 import { generateReply } from "@/lib/ai/reply-generator";
 import { checkUsageLimit, incrementUsage } from "@/lib/usage";
 import { GBP_ENABLED, GBP_COMING_SOON_MESSAGE } from "@/lib/feature-flags";
@@ -154,7 +155,46 @@ export async function POST(request: Request) {
 
   let published = false;
 
-  if (review.source === "play_store") {
+  if (review.source === "whatsapp") {
+    if (
+      !connection ||
+      !connection.whatsapp_phone_number_id ||
+      !connection.whatsapp_access_token_encrypted
+    ) {
+      return NextResponse.json(
+        { error: "WhatsApp connection missing credentials" },
+        { status: 400 }
+      );
+    }
+    if (!review.author_id) {
+      return NextResponse.json(
+        { error: "WhatsApp reply target phone number missing on the review" },
+        { status: 400 }
+      );
+    }
+    try {
+      const accessToken = decryptToken(connection.whatsapp_access_token_encrypted);
+      await sendWhatsAppText(
+        {
+          phoneNumberId: connection.whatsapp_phone_number_id,
+          accessToken,
+        },
+        review.author_id,
+        finalReplyText
+      );
+      published = true;
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "WhatsApp send failed";
+      await supabase
+        .from("reviews")
+        .update({ reply_text: finalReplyText, reply_status: "failed" })
+        .eq("id", reviewId);
+      return NextResponse.json(
+        { success: false, error: msg, message: "Failed to send WhatsApp reply" },
+        { status: 500 }
+      );
+    }
+  } else if (review.source === "play_store") {
     // connection.credentials is null for Invite Email method → lib falls back to shared env credentials
     const result = await replyToPlayStoreReview(
       connection?.external_id || "",

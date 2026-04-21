@@ -1,6 +1,8 @@
 "use client";
 
-import { Star, Globe, Smartphone, Zap } from "lucide-react";
+import { Star, Globe, Smartphone, MessageCircle, Zap } from "lucide-react";
+
+const WHATSAPP_GREEN = "#25D366";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { timeAgo } from "@/lib/utils";
@@ -102,6 +104,11 @@ export function ReviewCard({ review, selected, onClick, compact }: ReviewCardPro
  <div className="flex items-center justify-between gap-2">
  <span className={cn("text-sm truncate", !review.is_read ? "font-semibold" : "font-medium")}>
  {review.author_name}
+ {review.source === "whatsapp" && review.author_id && (
+ <span className="ml-1 font-normal text-xs text-muted-foreground font-mono">
+ ({review.author_id})
+ </span>
+ )}
  </span>
  <div className="flex items-center gap-1.5 shrink-0">
  <span className={cn("h-2 w-2 rounded-full", statusDot[review.reply_status])} />
@@ -113,25 +120,41 @@ export function ReviewCard({ review, selected, onClick, compact }: ReviewCardPro
  </div>
  </div>
  <div className="flex items-center gap-2 mt-1">
+ {review.source === "whatsapp" || review.rating == null ? (
+ <span className="text-[10px] text-muted-foreground">—</span>
+ ) : (
  <div className="flex gap-0.5">
  {[1, 2, 3, 4, 5].map((i) => (
  <Star
  key={i}
  className={cn(
  "h-3 w-3",
- i <= review.rating ? starColor(review.rating) : "text-muted-foreground/20"
+ i <= (review.rating ?? 0) ? starColor(review.rating ?? 0) : "text-muted-foreground/20"
  )}
  />
  ))}
  </div>
+ )}
  {review.source === "play_store" ? (
  <span className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground">
  <Smartphone className="h-2.5 w-2.5" /> Play Store
+ </span>
+ ) : review.source === "whatsapp" ? (
+ <span
+ className="inline-flex items-center gap-0.5 rounded-full px-1.5 py-0 text-[10px] font-medium text-white"
+ style={{ backgroundColor: WHATSAPP_GREEN }}
+ >
+ <MessageCircle className="h-2.5 w-2.5" /> WhatsApp
  </span>
  ) : (
  <span className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground">
  <Globe className="h-2.5 w-2.5" /> Google
  </span>
+ )}
+ {review.source === "whatsapp" && review.skip_auto_reply && (
+ <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+ Non-text
+ </Badge>
  )}
  {!compact && (
  <Badge

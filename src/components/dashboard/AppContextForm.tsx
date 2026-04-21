@@ -276,7 +276,7 @@ export function AppContextForm({ connectionId: connectionIdProp, disabled = fals
  const pending = allReviews.filter((r) => {
  const override = overrides[r.id] as { reply_status?: string } | undefined;
  const status = override?.reply_status ?? r.base_status;
- return status === "pending" && r.rating >= minRating && r.rating <= maxRating;
+ return status === "pending" && r.rating != null && r.rating >= minRating && r.rating <= maxRating;
  });
 
  if (pending.length === 0) {
@@ -334,7 +334,7 @@ export function AppContextForm({ connectionId: connectionIdProp, disabled = fals
  if (!data.reply) continue;
 
  // Apply safety net: always draft 1-2★ in auto_publish mode when draftLowSafety is on
- const safetyDraft = currentDraftLowSafety && review.rating <= 2 && currentReplyMode === "full";
+ const safetyDraft = currentDraftLowSafety && review.rating != null && review.rating <= 2 && currentReplyMode === "full";
  const newStatus = (currentReplyMode === "semi" || safetyDraft) ? "drafted" : "published";
 
  updatedOverrides[review.id] = {

@@ -228,6 +228,24 @@ export function getSyncCadence(planId: string): SyncCadence {
   return getPlan(planId).sync_cadence;
 }
 
+/**
+ * Max number of WhatsApp connections allowed on each plan.
+ * Returns 0 when the plan doesn't include WhatsApp (upsell required).
+ * Returns -1 for unlimited.
+ */
+export function getWhatsAppConnectionLimit(planId: string): number {
+  switch (planId) {
+    case "agency":
+      return 5;
+    case "growth":
+      return 1;
+    case "starter":
+    case "free":
+    default:
+      return 0;
+  }
+}
+
 /** Human-readable label shown on the Connections page */
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function getSyncScheduleLabel(_planId: string): string {

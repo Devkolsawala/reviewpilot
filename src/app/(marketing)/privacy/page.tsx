@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   robots: { index: true, follow: false },
 };
 
-const LAST_UPDATED = "April 14, 2026";
+const LAST_UPDATED = "April 21, 2026";
 
 export default function PrivacyPage() {
   return (
@@ -76,6 +76,31 @@ export default function PrivacyPage() {
               <p className="mt-2">
                 We access only the data necessary to provide the review management service. We do not
                 access your Google Ads, Search Console, or other Google product data.
+              </p>
+            </Subsection>
+
+            <Subsection title="1.4 WhatsApp Business Platform data">
+              <p className="mt-2">
+                When you connect a WhatsApp Business Account to ReviewPilot, we process the following
+                data on your behalf under Meta&apos;s WhatsApp Business Platform Terms:
+              </p>
+              <ul className="list-disc ml-6 space-y-1 mt-2">
+                <li><strong className="text-foreground">Access credentials</strong> — OAuth access tokens and WhatsApp Business Account identifiers received through Meta&apos;s Embedded Signup flow (or manual setup). Tokens are stored encrypted at rest using AES-256-GCM. We never transmit tokens to third parties.</li>
+                <li><strong className="text-foreground">Message content</strong> — Inbound customer messages received via the WhatsApp webhook, and outbound reply messages you or our AI generate. Message content is stored in our database for up to 90 days, after which it is automatically deleted. You can request earlier deletion at any time (see our <Link href="/data-deletion" className="text-accent hover:underline">Data Deletion page</Link>).</li>
+                <li><strong className="text-foreground">Contact metadata</strong> — WhatsApp display names, profile names, and phone numbers of customers who message your connected number. We use this only to attribute messages to their sender inside your ReviewPilot inbox.</li>
+                <li><strong className="text-foreground">Business profile data</strong> — Your WhatsApp Business profile (display name, business description, quality rating) as returned by the WhatsApp Cloud API, used only to display your connection status inside ReviewPilot.</li>
+              </ul>
+              <p className="mt-3">We do NOT:</p>
+              <ul className="list-disc ml-6 space-y-1 mt-2">
+                <li>Sell, rent, or share WhatsApp message content with any third party</li>
+                <li>Use WhatsApp message content to train machine learning or AI models</li>
+                <li>Retain message content longer than 90 days unless you explicitly request extended retention in writing</li>
+                <li>Access WhatsApp data of customers who have not connected their account to ReviewPilot</li>
+              </ul>
+              <p className="mt-3">
+                You may disconnect your WhatsApp Business Account at any time from Settings →
+                Connections, which immediately revokes our access and triggers deletion of all
+                associated message data within 30 days.
               </p>
             </Subsection>
           </Section>
@@ -190,6 +215,12 @@ export default function PrivacyPage() {
                 Email:{" "}
                 <a href="mailto:dev.kolsawala45@gmail.com" className="text-accent hover:underline">
                   dev.kolsawala45@gmail.com
+                </a>
+              </p>
+              <p>
+                Email (data &amp; platform requests):{" "}
+                <a href="mailto:hello@reviewpilot.co.in" className="text-accent hover:underline">
+                  hello@reviewpilot.co.in
                 </a>
               </p>
               <p>Website: <Link href="/" className="text-accent hover:underline">reviewpilot.co.in</Link></p>

@@ -134,9 +134,12 @@ type MinReview = {
 
 function computeTotals(rows: MinReview[], monthStart: Date): AnalyticsTotals {
   const total = rows.length;
+  // WhatsApp messages have no rating; exclude them from avg so the number
+  // isn't skewed toward 0.
+  const rated = rows.filter((r) => r.rating != null);
   const avg =
-    total > 0
-      ? rows.reduce((s, r) => s + (r.rating || 0), 0) / total
+    rated.length > 0
+      ? rated.reduce((s, r) => s + (r.rating || 0), 0) / rated.length
       : 0;
   const published = rows.filter((r) => r.reply_status === "published").length;
   const pending = rows.filter((r) => r.reply_status === "pending").length;
@@ -172,6 +175,8 @@ function computeTrend(rows: MinReview[], range: AnalyticsRange): { date: string;
   const bucket: Record<string, { sum: number; count: number }> = {};
   const useWeekly = range === "90d";
   for (const r of rows) {
+    // Skip rating-less rows (WhatsApp) from the rating trend
+    if (r.rating == null) continue;
     const d = new Date(r.review_created_at);
     const key = useWeekly ? isoWeekStart(d) : d.toISOString().split("T")[0];
     if (!bucket[key]) bucket[key] = { sum: 0, count: 0 };

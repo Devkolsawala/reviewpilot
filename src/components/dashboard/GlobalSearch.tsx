@@ -12,7 +12,7 @@ interface SearchResult {
  subtitle: string;
  href: string;
  icon: React.ReactNode;
- rating?: number;
+ rating?: number | null;
 }
 
 const PAGES: SearchResult[] = [
@@ -49,7 +49,7 @@ export function GlobalSearch({ open, onOpenChange }: { open: boolean; onOpenChan
  title: r.author_name,
  subtitle: r.review_text.slice(0, 80) + "...",
  href: "/dashboard/inbox",
- icon: <Star className={cn("h-4 w-4", r.rating >= 4 ? "text-accent" : r.rating <= 2 ? "text-destructive" : "text-amber-500")} />,
+ icon: <Star className={cn("h-4 w-4", r.rating != null && r.rating >= 4 ? "text-accent" : r.rating != null && r.rating <= 2 ? "text-destructive" : "text-amber-500")} />,
  rating: r.rating,
  })),
  ]
