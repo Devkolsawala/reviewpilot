@@ -8,7 +8,7 @@ import { PageTransition } from "@/components/dashboard/PageTransition";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, CheckCheck, Inbox, Zap, Info, BookOpen, ChevronDown, Bot, Loader2, ArrowLeft } from "lucide-react";
+import { Search, CheckCheck, Inbox, Zap, Info, BookOpen, ChevronDown, Bot, Loader2, ArrowLeft, MessageCircle } from "lucide-react";
 import { UpgradeGate } from "@/components/dashboard/UpgradeGate";
 import { AppSwitcher } from "@/components/dashboard/AppSwitcher";
 import { toast } from "@/components/ui/use-toast";
@@ -23,7 +23,7 @@ import type { Review } from "@/types/review";
 const MOCK_OVERRIDES_PREFIX = "reviewpilot_mock_overrides";
 const STAR_MAP: Record<string, number> = { ONE: 1, TWO: 2, THREE: 3, FOUR: 4, FIVE: 5 };
 
-type SourceFilter = "all" | "google_business" | "play_store";
+type SourceFilter = "all" | "google_business" | "play_store" | "whatsapp";
 type RatingFilter = "all" | 1 | 2 | 3 | 4 | 5;
 type StatusFilter = "all" | "pending" | "drafted" | "published";
 
@@ -45,6 +45,7 @@ export default function InboxPage() {
  // When switching apps, clear the selected review
  const activeConnections = connections.filter((c) => c.is_active);
  const showAppSwitcher = !isMock && activeConnections.length > 1;
+ const hasWhatsAppConnection = activeConnections.some((c) => c.type === "whatsapp");
 
  // Keep local reviews in sync with hook (allow optimistic updates)
  useEffect(() => {
@@ -385,6 +386,9 @@ export default function InboxPage() {
  <FilterChip label="Google" active={sourceFilter === "google_business"} onClick={() => setSourceFilter("google_business")} />
  )}
  <FilterChip label="Play Store" active={sourceFilter === "play_store"} onClick={() => setSourceFilter("play_store")} />
+ {hasWhatsAppConnection && (
+ <FilterChip label="WhatsApp" active={sourceFilter === "whatsapp"} onClick={() => setSourceFilter("whatsapp")} />
+ )}
  </div>
  <div className="flex gap-1 flex-wrap">
  <FilterChip label="All" active={statusFilter === "all"} onClick={() => setStatusFilter("all")} />
@@ -392,12 +396,14 @@ export default function InboxPage() {
  <FilterChip label="Drafted" active={statusFilter === "drafted"} onClick={() => setStatusFilter("drafted")} />
  <FilterChip label="Published" active={statusFilter === "published"} onClick={() => setStatusFilter("published")} />
  </div>
+ {sourceFilter !== "whatsapp" && (
  <div className="flex gap-1 flex-wrap">
  <FilterChip label="All Stars" active={ratingFilter === "all"} onClick={() => setRatingFilter("all")} />
  {[1, 2, 3, 4, 5].map((r) => (
  <FilterChip key={r} label={`${r}★`} active={ratingFilter === r} onClick={() => setRatingFilter(r as RatingFilter)} />
  ))}
  </div>
+ )}
 
  {/* Batch actions */}
  <UpgradeGate feature="inbox_bulk_reply" fallback={
@@ -422,11 +428,21 @@ export default function InboxPage() {
  {/* Review list */}
  <div className="flex-1 overflow-y-auto">
  {filteredReviews.length === 0 ? (
+ sourceFilter === "whatsapp" ? (
+ <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-6 text-center">
+ <MessageCircle className="h-8 w-8 mb-2 opacity-40" style={{ color: "#25D366" }} />
+ <p className="text-sm font-medium">No WhatsApp messages yet</p>
+ <p className="text-xs mt-1 max-w-xs">
+ Send a WhatsApp message to your connected business number. It will appear here within a few seconds.
+ </p>
+ </div>
+ ) : (
  <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-6">
  <Search className="h-8 w-8 mb-2 opacity-40" />
  <p className="text-sm font-medium">No reviews match your filters</p>
  <p className="text-xs mt-1">Try adjusting your search or filters</p>
  </div>
+ )
  ) : (
  filteredReviews.map((review) => (
  <ReviewCard
