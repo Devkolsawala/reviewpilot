@@ -84,7 +84,7 @@ export function ReviewCard({ review, selected, onClick, compact }: ReviewCardPro
  <button
  onClick={onClick}
  className={cn(
- "w-full text-left p-4 border-b transition-all duration-150 group",
+ "w-full text-left p-3 min-[1400px]:p-4 border-b transition-all duration-150 group",
  "hover:bg-secondary/50 hover:shadow-md hover:scale-[1.01] hover:z-10 relative",
  selected && "bg-accent/10 dark:bg-accent/10 border-l-[3px] border-l-accent pl-[13px]",
  !selected && "border-l-[3px] border-l-transparent",
@@ -105,7 +105,7 @@ export function ReviewCard({ review, selected, onClick, compact }: ReviewCardPro
  <span className={cn("text-sm truncate", !review.is_read ? "font-semibold" : "font-medium")}>
  {review.author_name}
  {review.source === "whatsapp" && review.author_id && (
- <span className="ml-1 font-normal text-xs text-muted-foreground font-mono">
+ <span className="hidden min-[1400px]:inline ml-1 font-normal text-xs text-muted-foreground font-mono">
  ({review.author_id})
  </span>
  )}

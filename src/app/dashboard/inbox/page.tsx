@@ -356,8 +356,8 @@ export default function InboxPage() {
  <div className="flex flex-1 min-h-0 rounded-xl border bg-card overflow-hidden shadow-sm">
  {/* Left panel — review list. On mobile: hidden when a review is open. */}
  <div className={cn(
- "flex flex-col border-r shrink-0 w-full md:w-96",
- selectedId ? "hidden md:flex" : "flex"
+ "flex flex-col border-r shrink-0 w-full min-[1200px]:w-80 min-[1400px]:w-96",
+ selectedId ? "hidden min-[1200px]:flex" : "flex"
  )}>
  {/* App switcher — only visible when 2+ active connections */}
  {showAppSwitcher && (
@@ -461,11 +461,11 @@ export default function InboxPage() {
  Desktop: always visible alongside the list. */}
  <div className={cn(
  "flex-1 flex-col min-w-0 overflow-hidden",
- selectedId ? "flex" : "hidden md:flex"
+ selectedId ? "flex" : "hidden min-[1200px]:flex"
  )}>
  {/* Mobile back button */}
  {selectedReview && (
- <div className="md:hidden flex items-center gap-2 px-3 py-2.5 border-b bg-card shrink-0">
+ <div className="min-[1200px]:hidden flex items-center gap-2 px-3 py-2.5 border-b bg-card shrink-0">
  <button
  onClick={() => setSelectedId(null)}
  className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
