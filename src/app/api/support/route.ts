@@ -93,7 +93,7 @@ async function sendSupportEmail(params: {
         },
         body: JSON.stringify({
           from: 'ReviewPilot Support <onboarding@resend.dev>',
-          to: ['hello@reviewpilot.co.in'],
+          to: ['dev.kolsawala45@gmail.com'],
           subject: `[ReviewPilot Support] ${params.category} — ${params.subject} (from ${params.userName})`,
           html: `
             <div style="font-family: sans-serif; max-width: 600px;">
@@ -127,7 +127,7 @@ async function sendSupportEmail(params: {
 
   // Fallback: log to console
   console.log('=== SUPPORT REQUEST RECEIVED ===');
-  console.log(`To: hello@reviewpilot.co.in`);
+  console.log(`To: dev.kolsawala45@gmail.com`);
   console.log(`From: ${params.userName} (${params.from})`);
   console.log(`User ID: ${params.userId || 'anonymous'}`);
   console.log(`Plan: ${params.plan}`);
