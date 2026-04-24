@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { TourResetButton } from "@/components/dashboard/ProductTour";
+import { ContactSupportDialog } from "@/components/dashboard/ContactSupportDialog";
 import {
  Link2,
  Bot,
@@ -318,10 +319,14 @@ export default function DocsPage() {
  </p>
  </div>
  <div className="flex gap-2 shrink-0">
+ <ContactSupportDialog
+ trigger={
  <Button variant="outline" size="sm" className="gap-2">
  <ExternalLink className="h-3.5 w-3.5" />
  Contact Support
  </Button>
+ }
+ />
  <Button size="sm" className="gap-2">
  <CheckCircle2 className="h-3.5 w-3.5" />
  Connect a Source
