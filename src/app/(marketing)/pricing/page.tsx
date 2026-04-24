@@ -41,7 +41,7 @@ const productSchema = {
   offers: [
     { "@type": "Offer", name: "Starter", price: "1500", priceCurrency: "INR", url: `${SITE_URL}/pricing`, availability: "https://schema.org/InStock", description: "1 location or 1 app, 100 AI replies/week, 3 team seats." },
     { "@type": "Offer", name: "Growth", price: "3000", priceCurrency: "INR", url: `${SITE_URL}/pricing`, availability: "https://schema.org/InStock", description: "3 locations or 3 apps, 500 AI replies/week, 5 team seats." },
-    { "@type": "Offer", name: "Agency", price: "8000", priceCurrency: "INR", url: `${SITE_URL}/pricing`, availability: "https://schema.org/InStock", description: "10 locations or apps, unlimited AI replies, white-label reports." },
+    { "@type": "Offer", name: "Agency", price: "8000", priceCurrency: "INR", url: `${SITE_URL}/pricing`, availability: "https://schema.org/InStock", description: "10 locations or apps, unlimited AI replies, priority support." },
   ],
 };
 

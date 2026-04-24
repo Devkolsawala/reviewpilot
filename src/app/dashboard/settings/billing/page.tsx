@@ -65,7 +65,6 @@ const PLAN_CARDS = [
  "5 team seats",
  "Full analytics + sentiment",
  "Bulk reply",
- "Data export",
  ],
  },
  {
@@ -77,7 +76,6 @@ const PLAN_CARDS = [
  "Unlimited AI replies",
  "1,000 SMS/week (Coming Soon)",
  "10 team seats",
- "White-label reports",
  "Priority support",
  ],
  },

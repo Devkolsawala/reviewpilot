@@ -10,7 +10,6 @@ type FeatureKey =
   | "play_store"
   | "sms_campaigns"
   | "analytics"
-  | "white_label"
   | "indian_languages";
 
 type Competitor = {
@@ -26,7 +25,6 @@ const FEATURE_LABELS: Record<FeatureKey, string> = {
   play_store: "Play Store reviews",
   sms_campaigns: "SMS collection",
   analytics: "Sentiment analytics",
-  white_label: "White-label",
   indian_languages: "8 Indian languages",
 };
 
@@ -43,7 +41,6 @@ const COMPETITORS: Competitor[] = [
       play_store: true,
       sms_campaigns: true,
       analytics: true,
-      white_label: true,
       indian_languages: true,
     },
   },
@@ -56,7 +53,6 @@ const COMPETITORS: Competitor[] = [
       play_store: false,
       sms_campaigns: true,
       analytics: true,
-      white_label: true,
       indian_languages: false,
     },
   },
@@ -69,7 +65,6 @@ const COMPETITORS: Competitor[] = [
       play_store: false,
       sms_campaigns: true,
       analytics: true,
-      white_label: false,
       indian_languages: false,
     },
   },
@@ -82,7 +77,6 @@ const COMPETITORS: Competitor[] = [
       play_store: true,
       sms_campaigns: false,
       analytics: true,
-      white_label: false,
       indian_languages: false,
     },
   },

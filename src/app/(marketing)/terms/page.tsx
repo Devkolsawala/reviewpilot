@@ -74,7 +74,7 @@ export default function TermsPage() {
               <li>Upload or process any content that is illegal, infringing, or violates any third party&apos;s rights.</li>
               <li>Attempt to reverse-engineer, scrape, or extract data from ReviewPilot beyond what is provided through our official interfaces.</li>
               <li>Use ReviewPilot to violate Google&apos;s API Terms of Service or Google Play Developer Program Policies.</li>
-              <li>Resell or sublicense access to ReviewPilot without our written consent (Agency plan customers may use white-label reports for their clients; this does not constitute sublicensing of the platform itself).</li>
+              <li>Resell or sublicense access to ReviewPilot without our written consent.</li>
             </ul>
             <p className="mt-3">
               We may remove content or suspend accounts that violate these rules without prior notice.

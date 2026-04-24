@@ -37,7 +37,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "Can I manage multiple businesses or apps from one account?",
-    a: "Yes. The Growth plan handles up to 3 locations/apps, Agency up to 10, and Enterprise is unlimited. Agency plans include white-label reports with your logo for client hand-off.",
+    a: "Yes. The Growth plan handles up to 3 locations/apps, Agency up to 10, and Enterprise is unlimited.",
   },
 ];
 

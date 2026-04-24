@@ -20,13 +20,12 @@ FEATURES
 - Unified inbox across Play Store + GBP: bulk-approve, filter, search
 - Sentiment analytics, keyword analysis, rating trends
 - Multi-language: English, Hindi, Tamil, Telugu, Marathi, Bengali, Kannada, Gujarati (auto-detects review language, replies in the same)
-- Agency white-label reports (Agency plan)
 - Multi-location / multi-app dashboard
 
 PRICING (INR, monthly; annual billing gets ~20% off)
 - Starter — ₹1,500/mo: 1 location OR 1 app, 100 AI replies/week, 50 SMS/week (soon), 3 team seats, basic analytics
-- Growth — ₹3,000/mo (most popular): 3 locations or apps, 500 AI replies/week, 200 SMS/week (soon), 5 team seats, full analytics + sentiment, data export
-- Agency — ₹8,000/mo: 10 locations or apps, unlimited AI replies, 1,000 SMS/week (soon), 10 team seats, white-label reports, priority support
+- Growth — ₹3,000/mo (most popular): 3 locations or apps, 500 AI replies/week, 200 SMS/week (soon), 5 team seats, full analytics + sentiment
+- Agency — ₹8,000/mo: 10 locations or apps, unlimited AI replies, 1,000 SMS/week (soon), 10 team seats, priority support
 - Enterprise — custom: unlimited locations/apps, SLA, dedicated CSM, custom integrations, SSO, audit logs
 - All paid plans include a 7-day free trial, no credit card required
 - Positioned as ~17× cheaper than Birdeye and similar global tools

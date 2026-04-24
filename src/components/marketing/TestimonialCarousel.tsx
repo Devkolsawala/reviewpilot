@@ -24,7 +24,7 @@ const TESTIMONIALS = [
     role: "Marketing agency · Delhi",
     avatar: "NA",
     quote:
-      "The agency plan saves us ₹2L/mo vs Birdeye. White-label reports are genuinely white — our logo, clean handoff.",
+      "The agency plan saves us ₹2L/mo vs Birdeye. Managing 8 client accounts from one dashboard used to be a nightmare.",
     rating: 5,
   },
   {

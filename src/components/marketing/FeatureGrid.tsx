@@ -6,7 +6,6 @@ import {
   Inbox,
   BarChart3,
   Globe2,
-  Building2,
   Sparkles,
   Star,
   Zap,
@@ -93,10 +92,9 @@ export function FeatureGrid() {
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true, margin: "-80px" }}
-            className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
+            className="mt-4 grid gap-4 sm:grid-cols-3"
           >
             <MiniCard icon={Globe2} title="8 Indian languages" />
-            <MiniCard icon={Building2} title="Agency white-label" />
             <MiniCard icon={Zap} title="3-second drafts" />
             <MiniCard icon={Sparkles} title="Auto-publish rules" />
           </m.div>

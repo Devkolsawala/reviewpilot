@@ -724,56 +724,6 @@ Sentiment analysis works across all supported languages (English, Hindi, Tamil, 
 `,
   },
 
-  "export-reports": {
-    title: "Export Reports",
-    category: "Analytics & Reports",
-    description: "Download your review and analytics data as CSV or PDF for sharing with clients or your team.",
-    readTime: "2 min read",
-    content: `
-## Export types
-
-ReviewPilot supports two export formats:
-
-- **CSV export** — raw data for spreadsheet analysis. Includes every review: text, rating, date, platform, location/app, reply status, reply text, response time.
-- **PDF report** — formatted summary for sharing with clients or stakeholders. Includes rating trend charts, reply rate, top keywords, and period-over-period comparison. Available on Growth and Agency plans.
-
-## How to export (CSV)
-
-1. Go to **Analytics** or **Inbox**.
-2. Apply any filters you want (date range, platform, location, star rating).
-3. Click **Export CSV**.
-4. The file downloads to your device immediately.
-
-## How to export (PDF)
-
-1. Go to **Analytics**.
-2. Set your desired date range (monthly reports work best).
-3. Click **Export PDF**.
-4. A formatted report is generated and downloaded. This can be white-labelled on the Agency plan — your logo replaces ReviewPilot's in the report header.
-
-## Scheduled exports (Agency plan)
-
-Agency plan users can set up automatic monthly reports sent to a specified email address. Useful for agencies who report to clients every month.
-
-Go to **Settings → Reports → Scheduled exports** to configure.
-
-## What the CSV includes
-
-| Column | Description |
-|---|---|
-| review_id | ReviewPilot internal ID |
-| platform | google_gbp or google_play |
-| location_or_app | Name of connected location or app |
-| reviewer_name | As shown on the platform |
-| rating | 1–5 |
-| review_text | Full review text |
-| review_date | ISO date |
-| reply_status | draft / published / pending / none |
-| reply_text | Published reply text (if any) |
-| response_time_hours | Hours from review to published reply |
-`,
-  },
-
   // ─── SMS & Email Campaigns ─────────────────────────────────────────────────
 
   "create-sms-campaign": {
@@ -1001,8 +951,6 @@ All plans include a **7-day free trial** with full features, no credit card requ
 | AI replies per week | 100 | 500 | Unlimited |
 | Team seats | 3 | 5 | Unlimited |
 | SMS campaigns | ✓ | ✓ | ✓ |
-| White-label reports | — | — | ✓ |
-| PDF exports | — | ✓ | ✓ |
 
 ## Who should choose Starter
 
@@ -1014,13 +962,12 @@ All plans include a **7-day free trial** with full features, no credit card requ
 
 - A business with 2–3 locations.
 - A small team managing an app and a physical location together.
-- You want PDF exports and more than 100 AI replies per week.
+- You want more than 100 AI replies per week.
 
 ## Who should choose Agency
 
 - A marketing or reputation management agency managing multiple client accounts.
 - A franchise or chain with more than 3 locations.
-- You need white-label reports to send to clients under your brand.
 - You need unlimited AI replies (high-volume apps or multi-location chains).
 
 ## Comparing to alternatives
