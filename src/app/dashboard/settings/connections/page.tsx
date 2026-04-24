@@ -120,17 +120,6 @@ export default function ConnectionsPage() {
  doSync(newConn.id, false);
  }
 
- async function handleRemove(connId: string) {
- const supabase = createClient();
- const { error } = await supabase.from("connections").delete().eq("id", connId);
- if (error) {
- toast({ title: "Error", description: "Could not remove connection.", variant: "destructive" });
- } else {
- toast({ title: "Connection removed" });
- await refetch();
- }
- }
-
  async function confirmRemove() {
  if (!removeTarget) return;
  setRemoving(true);
