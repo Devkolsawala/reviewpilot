@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import Link from "next/link";
 import { ConnectionWizard } from "@/components/dashboard/ConnectionWizard";
 import { useConnections } from "@/hooks/useConnection";
@@ -10,7 +10,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Globe, Smartphone, MessageCircle, Trash2, RefreshCw, CheckCircle2, AlertCircle, Clock, CalendarClock } from "lucide-react";
+import { Plus, Globe, Smartphone, MessageCircle, Trash2, RefreshCw, CheckCircle2, AlertCircle, Clock, CalendarClock, Loader2 } from "lucide-react";
+import {
+ Dialog,
+ DialogContent,
+ DialogDescription,
+ DialogFooter,
+ DialogHeader,
+ DialogTitle,
+} from "@/components/ui/dialog";
 
 const WHATSAPP_GREEN = "#25D366";
 import { toast } from "@/components/ui/use-toast";
@@ -52,6 +60,18 @@ export default function ConnectionsPage() {
  const { isOwner } = useTeamRole();
  const [showWizard, setShowWizard] = useState(false);
  const [syncingId, setSyncingId] = useState<string | null>(null);
+ const [removeTarget, setRemoveTarget] = useState<Connection | null>(null);
+ const [removing, setRemoving] = useState(false);
+ const [removeError, setRemoveError] = useState<string | null>(null);
+ const cancelRemoveBtnRef = useRef<HTMLButtonElement | null>(null);
+
+ useEffect(() => {
+ if (removeTarget) {
+ setRemoveError(null);
+ // Focus Cancel on open so Enter doesn't delete by accident.
+ requestAnimationFrame(() => cancelRemoveBtnRef.current?.focus());
+ }
+ }, [removeTarget]);
 
  const doSync = useCallback(async (connId: string, silent = false) => {
  if (!silent) {
@@ -108,6 +128,27 @@ export default function ConnectionsPage() {
  } else {
  toast({ title: "Connection removed" });
  await refetch();
+ }
+ }
+
+ async function confirmRemove() {
+ if (!removeTarget) return;
+ setRemoving(true);
+ setRemoveError(null);
+ try {
+ const supabase = createClient();
+ const { error } = await supabase.from("connections").delete().eq("id", removeTarget.id);
+ if (error) {
+ setRemoveError("Couldn't remove the connection. Please try again.");
+ return;
+ }
+ setRemoveTarget(null);
+ toast({ title: "Connection removed" });
+ await refetch();
+ } catch {
+ setRemoveError("Couldn't remove the connection. Please try again.");
+ } finally {
+ setRemoving(false);
  }
  }
 
@@ -339,7 +380,8 @@ export default function ConnectionsPage() {
  variant="ghost"
  size="icon"
  className="h-8 w-8 hover:text-destructive"
- onClick={() => handleRemove(conn.id)}
+ onClick={() => setRemoveTarget(conn)}
+ aria-label="Remove connection"
  >
  <Trash2 className="h-4 w-4" />
  </Button>
@@ -423,6 +465,67 @@ export default function ConnectionsPage() {
  </div>
  </details>
  )}
+
+ <Dialog
+ open={!!removeTarget}
+ onOpenChange={(open) => {
+ if (!open && !removing) {
+ setRemoveTarget(null);
+ setRemoveError(null);
+ }
+ }}
+ >
+ <DialogContent>
+ <DialogHeader>
+ <DialogTitle>Remove this connection?</DialogTitle>
+ <DialogDescription asChild>
+ <div className="space-y-3 text-sm text-muted-foreground">
+ <p>
+ This will disconnect{" "}
+ <strong className="text-foreground">
+ {removeTarget?.name || "this connection"}
+ </strong>{" "}
+ from ReviewPilot. Your inbox history — including every review
+ you&apos;ve already replied to — will no longer appear in the dashboard.
+ </p>
+ <p>
+ You can reconnect anytime. When you do, we&apos;ll pull in reviews
+ from the last 7 days to get you back up and running.
+ </p>
+ </div>
+ </DialogDescription>
+ </DialogHeader>
+ {removeError && (
+ <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+ {removeError}
+ </div>
+ )}
+ <DialogFooter>
+ <Button
+ ref={cancelRemoveBtnRef}
+ variant="outline"
+ onClick={() => setRemoveTarget(null)}
+ disabled={removing}
+ >
+ Keep connection
+ </Button>
+ <Button
+ variant="destructive"
+ onClick={confirmRemove}
+ disabled={removing}
+ >
+ {removing ? (
+ <>
+ <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+ Removing…
+ </>
+ ) : (
+ "Remove connection"
+ )}
+ </Button>
+ </DialogFooter>
+ </DialogContent>
+ </Dialog>
 
  <Card className="bg-secondary/30 border-dashed">
  <CardContent className="p-4">
