@@ -9,7 +9,7 @@ import Link from "next/link";
 const FAQ_ITEMS = [
   {
     q: "How much does ReviewPilot cost?",
-    a: "Starter is ₹1,500/mo (1 location or app, 100 AI replies/week). Growth is ₹3,000/mo, Agency is ₹8,000/mo, and Enterprise is custom. All paid plans include a 7-day free trial — no credit card required to start.",
+    a: "Starter is $16/mo (1 location or app, 100 AI replies/week). Growth is $32/mo, Agency is $85/mo, and Enterprise is custom. All prices billed in INR equivalent at checkout. All paid plans include a 7-day free trial — no credit card required to start.",
   },
   {
     q: "Does ReviewPilot actually work with Google Play Store reviews?",

@@ -73,7 +73,7 @@ export function Footer() {
             </Link>
             <p className="mt-4 max-w-sm text-sm text-muted-foreground leading-relaxed">
               AI review management for Indian app makers and local businesses.
-              From ₹1,500/mo — built for the teams who care about every star.
+              From $16/mo — built for the teams who care about every star.
             </p>
 
             {/* Newsletter — disabled until backend wiring lands */}

@@ -212,7 +212,7 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
               Ready to automate your reviews?
             </h3>
             <p className="mt-3 text-sm text-muted-foreground">
-              7-day free trial. No credit card. From ₹1,500/mo.
+              7-day free trial. No credit card. From $16/mo.
             </p>
             <div className="mt-6 flex flex-wrap justify-center gap-3">
               <Button variant="gradient" size="lg" asChild>

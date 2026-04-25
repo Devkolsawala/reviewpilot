@@ -62,7 +62,7 @@ export default function AboutPage() {
             Our story
           </p>
           <h2 className="mt-3 font-sans text-3xl font-semibold tracking-tight sm:text-4xl">
-            The ₹25,000 quote that started it all.
+            The $266 quote that started it all.
           </h2>
           <div className="mt-8 space-y-5 text-base text-muted-foreground leading-relaxed sm:text-lg">
             <p>
@@ -82,7 +82,7 @@ export default function AboutPage() {
               So we went looking for a tool. Birdeye. Podium. Simplify360. The
               quotes came back:{" "}
               <span className="font-semibold text-foreground">
-                ₹25,000 to ₹45,000 a month
+                $266 to $479 a month
               </span>
               , annual contracts only, and most didn&apos;t even touch Play Store
               reviews. It felt absurd. We were paying more for review software
@@ -94,7 +94,7 @@ export default function AboutPage() {
               <em>&ldquo;We can build this ourselves.&rdquo;</em> So we did.
               ReviewPilot is what we wished existed — AI review management that
               understands Play Store AND Google Business Profile, speaks Indian
-              languages, and costs ₹1,500 a month. A{" "}
+              languages, and costs $16 a month. A{" "}
               <span className="text-gradient-brand font-semibold">
                 seventeenth of Birdeye
               </span>
@@ -139,7 +139,7 @@ export default function AboutPage() {
               developers. We believe the same automation that protects global
               enterprises&apos; ratings should be accessible to a family
               restaurant in Indore or an indie dev in Kochi — without a
-              ₹25,000/month invoice.
+              $266/month invoice.
             </p>
           </div>
           <div className="rounded-2xl border border-border/60 bg-card/40 p-8 backdrop-blur-sm">

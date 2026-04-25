@@ -16,7 +16,7 @@ import { GridPattern } from "@/components/ui/grid-pattern";
 export const metadata: Metadata = {
   title: "Google Review Automation for Local Businesses India | ReviewPilot",
   description:
-    "Reply to Google reviews with AI, collect new reviews via SMS, and track sentiment. Google review automation built for Indian SMBs from ₹1,500/mo.",
+    "Reply to Google reviews with AI, collect new reviews via SMS, and track sentiment. Google review automation built for Indian SMBs from $16/mo.",
   alternates: { canonical: "/for-local-business" },
   openGraph: {
     title: "Google Review Automation for Local Businesses | ReviewPilot",

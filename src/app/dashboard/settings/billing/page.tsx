@@ -43,7 +43,7 @@ const PLAN_CARDS = [
  {
  key: "starter",
  name: "Starter",
- price: 1500,
+ price: 16,
  features: [
  "1 location or app",
  "100 AI replies/week",
@@ -56,7 +56,7 @@ const PLAN_CARDS = [
  {
  key: "growth",
  name: "Growth",
- price: 3000,
+ price: 32,
  popular: true,
  features: [
  "3 locations or apps",
@@ -70,7 +70,7 @@ const PLAN_CARDS = [
  {
  key: "agency",
  name: "Agency",
- price: 8000,
+ price: 85,
  features: [
  "10 locations or apps",
  "Unlimited AI replies",
@@ -410,9 +410,10 @@ export default function BillingPage() {
  <CardContent className="p-6">
  <h3 className="font-sans text- font-semibold tracking-tight">{p.name}</h3>
  <p className="mt-2">
- <span className="text-3xl font-bold font-sans tracking-tight">₹{p.price.toLocaleString("en-IN")}</span>
+ <span className="text-3xl font-bold font-sans tracking-tight">${p.price}</span>
  <span className="text-sm text-muted-foreground">/mo</span>
  </p>
+ <p className="mt-1 text-[11px] text-muted-foreground">Billed in INR equivalent at checkout</p>
  <ul className="mt-4 space-y-2">
  {p.features.map((f) => <FeatureItem key={f} text={f} />)}
  </ul>
@@ -442,7 +443,7 @@ export default function BillingPage() {
  )}
  </Button>
  <p className="text-[11px] text-center text-muted-foreground">
- Your current plan will be cancelled and you&apos;ll be billed ₹{p.price.toLocaleString("en-IN")}/mo from today.
+ Your current plan will be cancelled and you&apos;ll be billed ${p.price}/mo (INR equivalent) from today.
  </p>
  </div>
  ) : downgrading ? (
@@ -537,7 +538,7 @@ export default function BillingPage() {
  <div className="space-y-3 text-sm text-muted-foreground">
  <p>
  Your current <strong className="text-foreground">{plan.name} plan</strong> will be cancelled immediately and you&apos;ll be charged{" "}
- <strong className="text-foreground">₹{upgradeTargetCard.price.toLocaleString("en-IN")}/mo</strong> starting today.
+ <strong className="text-foreground">${upgradeTargetCard.price}/mo</strong> (billed in INR equivalent) starting today.
  </p>
  <p className="text-amber-600 dark:text-amber-400">
  Unused days from your current plan are not refunded. For best value, upgrade near the end of your billing cycle.
@@ -551,7 +552,7 @@ export default function BillingPage() {
  className="bg-accent hover:bg-accent/90"
  onClick={() => { setUpgradeTarget(null); openCheckout(upgradeTargetCard.key); }}
  >
- Confirm Upgrade — ₹{upgradeTargetCard.price.toLocaleString("en-IN")}/mo
+ Confirm Upgrade — ${upgradeTargetCard.price}/mo
  </Button>
  </DialogFooter>
  </DialogContent>

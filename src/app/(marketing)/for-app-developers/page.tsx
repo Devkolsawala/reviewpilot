@@ -16,7 +16,7 @@ import { GridPattern } from "@/components/ui/grid-pattern";
 export const metadata: Metadata = {
   title: "Play Store Review Management for App Developers | ReviewPilot",
   description:
-    "Reply to every Play Store review with AI. Enforce the 350-char limit, detect known bugs, lift your rating. Built for Indian app developers from ₹1,500/mo.",
+    "Reply to every Play Store review with AI. Enforce the 350-char limit, detect known bugs, lift your rating. Built for Indian app developers from $16/mo.",
   alternates: { canonical: "/for-app-developers" },
   openGraph: {
     title: "Play Store Review Management for App Developers | ReviewPilot",
@@ -157,7 +157,7 @@ export default function ForAppDevelopersPage() {
               </h2>
               <p className="mx-auto mt-4 max-w-xl text-muted-foreground">
                 Join hundreds of developers using ReviewPilot to keep a 4+ rating.
-                From ₹1,500/month.
+                From $16/month.
               </p>
               <div className="mt-8 flex justify-center">
                 <Button variant="gradient" size="xl" asChild>

@@ -8,15 +8,12 @@ import { cn } from "@/lib/utils";
 import { m, MotionProvider } from "@/components/motion/primitives";
 
 type Billing = "monthly" | "annual";
-type Currency = "INR" | "USD";
 
 const PLANS = [
   {
     name: "Starter",
-    priceINR: 1500,
-    priceUSD: 19,
-    annualINR: 1200,
-    annualUSD: 15,
+    priceUSD: 16,
+    annualUSD: 13,
     description: "For a single location or app",
     features: [
       "1 location OR 1 app",
@@ -31,10 +28,8 @@ const PLANS = [
   },
   {
     name: "Growth",
-    priceINR: 3000,
-    priceUSD: 39,
-    annualINR: 2400,
-    annualUSD: 31,
+    priceUSD: 32,
+    annualUSD: 26,
     description: "For growing businesses and dev studios",
     features: [
       "3 locations OR 3 apps",
@@ -49,10 +44,8 @@ const PLANS = [
   },
   {
     name: "Agency",
-    priceINR: 8000,
-    priceUSD: 99,
-    annualINR: 6400,
-    annualUSD: 79,
+    priceUSD: 85,
+    annualUSD: 68,
     description: "For agencies managing multiple clients",
     features: [
       "10 locations or apps",
@@ -82,21 +75,12 @@ const PLANS = [
 ] as const;
 
 export function PricingTable() {
-  const [currency, setCurrency] = useState<Currency>("INR");
   const [billing, setBilling] = useState<Billing>("monthly");
 
   return (
     <MotionProvider>
       <div>
         <div className="mx-auto flex w-fit flex-wrap items-center justify-center gap-3">
-          <Toggle<Currency>
-            value={currency}
-            onChange={setCurrency}
-            options={[
-              { value: "INR", label: "INR (₹)" },
-              { value: "USD", label: "USD ($)" },
-            ]}
-          />
           <Toggle<Billing>
             value={billing}
             onChange={setBilling}
@@ -151,16 +135,9 @@ export function PricingTable() {
               );
             }
 
-            const paid = plan as Extract<(typeof PLANS)[number], { priceINR: number }>;
-            const price =
-              billing === "annual"
-                ? currency === "INR"
-                  ? paid.annualINR
-                  : paid.annualUSD
-                : currency === "INR"
-                  ? paid.priceINR
-                  : paid.priceUSD;
-            const symbol = currency === "INR" ? "₹" : "$";
+            const paid = plan as Extract<(typeof PLANS)[number], { priceUSD: number }>;
+            const price = billing === "annual" ? paid.annualUSD : paid.priceUSD;
+            const symbol = "$";
             const isHighlight = paid.highlight;
 
             return (
@@ -201,6 +178,9 @@ export function PricingTable() {
                   </span>
                   <span className="ml-1 text-xs text-muted-foreground">/mo</span>
                 </div>
+                <p className="mt-1 text-[10px] text-muted-foreground">
+                  Billed in INR equivalent at checkout
+                </p>
                 <ul className="mt-5 flex-1 space-y-2.5">
                   {paid.features.map((f) => {
                     const soon = f.includes("(Coming soon)");

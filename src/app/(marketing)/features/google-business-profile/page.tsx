@@ -12,19 +12,19 @@ import { JsonLd, SITE_URL, SITE_OG } from "@/components/marketing/JsonLd";
 export const metadata: Metadata = {
   title: "AI Replies to Google Business Reviews India | ReviewPilot",
   description:
-    "Auto-reply to Google Business Profile reviews with AI. One-click GBP connection, brand-voice replies, SMS review collection. Built for Indian SMBs. ₹1,500/mo.",
+    "Auto-reply to Google Business Profile reviews with AI. One-click GBP connection, brand-voice replies, SMS review collection. Built for Indian SMBs. $16/mo.",
   alternates: { canonical: "/features/google-business-profile" },
   openGraph: {
     title: "AI Replies to Google Business Reviews — Built for India | ReviewPilot",
     description:
-      "Connect Google Business Profile in one click. AI writes brand-voice replies, SMS collection smart-routes happy customers to Google. From ₹1,500/mo.",
+      "Connect Google Business Profile in one click. AI writes brand-voice replies, SMS collection smart-routes happy customers to Google. From $16/mo.",
     url: `${SITE_URL}/features/google-business-profile`,
     images: [{ url: "/og-image.svg", width: 1200, height: 630, alt: "Google Business Profile review automation — ReviewPilot" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "AI Google Business Review Replies India | ReviewPilot",
-    description: "Auto-reply to Google Business reviews with AI. Built for Indian SMBs. ₹1,500/mo.",
+    description: "Auto-reply to Google Business reviews with AI. Built for Indian SMBs. $16/mo.",
     images: ["/og-image.svg"],
   },
 };
@@ -126,7 +126,7 @@ export default function GoogleBusinessProfilePage() {
             88% of Indian consumers check Google reviews before visiting a local
             business. ReviewPilot connects to your Google Business Profile in one
             click and handles every reply — in your voice, automatically, from
-            ₹1,500/month.
+            $16/month.
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
             <Button variant="gradient" size="xl" asChild>

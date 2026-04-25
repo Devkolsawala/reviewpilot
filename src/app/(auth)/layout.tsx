@@ -36,7 +36,7 @@ export default function AuthLayout({
           </h2>
           <p className="mt-5 text-base text-muted-foreground leading-relaxed">
             AI-powered review management for Indian app developers and local
-            businesses. From ₹1,500/mo — built for teams who care about every
+            businesses. From $16/mo — built for teams who care about every
             star.
           </p>
 

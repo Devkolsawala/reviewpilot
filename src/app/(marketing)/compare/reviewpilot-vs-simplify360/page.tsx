@@ -28,7 +28,7 @@ const faqs = [
   },
   {
     q: "Can I buy just review management from Simplify360?",
-    a: "Simplify360's pricing is typically bundled with broader CX modules (social listening + support + reviews) and quoted per account. A standalone review management SKU isn't part of their published offering. If you only need review management, ReviewPilot's ₹1,500/month Starter is a purpose-built, published price you can start with today.",
+    a: "Simplify360's pricing is typically bundled with broader CX modules (social listening + support + reviews) and quoted per account. A standalone review management SKU isn't part of their published offering. If you only need review management, ReviewPilot's $16/month Starter is a purpose-built, published price you can start with today.",
   },
   {
     q: "Does Simplify360 cover Play Store reviews?",
@@ -66,7 +66,7 @@ export default function Page() {
         intro="Simplify360 is an established Indian customer experience platform with social listening, reviews, and support bundled together for mid-market and enterprise customers. ReviewPilot is a focused, SMB-priced review management tool with native Play Store coverage."
         pricingNote="Simplify360 pricing is bundled with their broader CX suite and quoted per account, so exact numbers aren't published publicly."
         rows={[
-          { feature: "Starting price (monthly)", reviewpilot: "₹1,500", competitor: "Enterprise bundle" },
+          { feature: "Starting price (monthly)", reviewpilot: "$16", competitor: "Enterprise bundle" },
           { feature: "Google Business Profile replies", reviewpilot: true, competitor: true },
           { feature: "Google Play Store reviews", reviewpilot: true, competitor: "Not advertised" },
           { feature: "AI-generated replies", reviewpilot: true, competitor: "Tier-dependent" },

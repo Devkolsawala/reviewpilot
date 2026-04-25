@@ -36,7 +36,7 @@ export const PLANS = {
   starter: {
     name: 'Starter',
     price_inr: 1500,
-    price_usd: 19,
+    price_usd: 16,
     sync_cadence: 'every_2h' as SyncCadence,   // every 2 hours (all plans)
     limits: {
       ai_replies_per_period: 100,
@@ -62,7 +62,7 @@ export const PLANS = {
   growth: {
     name: 'Growth',
     price_inr: 3000,
-    price_usd: 39,
+    price_usd: 32,
     sync_cadence: 'every_2h' as SyncCadence,   // every 2 hours (all plans)
     limits: {
       ai_replies_per_period: 500,
@@ -88,7 +88,7 @@ export const PLANS = {
   agency: {
     name: 'Agency',
     price_inr: 8000,
-    price_usd: 99,
+    price_usd: 85,
     sync_cadence: 'every_2h' as SyncCadence,   // every 2 hours (all plans)
     limits: {
       ai_replies_per_period: -1, // -1 = unlimited

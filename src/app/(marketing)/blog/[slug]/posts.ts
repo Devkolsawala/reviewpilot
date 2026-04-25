@@ -92,7 +92,7 @@ We've written a complete playbook of 15 templates in our [negative review reply 
 
 When you hit 20+ reviews a week, manual replies become a part-time job. This is where AI review management tools earn their keep. Tools like ReviewPilot read every review, understand context (was it about food? wait time? a staff member?), and generate replies in your brand voice. You approve with one click. What used to take two hours now takes ten minutes.
 
-Read more on [how our AI review management platform works](/how-it-works), or jump straight to [pricing](/pricing) — plans start at ₹1,500/month.
+Read more on [how our AI review management platform works](/how-it-works), or jump straight to [pricing](/pricing) — plans start at $16/month.
 
 ## Red flags: things that will get your account flagged or suspended
 
@@ -278,7 +278,7 @@ We looked at four things that matter for Indian SMBs in 2026:
 ## Quick verdict
 
 - **ReviewPilot** — best for Indian SMBs and app developers who want transparent, affordable pricing and unified Google + Play Store coverage.
-- **Birdeye** — best for large multi-location enterprises with ₹25,000+/month budgets who need deep CRM integrations.
+- **Birdeye** — best for large multi-location enterprises with $266+/month budgets who need deep CRM integrations.
 - **Podium** — strongest in North America; customer messaging focus; limited India fit.
 - **Famepilot** — established Indian brand with enterprise multi-location focus; pricing is quote-based.
 - **Simplify360** — bundled CX suite including reviews; enterprise-oriented.
@@ -286,7 +286,7 @@ We looked at four things that matter for Indian SMBs in 2026:
 
 ## Detailed breakdown
 
-### 1. ReviewPilot — ₹1,500/mo starting
+### 1. ReviewPilot — $16/mo starting
 
 The tool you're on right now. Built in India, priced for Indian SMBs, and the only platform that treats Google Play Store AND Google Business Profile as equal first-class citizens in a single unified inbox. AI replies in Hindi, Tamil, Telugu and other Indian languages. Enforces Play Store's 350-char reply limit. App Context Profiles let you bake known bugs and FAQs directly into AI reply logic.
 
@@ -294,19 +294,19 @@ The tool you're on right now. Built in India, priced for Indian SMBs, and the on
 
 **Weaknesses we'll admit:** We're new (founded 2026). We don't have the brand recognition of a Birdeye or the CRM depth of enterprise tools. We don't yet have deep integrations with large Indian CRMs. Our user base is still growing. If your procurement committee requires a Gartner-rated vendor with 10+ years of history, we're not that — yet.
 
-**Pricing:** ₹1,500/mo Starter, ₹3,000/mo Growth, ₹8,000/mo Agency. [Full pricing here.](/pricing)
+**Pricing:** $16/mo Starter, $32/mo Growth, $85/mo Agency (billed in INR equivalent at checkout). [Full pricing here.](/pricing)
 
-### 2. Birdeye — typically ~₹25,000/mo (quote-only in India)
+### 2. Birdeye — typically ~$266/mo (quote-only in India)
 
 Global leader. Trusted by US Fortune 500s and large multi-location chains. Deep CRM integrations, enterprise SSO, big professional services team.
 
-**Where Birdeye genuinely wins:** enterprise feature depth. If you have 100+ locations, dedicated ops staff, and a ₹25K+ monthly budget, Birdeye's capabilities likely justify the price.
+**Where Birdeye genuinely wins:** enterprise feature depth. If you have 100+ locations, dedicated ops staff, and a $266+ monthly budget, Birdeye's capabilities likely justify the price.
 
 **Where Birdeye is weak for Indian SMBs:** the price. Annual contracts. No native Play Store focus. Sales-led buying process — you can't just sign up online.
 
 Read our detailed [ReviewPilot vs Birdeye comparison](/compare/reviewpilot-vs-birdeye).
 
-### 3. Podium — ~₹20,000/mo equivalent (USD-billed)
+### 3. Podium — ~$213/mo equivalent (USD-billed)
 
 North America's customer-messaging-plus-reviews platform. Strong SMS/chat functionality. Popular with US SMBs.
 
@@ -347,9 +347,9 @@ Ask yourself three questions:
 - No → Any of the above work; eliminate AppFollow.
 
 **Q2: What's your monthly budget?**
-- Under ₹10,000 → ReviewPilot is one of the few credible options at this price tier.
-- ₹10,000–₹25,000 → ReviewPilot Agency plan, or wait for Famepilot / Simplify360 quotes.
-- ₹25,000+ → Birdeye, Simplify360, Famepilot enterprise all viable.
+- Under $106 → ReviewPilot is one of the few credible options at this price tier.
+- $106–$266 → ReviewPilot Agency plan, or wait for Famepilot / Simplify360 quotes.
+- $266+ → Birdeye, Simplify360, Famepilot enterprise all viable.
 
 **Q3: Do you want self-serve or sales-led buying?**
 - Self-serve → ReviewPilot (sign up, 7-day free trial, no card).
@@ -498,7 +498,7 @@ If reply rate is above 90% and 14-day rating is stable or climbing, your review 
 
 [ReviewPilot](/how-it-works) is built specifically for this problem. It connects to your Play Console via service account, pulls reviews in real-time, and drafts replies respecting the 350-char limit, your App Context Profile, and the review language. You approve in bulk. Replies publish to Play Store.
 
-Starter is ₹1,500/month for a single app — less than the cost of one hour of your engineering time per week. [See pricing →](/pricing) or [start a free 7-day trial](/signup).
+Starter is $16/month for a single app — less than the cost of one hour of your engineering time per week. [See pricing →](/pricing) or [start a free 7-day trial](/signup).
 
 ## The bottom line
 

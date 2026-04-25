@@ -49,7 +49,7 @@ export const metadata: Metadata = {
     template: "%s | ReviewPilot",
   },
   description:
-    "Manage Google Play Store and Google Business reviews with AI-powered auto-replies. Save hours every week. Plans from ₹1,500/mo.",
+    "Manage Google Play Store and Google Business reviews with AI-powered auto-replies. Save hours every week. Plans from $16/mo.",
   keywords: [
     "review management",
     "google play reviews",

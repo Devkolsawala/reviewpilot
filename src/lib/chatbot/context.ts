@@ -1,7 +1,7 @@
 export const SUPPORT_EMAIL = "hello@reviewpilot.co.in";
 
 export const PRODUCT_CONTEXT = `
-ReviewPilot — AI review management for India. Automates replies to Google Business Profile (GBP) and Google Play Store reviews. From ₹1,500/month.
+ReviewPilot — AI review management for India. Automates replies to Google Business Profile (GBP) and Google Play Store reviews. From $16/month (billed in INR equivalent at checkout).
 
 WHO IT'S FOR
 - Indian app developers publishing on Play Store
@@ -22,10 +22,10 @@ FEATURES
 - Multi-language: English, Hindi, Tamil, Telugu, Marathi, Bengali, Kannada, Gujarati (auto-detects review language, replies in the same)
 - Multi-location / multi-app dashboard
 
-PRICING (INR, monthly; annual billing gets ~20% off)
-- Starter — ₹1,500/mo: 1 location OR 1 app, 100 AI replies/week, 50 SMS/week (soon), 3 team seats, basic analytics
-- Growth — ₹3,000/mo (most popular): 3 locations or apps, 500 AI replies/week, 200 SMS/week (soon), 5 team seats, full analytics + sentiment
-- Agency — ₹8,000/mo: 10 locations or apps, unlimited AI replies, 1,000 SMS/week (soon), 10 team seats, priority support
+PRICING (USD displayed; billed in INR equivalent at checkout; annual billing gets ~20% off)
+- Starter — $16/mo: 1 location OR 1 app, 100 AI replies/week, 50 SMS/week (soon), 3 team seats, basic analytics
+- Growth — $32/mo (most popular): 3 locations or apps, 500 AI replies/week, 200 SMS/week (soon), 5 team seats, full analytics + sentiment
+- Agency — $85/mo: 10 locations or apps, unlimited AI replies, 1,000 SMS/week (soon), 10 team seats, priority support
 - Enterprise — custom: unlimited locations/apps, SLA, dedicated CSM, custom integrations, SSO, audit logs
 - All paid plans include a 7-day free trial, no credit card required
 - Positioned as ~17× cheaper than Birdeye and similar global tools

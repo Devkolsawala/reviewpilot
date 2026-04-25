@@ -20,12 +20,12 @@ import {
 export const metadata: Metadata = {
   title: "AI Review Management India — Google & Play Store | ReviewPilot",
   description:
-    "Automate Google Business Profile and Play Store review replies with AI. Made-in-India review management from ₹1,500/mo. Start your free 7-day trial today.",
+    "Automate Google Business Profile and Play Store review replies with AI. Made-in-India review management from $16/mo. Start your free 7-day trial today.",
   alternates: { canonical: "/" },
   openGraph: {
     title: "AI Review Management India — Google & Play Store | ReviewPilot",
     description:
-      "Automate Google Business Profile and Play Store review replies with AI. From ₹1,500/mo — 17× cheaper than Birdeye. Start a free trial.",
+      "Automate Google Business Profile and Play Store review replies with AI. From $16/mo — 17× cheaper than Birdeye. Start a free trial.",
     type: "website",
     url: SITE_URL,
     images: [
@@ -41,7 +41,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "AI Review Management India | ReviewPilot",
     description:
-      "Automate Google & Play Store review replies with AI. From ₹1,500/mo. Start your free trial.",
+      "Automate Google & Play Store review replies with AI. From $16/mo. Start your free trial.",
     images: ["/og-image.svg"],
   },
 };
@@ -58,12 +58,12 @@ const softwareSchema = {
   image: SITE_OG,
   offers: {
     "@type": "Offer",
-    price: "1500",
-    priceCurrency: "INR",
+    price: "16",
+    priceCurrency: "USD",
     priceSpecification: {
       "@type": "UnitPriceSpecification",
-      price: "1500",
-      priceCurrency: "INR",
+      price: "16",
+      priceCurrency: "USD",
       unitText: "MONTH",
     },
   },
@@ -80,7 +80,7 @@ const websiteSchema = {
 const FAQ_SCHEMA_ITEMS = [
   {
     q: "How much does ReviewPilot cost?",
-    a: "Starter is ₹1,500/mo (1 location or app, 100 AI replies/week). Growth is ₹3,000/mo, Agency is ₹8,000/mo. All plans include a 7-day free trial.",
+    a: "Starter is $16/mo (1 location or app, 100 AI replies/week). Growth is $32/mo, Agency is $85/mo. All prices billed in INR equivalent at checkout. All plans include a 7-day free trial.",
   },
   {
     q: "Does ReviewPilot work with Google Play Store reviews?",

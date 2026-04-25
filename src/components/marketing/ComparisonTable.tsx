@@ -33,7 +33,7 @@ const FEATURE_KEYS = Object.keys(FEATURE_LABELS) as FeatureKey[];
 const COMPETITORS: Competitor[] = [
   {
     name: "ReviewPilot",
-    price: "₹1,500",
+    price: "$16",
     highlight: true,
     features: {
       ai_replies: true,
@@ -46,7 +46,7 @@ const COMPETITORS: Competitor[] = [
   },
   {
     name: "Birdeye",
-    price: "₹25,000",
+    price: "~$266",
     features: {
       ai_replies: true,
       google_business: true,
@@ -58,7 +58,7 @@ const COMPETITORS: Competitor[] = [
   },
   {
     name: "Podium",
-    price: "₹20,000",
+    price: "~$213",
     features: {
       ai_replies: false,
       google_business: true,
@@ -70,7 +70,7 @@ const COMPETITORS: Competitor[] = [
   },
   {
     name: "AppFollow",
-    price: "₹15,000",
+    price: "~$160",
     features: {
       ai_replies: true,
       google_business: false,

@@ -32,7 +32,7 @@ const faqs = [
   },
   {
     q: "How does pricing compare?",
-    a: "ReviewPilot starts at ₹1,500/month — published on our pricing page, self-serve, no sales call required. Famepilot is quote-only, so the price you pay depends on your location count and negotiation. We recommend starting with ReviewPilot's 7-day free trial so you can evaluate actual outcomes before signing anything.",
+    a: "ReviewPilot starts at $16/month — published on our pricing page, self-serve, no sales call required. Famepilot is quote-only, so the price you pay depends on your location count and negotiation. We recommend starting with ReviewPilot's 7-day free trial so you can evaluate actual outcomes before signing anything.",
   },
   {
     q: "Which is better for an app developer?",
@@ -66,7 +66,7 @@ export default function Page() {
         intro="Famepilot is a well-established Indian review and reputation management platform popular with multi-location brands. ReviewPilot is a newer India-first alternative focused on transparent pricing, unified Google + Play Store inboxes, and SMB affordability."
         pricingNote="Famepilot pricing is quote-only and varies by location count, so we've shown 'Quote-based' where specific numbers aren't published."
         rows={[
-          { feature: "Starting price (monthly)", reviewpilot: "₹1,500 (published)", competitor: "Quote-based" },
+          { feature: "Starting price (monthly)", reviewpilot: "$16 (published)", competitor: "Quote-based" },
           { feature: "Google Business Profile replies", reviewpilot: true, competitor: true },
           { feature: "Google Play Store reviews", reviewpilot: true, competitor: "Not advertised" },
           { feature: "AI-generated replies", reviewpilot: true, competitor: "Tier-dependent" },

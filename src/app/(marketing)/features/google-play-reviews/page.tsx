@@ -12,7 +12,7 @@ import { JsonLd, SITE_URL, SITE_OG } from "@/components/marketing/JsonLd";
 export const metadata: Metadata = {
   title: "Reply to Play Store Reviews Automatically | ReviewPilot",
   description:
-    "Auto-reply to every Google Play Store review with AI. Respects the 350-char limit, supports Hindi/Tamil/Telugu, lifts your app rating. From ₹1,500/mo.",
+    "Auto-reply to every Google Play Store review with AI. Respects the 350-char limit, supports Hindi/Tamil/Telugu, lifts your app rating. From $16/mo.",
   alternates: { canonical: "/features/google-play-reviews" },
   openGraph: {
     title: "Play Store Review Automation — AI Replies for Android Apps | ReviewPilot",
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Auto-Reply to Play Store Reviews | ReviewPilot",
-    description: "AI-powered Play Store review management for Indian app developers. From ₹1,500/mo.",
+    description: "AI-powered Play Store review management for Indian app developers. From $16/mo.",
     images: ["/og-image.svg"],
   },
 };
@@ -41,12 +41,12 @@ const schema = {
   image: SITE_OG,
   offers: {
     "@type": "Offer",
-    price: "1500",
-    priceCurrency: "INR",
+    price: "16",
+    priceCurrency: "USD",
     priceSpecification: {
       "@type": "UnitPriceSpecification",
-      price: "1500",
-      priceCurrency: "INR",
+      price: "16",
+      priceCurrency: "USD",
       unitText: "MONTH",
     },
   },
@@ -118,7 +118,7 @@ export default function PlayStoreReviewsPage() {
             </Button>
           </div>
           <p className="mt-5 font-mono text-[11px] text-muted-foreground">
-            7-day free trial · No credit card · From ₹1,500/month
+            7-day free trial · No credit card · From $16/month
           </p>
         </div>
       </section>

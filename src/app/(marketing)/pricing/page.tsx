@@ -11,21 +11,21 @@ import { GridPattern } from "@/components/ui/grid-pattern";
 import { JsonLd, SITE_URL } from "@/components/marketing/JsonLd";
 
 export const metadata: Metadata = {
-  title: "Pricing — AI Review Management from ₹1,500/mo | ReviewPilot",
+  title: "Pricing — AI Review Management from $16/mo | ReviewPilot",
   description:
-    "Simple review management software pricing for India. Starter ₹1,500/mo, Growth ₹3,000, Agency ₹8,000. Start your 7-day free trial — no card required.",
+    "Simple review management software pricing. Starter $16/mo, Growth $32, Agency $85. Billed in INR equivalent at checkout. Start your 7-day free trial — no card required.",
   alternates: { canonical: "/pricing" },
   openGraph: {
-    title: "Pricing — AI Review Management from ₹1,500/mo | ReviewPilot",
+    title: "Pricing — AI Review Management from $16/mo | ReviewPilot",
     description:
-      "Transparent India-first pricing for AI review management. Plans from ₹1,500/mo. Start your free 7-day trial.",
+      "Transparent India-first pricing for AI review management. Plans from $16/mo. Start your free 7-day trial.",
     url: `${SITE_URL}/pricing`,
     type: "website",
     images: [{ url: "/og-image.svg", width: 1200, height: 630, alt: "ReviewPilot pricing" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "ReviewPilot Pricing — From ₹1,500/mo",
+    title: "ReviewPilot Pricing — From $16/mo",
     description: "AI review management plans for Indian SMBs. Try free for 7 days.",
     images: ["/og-image.svg"],
   },
@@ -39,9 +39,9 @@ const productSchema = {
     "AI-powered review management software for Indian businesses and app developers.",
   brand: { "@type": "Brand", name: "ReviewPilot" },
   offers: [
-    { "@type": "Offer", name: "Starter", price: "1500", priceCurrency: "INR", url: `${SITE_URL}/pricing`, availability: "https://schema.org/InStock", description: "1 location or 1 app, 100 AI replies/week, 3 team seats." },
-    { "@type": "Offer", name: "Growth", price: "3000", priceCurrency: "INR", url: `${SITE_URL}/pricing`, availability: "https://schema.org/InStock", description: "3 locations or 3 apps, 500 AI replies/week, 5 team seats." },
-    { "@type": "Offer", name: "Agency", price: "8000", priceCurrency: "INR", url: `${SITE_URL}/pricing`, availability: "https://schema.org/InStock", description: "10 locations or apps, unlimited AI replies, priority support." },
+    { "@type": "Offer", name: "Starter", price: "16", priceCurrency: "USD", url: `${SITE_URL}/pricing`, availability: "https://schema.org/InStock", description: "1 location or 1 app, 100 AI replies/week, 3 team seats." },
+    { "@type": "Offer", name: "Growth", price: "32", priceCurrency: "USD", url: `${SITE_URL}/pricing`, availability: "https://schema.org/InStock", description: "3 locations or 3 apps, 500 AI replies/week, 5 team seats." },
+    { "@type": "Offer", name: "Agency", price: "85", priceCurrency: "USD", url: `${SITE_URL}/pricing`, availability: "https://schema.org/InStock", description: "10 locations or apps, unlimited AI replies, priority support." },
   ],
 };
 
@@ -50,7 +50,7 @@ const FAQ = [
   { q: "Can I switch plans later?", a: "Absolutely. You can upgrade or downgrade at any time. Changes take effect at the start of your next billing cycle." },
   { q: "What payment methods do you accept?", a: "All major credit/debit cards, UPI, net banking, and wallets via Razorpay." },
   { q: "What happens after the trial ends?", a: "If you don't subscribe, your account moves to the free plan with limited features. Your data is preserved for 30 days." },
-  { q: "Do you offer refunds?", a: "We don't offer refunds on subscription payments — and here's why that's actually good for you. Every plan includes a 7-day free trial with full access to every feature, no credit card required. That's your evaluation window: connect your Play Store, train the AI on your brand voice, reply to real reviews, and see the results before you ever pay. If it's not right for you, simply don't subscribe. By skipping refund processing, we keep prices at ₹1,500/month instead of the ₹25,000+ that enterprise competitors charge. If you cancel a paid plan, it stays active until the end of your current billing cycle — you keep everything you paid for." },
+  { q: "Do you offer refunds?", a: "We don't offer refunds on subscription payments — and here's why that's actually good for you. Every plan includes a 7-day free trial with full access to every feature, no credit card required. That's your evaluation window: connect your Play Store, train the AI on your brand voice, reply to real reviews, and see the results before you ever pay. If it's not right for you, simply don't subscribe. By skipping refund processing, we keep prices at $16/month instead of the $266+ that enterprise competitors charge. If you cancel a paid plan, it stays active until the end of your current billing cycle — you keep everything you paid for." },
   { q: "Can I use ReviewPilot for both Google Business and Play Store?", a: "Google Play Store review management is live today. Google Business Profile automation is launching soon and will be included in every plan at no extra cost." },
 ];
 

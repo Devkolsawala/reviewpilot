@@ -946,7 +946,7 @@ All plans include a **7-day free trial** with full features, no credit card requ
 
 | Feature | Starter | Growth | Agency |
 |---|---|---|---|
-| Price | ₹1,500/mo | ₹3,000/mo | ₹8,000/mo |
+| Price | $16/mo | $32/mo | $85/mo |
 | Locations or apps | 1 | 3 | 10 |
 | AI replies per week | 100 | 500 | Unlimited |
 | Team seats | 3 | 5 | Unlimited |
@@ -1069,7 +1069,7 @@ ReviewPilot processes payments through **Razorpay**, India's leading payment gat
 - **Net banking** — most Indian banks supported
 - **Wallets** — Paytm, Amazon Pay, and others
 
-All prices are in **Indian Rupees (₹)**. No foreign exchange, no surprise currency conversion.
+Prices are displayed in **USD** and billed in INR equivalent at checkout via Razorpay. No surprise currency conversion — the INR amount is fixed at the time of checkout.
 
 ## Billing cycle
 
@@ -1094,7 +1094,7 @@ To change your payment method or update billing address, go to **Settings → Bi
 **Why no refunds?** Two reasons, both in your favour:
 
 1. The 7-day trial is genuinely full-featured — you know exactly what you're buying before you buy it.
-2. Skipping refund operations lets us keep the Starter plan at ₹1,500/month. Enterprise tools that offer refunds typically charge ₹20,000–₹25,000/month to cover those ops.
+2. Skipping refund operations lets us keep the Starter plan at $16/month. Enterprise tools that offer refunds typically charge $213–$266/month to cover those ops.
 
 **Billing issues or accidental charges?** If you were charged in error (duplicate payment, charge after cancellation, etc.), email **dev.kolsawala45@gmail.com** with your registered email and payment date — we resolve genuine billing errors within 5–7 business days.
 

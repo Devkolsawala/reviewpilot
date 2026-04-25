@@ -53,7 +53,7 @@ const faqSchema = {
       name: "Is ReviewPilot really 17× cheaper than Birdeye?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "ReviewPilot's Starter plan is ₹1,500/month — published, self-serve, and billed in INR with UPI support. Birdeye's India-market quotes typically start around ₹25,000/month for comparable functionality, billed in USD on an annual contract. That's roughly 17× more for a tool not designed around Indian SMB workflows. Birdeye's pricing is quote-only, so exact numbers depend on your sales conversation with them.",
+        text: "ReviewPilot's Starter plan is $16/month — published, self-serve, and billed in INR equivalent at checkout with UPI support. Birdeye's India-market quotes typically start around $266/month for comparable functionality, on an annual contract. That's roughly 17× more for a tool not designed around Indian SMB workflows. Birdeye's pricing is quote-only, so exact numbers depend on your sales conversation with them.",
       },
     },
     {
@@ -91,7 +91,7 @@ type FeatureRow = {
 };
 
 const ROWS: FeatureRow[] = [
-  { feature: "Starting monthly price (INR)", reviewpilot: "₹1,500", birdeye: "~₹25,000 ", appfollow: "~₹8,000 " },
+  { feature: "Starting monthly price (USD)", reviewpilot: "$16", birdeye: "~$266", appfollow: "~$85" },
   { feature: "Google Business Profile reviews", reviewpilot: true, birdeye: true, appfollow: false },
   { feature: "Google Play Store reviews", reviewpilot: true, birdeye: false, appfollow: true },
   { feature: "Both GBP + Play Store in one inbox", reviewpilot: true, birdeye: false, appfollow: false },
@@ -118,7 +118,7 @@ function Cell({ value }: { value: boolean | string }) {
 const FAQS = [
   {
     q: "Is ReviewPilot really 17× cheaper than Birdeye?",
-    a: "ReviewPilot's Starter plan is ₹1,500/month — published, self-serve, and billed in INR with UPI support. Birdeye's India-market quotes typically start around ₹25,000/month for comparable functionality, billed in USD on an annual contract. That's roughly 17× more for a tool not designed around Indian SMB workflows. Birdeye's pricing is quote-only, so exact numbers depend on your sales conversation with them.",
+    a: "ReviewPilot's Starter plan is $16/month — published, self-serve, and billed in INR equivalent at checkout with UPI support. Birdeye's India-market quotes typically start around $266/month for comparable functionality, on an annual contract. That's roughly 17× more for a tool not designed around Indian SMB workflows. Birdeye's pricing is quote-only, so exact numbers depend on your sales conversation with them.",
   },
   {
     q: "Does Birdeye support Google Play Store reviews?",
@@ -150,10 +150,10 @@ export default function BirdeyeAlternativePage() {
             <span className="text-accent">Built for India</span>
           </h1>
           <p className="mt-6 text-lg text-muted-foreground leading-relaxed max-w-2xl mx-auto">
-            Birdeye charges Indian SMBs ~₹25,000/month. ReviewPilot does the
+            Birdeye charges Indian SMBs ~$266/month. ReviewPilot does the
             same core job — AI review replies for Google Business Profile and
-            Play Store — for ₹1,500/month. That&apos;s 17× cheaper, with INR billing,
-            UPI payments, and Indian-language AI replies included.
+            Play Store — for $16/month. That&apos;s 17× cheaper, with INR-equivalent
+            billing, UPI payments, and Indian-language AI replies included.
           </p>
           <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
             <Button size="lg" asChild>
@@ -166,7 +166,7 @@ export default function BirdeyeAlternativePage() {
             </Button>
           </div>
           <p className="mt-4 text-sm text-muted-foreground">
-            7-day free trial · Plans from ₹1,500/month · No annual contract
+            7-day free trial · Plans from $16/month · No annual contract
           </p>
         </div>
       </section>
@@ -183,8 +183,9 @@ export default function BirdeyeAlternativePage() {
                 RP
               </div>
               <p className="font-sans text-lg font-semibold tracking-tight mb-1">ReviewPilot</p>
-              <p className="text-3xl font-bold text-accent font-sans">₹1,500</p>
+              <p className="text-3xl font-bold text-accent font-sans">$16</p>
               <p className="text-sm text-muted-foreground mt-1">per month · Starter</p>
+              <p className="text-[10px] text-muted-foreground">Billed in INR equivalent at checkout</p>
               <div className="mt-4 space-y-2 text-sm text-left">
                 <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-accent shrink-0" /> GBP + Play Store</div>
                 <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-accent shrink-0" /> Indian languages</div>
@@ -196,7 +197,7 @@ export default function BirdeyeAlternativePage() {
             <div className="rounded-2xl border border-border/60 bg-card/40 backdrop-blur-sm p-6 text-center opacity-80">
               <Globe className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
               <p className="font-sans text-lg font-semibold tracking-tight mb-1">Birdeye</p>
-              <p className="text-3xl font-bold text-foreground font-sans">~₹25,000</p>
+              <p className="text-3xl font-bold text-foreground font-sans">~$266</p>
               <p className="text-sm text-muted-foreground mt-1">per month · quote-only</p>
               <div className="mt-4 space-y-2 text-sm text-left">
                 <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-accent shrink-0" /> GBP reviews</div>
@@ -209,7 +210,7 @@ export default function BirdeyeAlternativePage() {
             <div className="rounded-2xl border border-border/60 bg-card/40 backdrop-blur-sm p-6 text-center opacity-80">
               <Smartphone className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
               <p className="font-sans text-lg font-semibold tracking-tight mb-1">AppFollow</p>
-              <p className="text-3xl font-bold text-foreground font-sans">~₹8,000</p>
+              <p className="text-3xl font-bold text-foreground font-sans">~$85</p>
               <p className="text-sm text-muted-foreground mt-1">per month · USD-billed plans</p>
               <div className="mt-4 space-y-2 text-sm text-left">
                 <div className="flex items-center gap-2"><XCircle className="h-4 w-4 text-red-400/60 shrink-0" /> No GBP reviews</div>
@@ -277,7 +278,7 @@ export default function BirdeyeAlternativePage() {
                   "You want INR billing, UPI, and India-based support",
                   "You need AI replies in Hindi, Tamil, Telugu, and more",
                   "You want a 7-day free trial with no annual commitment",
-                  "Your budget is ₹1,500–₹8,000/month",
+                  "Your budget is $16–$85/month",
                 ].map((item) => (
                   <li key={item} className="flex items-start gap-2 text-sm">
                     <CheckCircle2 className="h-4 w-4 text-accent mt-0.5 shrink-0" />
@@ -293,7 +294,7 @@ export default function BirdeyeAlternativePage() {
               </p>
               <ul className="space-y-3">
                 {[
-                  "You're a large enterprise with a ₹25,000+/month budget",
+                  "You're a large enterprise with a $266+/month budget",
                   "You need deep CRM, SSO, and enterprise integrations",
                   "You manage 50+ locations across multiple countries",
                   "You don't need Play Store review management",

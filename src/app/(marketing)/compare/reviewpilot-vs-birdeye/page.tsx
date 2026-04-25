@@ -25,7 +25,7 @@ export const metadata: Metadata = {
 const faqs = [
   {
     q: "Is ReviewPilot really 17× cheaper than Birdeye?",
-    a: "ReviewPilot's Starter plan is ₹1,500/month — published on our pricing page, billed in INR, with UPI and card support. Birdeye's India-market quotes typically start around ₹25,000/month for comparable functionality, billed in USD on an annual contract. That's roughly 17× more. Birdeye pricing is quote-only, so the exact figure depends on your sales call with them.",
+    a: "ReviewPilot's Starter plan is $16/month — published on our pricing page, billed in INR equivalent at checkout. Birdeye's India-market quotes typically start around $266/month for comparable functionality, billed on an annual contract. That's roughly 17× more. Birdeye pricing is quote-only, so the exact figure depends on your sales call with them.",
   },
   {
     q: "Does Birdeye support Google Play Store reviews?",
@@ -74,9 +74,9 @@ export default function Page() {
       <CompareLayout
         competitor="Birdeye"
         intro="Birdeye is one of the most established global review management platforms, trusted by large multi-location enterprises. ReviewPilot is a newer India-first alternative built for SMBs and app developers at a fraction of the cost. This comparison uses only publicly available information; because Birdeye's India pricing and feature set are negotiated per account, we recommend confirming specifics with their sales team before you commit."
-        pricingNote="The ReviewPilot price shown is our published Starter plan (₹1,500/mo). Birdeye is quote-only in India, so the ~₹25,000/mo figure reflects typical market quotes and will vary by contract size."
+        pricingNote="The ReviewPilot price shown is our published Starter plan ($16/mo, billed in INR equivalent at checkout). Birdeye is quote-only in India, so the ~$266/mo figure reflects typical market quotes and will vary by contract size."
         rows={[
-          { feature: "Starting price (monthly)", reviewpilot: "₹1,500", competitor: "~₹25,000 (quoted)" },
+          { feature: "Starting price (monthly)", reviewpilot: "$16", competitor: "~$266 (quoted)" },
           { feature: "Google Business Profile replies", reviewpilot: true, competitor: true },
           { feature: "Google Play Store reviews", reviewpilot: true, competitor: "Not a core feature" },
           { feature: "AI-generated replies", reviewpilot: true, competitor: true },
@@ -87,7 +87,7 @@ export default function Page() {
           { feature: "Indian-language AI replies", reviewpilot: true, competitor: "Not advertised" },
         ]}
         whenCompetitor={[
-          "You're a large multi-location enterprise with ₹25,000+/month review-management budget.",
+          "You're a large multi-location enterprise with $266+/month review-management budget.",
           "You need deep CRM, SSO, and enterprise integrations out of the box.",
           "Your stakeholders require a Gartner-recognized vendor with decades of history.",
           "You do not need Play Store review management.",

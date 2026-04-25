@@ -36,7 +36,7 @@ export function FinalCTA() {
               </Button>
             </div>
             <p className="mt-5 font-mono text-[11px] text-muted-foreground">
-              7-day free trial · No credit card · From ₹1,500/mo
+              7-day free trial · No credit card · From $16/mo
             </p>
           </div>
         </div>

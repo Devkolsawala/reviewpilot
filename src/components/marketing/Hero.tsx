@@ -66,7 +66,7 @@ export function Hero() {
               AI-drafted replies for Google Play Store reviews and Google
               Business Profile — built for Indian app makers and local businesses.
               From{" "}
-              <span className="font-mono text-foreground">₹1,500/mo</span>.
+              <span className="font-mono text-foreground">$16/mo</span>.
             </m.p>
 
             {/* CTAs */}
