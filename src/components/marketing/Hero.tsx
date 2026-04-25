@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { YOUTUBE_DEMO_URL } from "@/lib/constants";
 import { AuroraBackground } from "@/components/ui/aurora-background";
 import { GridPattern } from "@/components/ui/grid-pattern";
 import { m, MotionProvider, fadeUp, stagger } from "@/components/motion/primitives";
@@ -80,10 +81,15 @@ export function Hero() {
                 </Link>
               </Button>
               <Button variant="subtle" size="xl" asChild>
-                <Link href="/demo" className="group">
+                <a
+                  href={YOUTUBE_DEMO_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group"
+                >
                   <Play className="mr-1.5 h-4 w-4 fill-current" />
                   Watch 2-min demo
-                </Link>
+                </a>
               </Button>
             </m.div>
 
