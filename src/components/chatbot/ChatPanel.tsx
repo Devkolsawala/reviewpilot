@@ -224,13 +224,13 @@ export function ChatPanel({ open, onClose, onMinimize }: Props) {
                 rows={1}
                 disabled={isStreaming}
                 aria-label="Message ReviewPilot Assistant"
-                className="max-h-[120px] flex-1 resize-none bg-transparent text-sm leading-relaxed outline-none placeholder:text-muted-foreground disabled:opacity-60"
+                className="max-h-[120px] flex-1 resize-none bg-transparent text-base sm:text-sm leading-relaxed outline-none placeholder:text-muted-foreground disabled:opacity-60"
               />
               <button
                 type="submit"
                 disabled={!input.trim() || isStreaming}
                 aria-label="Send message"
-                className="flex h-8 w-8 flex-none items-center justify-center rounded-lg bg-brand-600 text-white transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-40"
+                className="flex h-10 w-10 sm:h-9 sm:w-9 flex-none items-center justify-center rounded-lg bg-brand-600 text-white transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {isStreaming ? (
                   <Loader2 className="h-4 w-4 animate-spin" />

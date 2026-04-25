@@ -20,11 +20,16 @@ export function UpgradeGate({ feature, children, fallback }: {
  return (
  <div className="relative">
  <div className="opacity-30 pointer-events-none blur-[2px]">{children}</div>
- <div className="absolute inset-0 flex items-center justify-center">
- <div className="bg-white dark:bg-gray-900 border rounded-xl p-6 text-center shadow-lg max-w-sm">
- <p className="text-lg font-semibold mb-2">Upgrade to unlock</p>
+ <div className="absolute inset-0 flex items-center justify-center p-4">
+ <div className="bg-white dark:bg-gray-900 border rounded-xl p-5 sm:p-6 text-center shadow-lg w-full max-w-sm">
+ <p className="text-base sm:text-lg font-semibold mb-2">Upgrade to unlock</p>
  <p className="text-sm text-gray-500 mb-4">This feature requires a higher plan.</p>
- <a href="/dashboard/settings/billing" className="inline-block bg-accent text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-accent">Upgrade Plan</a>
+ <a
+ href="/dashboard/settings/billing"
+ className="inline-flex min-h-[48px] w-full sm:w-auto items-center justify-center bg-accent text-white px-6 py-3 rounded-lg text-sm font-semibold hover:bg-accent/90 transition-colors"
+ >
+ Upgrade Plan
+ </a>
  </div>
  </div>
  </div>

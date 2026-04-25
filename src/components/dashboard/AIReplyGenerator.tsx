@@ -402,14 +402,14 @@ export function AIReplyGenerator({
  Choose a tone, then let AI craft a professional reply in seconds.
  </p>
  </div>
- <div className="flex gap-1 flex-wrap justify-center">
+ <div className="flex gap-1.5 flex-wrap justify-center">
  {TONES.map((t) => (
  <button
  key={t.value}
  type="button"
  onClick={() => setTone(t.value)}
  className={cn(
- "rounded-full px-3 py-1.5 text-xs font-medium transition-all duration-150",
+ "rounded-full px-4 py-2 text-sm sm:px-3 sm:py-1.5 sm:text-xs font-medium transition-all duration-150 min-h-[40px] sm:min-h-0",
  tone === t.value
  ? "bg-accent text-white shadow-sm"
  : "bg-secondary text-muted-foreground hover:text-foreground"
@@ -419,7 +419,7 @@ export function AIReplyGenerator({
  </button>
  ))}
  </div>
- <Button onClick={handleGenerate} size="lg" className="px-8">
+ <Button onClick={handleGenerate} size="lg" className="h-12 sm:h-11 w-full sm:w-auto px-8">
  <Bot className="mr-2 h-4 w-4" />
  Generate AI Reply
  </Button>
@@ -449,19 +449,19 @@ export function AIReplyGenerator({
  <p>Posting to the store failed. Edit the reply if needed and try again.</p>
  </div>
  )}
- <div className="flex items-center justify-between">
+ <div className="flex items-center justify-between gap-2 flex-wrap">
  <div className="flex items-center gap-2">
  <Bot className="h-4 w-4 text-accent" />
  <span className="text-sm font-medium">AI Reply</span>
  </div>
- <div className="flex gap-1">
+ <div className="flex gap-1.5 flex-wrap">
  {TONES.map((t) => (
  <button
  key={t.value}
  type="button"
  onClick={() => setTone(t.value)}
  className={cn(
- "rounded-full px-3 py-1 text-xs font-medium transition-all duration-150",
+ "rounded-full px-3.5 py-1.5 sm:px-3 sm:py-1 text-xs font-medium transition-all duration-150 min-h-[36px] sm:min-h-0",
  tone === t.value
  ? "bg-accent text-white shadow-sm"
  : "bg-secondary text-muted-foreground hover:text-foreground"
@@ -478,7 +478,7 @@ export function AIReplyGenerator({
  onChange={(e) => setReply(e.target.value)}
  placeholder="Edit the generated reply before publishing…"
  rows={6}
- className="resize-none transition-colors focus:border-accent/40"
+ className="resize-none transition-colors focus:border-accent/40 text-base sm:text-sm"
  />
 
  <div className="flex items-center justify-between">
@@ -505,7 +505,7 @@ export function AIReplyGenerator({
  <Button
  variant="outline"
  onClick={handleGenerate}
- className="flex-1 min-w-[120px]"
+ className="flex-1 min-w-[120px] h-12 sm:h-10"
  >
  <RefreshCw className="mr-2 h-4 w-4" />
  Regenerate
@@ -514,8 +514,9 @@ export function AIReplyGenerator({
  <Button
  variant="outline"
  onClick={handleSaveDraft}
- className="px-3"
+ className="px-3 h-12 w-12 sm:h-10 sm:w-auto"
  title="Save as draft"
+ aria-label="Save as draft"
  >
  <Save className="h-4 w-4" />
  </Button>
@@ -535,8 +536,9 @@ export function AIReplyGenerator({
  }
  }
  }}
- className="px-3 text-muted-foreground hover:text-destructive"
+ className="px-3 h-12 w-12 sm:h-10 sm:w-auto text-muted-foreground hover:text-destructive"
  title="Discard reply"
+ aria-label="Discard reply"
  >
  <Trash2 className="h-4 w-4" />
  </Button>
@@ -545,7 +547,7 @@ export function AIReplyGenerator({
  <Button
  onClick={handlePost}
  disabled={overLimit}
- className="flex-1 min-w-[140px] bg-indigo-600 hover:bg-indigo-700"
+ className="flex-1 min-w-[140px] h-12 sm:h-10 bg-indigo-600 hover:bg-indigo-700"
  >
  <Send className="mr-2 h-4 w-4" />
  Approve &amp; Publish
@@ -555,7 +557,7 @@ export function AIReplyGenerator({
  <Button
  onClick={handlePost}
  disabled={overLimit}
- className="flex-1 min-w-[120px]"
+ className="flex-1 min-w-[120px] h-12 sm:h-10"
  >
  <Send className="mr-2 h-4 w-4" />
  {isFailed ? "Retry publish" : "Post Reply"}

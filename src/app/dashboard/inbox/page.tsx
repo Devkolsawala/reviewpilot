@@ -320,13 +320,13 @@ export default function InboxPage() {
  </Badge>
  )}
  </div>
- <div className="flex gap-2">
+ <div className="flex gap-2 flex-wrap">
  {pendingCount > 0 && (
  <Button
  size="sm"
  onClick={handleAiReplyAll}
  disabled={aiReplyingAll}
- className="bg-accent hover:bg-accent/90 text-white"
+ className="bg-accent hover:bg-accent/90 text-white h-12 sm:h-9 px-4 sm:px-3"
  >
  {aiReplyingAll ? (
  <>
@@ -343,7 +343,7 @@ export default function InboxPage() {
  )}
  </Button>
  )}
- <Button variant="outline" size="sm" onClick={() => {
+ <Button variant="outline" size="sm" className="h-11 sm:h-9" onClick={() => {
  setLocalReviews((prev) => prev.map((r) => ({ ...r, is_read: true })));
  toast({ title: "All marked as read" });
  }}>
