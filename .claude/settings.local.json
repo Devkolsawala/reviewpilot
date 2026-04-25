@@ -12,7 +12,18 @@
       "Bash(git commit *)",
       "Bash(git push *)",
       "Bash(npx tsc *)",
-      "Bash(NODE_OPTIONS=\"--max-old-space-size=4096\" npm run build)"
+      "Bash(NODE_OPTIONS=\"--max-old-space-size=4096\" npm run build)",
+      "Bash(awk 'NR>=382 && NR<=400 {printf \"%d|%s\\\\n\", NR, $0}' \"C:/Users/devko/OneDrive/Desktop/Website/reviewpilot/src/app/dashboard/inbox/page.tsx\")",
+      "Bash(awk 'NR==387' \"C:/Users/devko/OneDrive/Desktop/Website/reviewpilot/src/app/dashboard/inbox/page.tsx\")",
+      "Bash(python -c ' *)",
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(NODE_OPTIONS=\"--max-old-space-size=6144\" npm run build)",
+      "mcp__Claude_Preview__preview_start",
+      "PowerShell(Get-NetTCPConnection -LocalPort 3000 -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique | ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue })",
+      "Bash(git ls-tree *)",
+      "Bash(xargs grep *)",
+      "Bash(set NODE_OPTIONS=--max-old-space-size=4096)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/dashboard/docs)"
     ]
   }
 }

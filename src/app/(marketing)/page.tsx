@@ -6,7 +6,6 @@ import { FeatureGrid } from "@/components/marketing/FeatureGrid";
 import { HowItWorks } from "@/components/marketing/HowItWorks";
 import { InteractiveDemo } from "@/components/marketing/InteractiveDemo";
 import { ComparisonTable } from "@/components/marketing/ComparisonTable";
-import { TestimonialCarousel } from "@/components/marketing/TestimonialCarousel";
 import { PricingTable } from "@/components/marketing/PricingTable";
 import { FAQ } from "@/components/marketing/FAQ";
 import { FinalCTA } from "@/components/marketing/FinalCTA";
@@ -116,7 +115,6 @@ export default function HomePage() {
       <HowItWorks />
       <InteractiveDemo />
       <ComparisonTable />
-      <TestimonialCarousel />
 
       <section className="relative py-24 sm:py-32 bg-muted/20">
         <div className="mx-auto max-w-2xl text-center px-4 sm:px-6 lg:px-8">
