@@ -1,3 +1,7 @@
+// PLACEHOLDER FAVICON (32x32). To swap in the real logo:
+//   1. Delete this file (src/app/icon.tsx).
+//   2. Drop a 32x32 PNG named `icon.png` next to it (src/app/icon.png).
+// Next.js 14 will auto-pick it up from the App Router file convention.
 import { ImageResponse } from "next/og";
 
 export const runtime = "edge";

@@ -1,3 +1,7 @@
+// PLACEHOLDER APPLE TOUCH ICON (180x180). To swap in the real logo:
+//   1. Delete this file (src/app/apple-icon.tsx).
+//   2. Drop a 180x180 PNG named `apple-icon.png` next to it
+//      (src/app/apple-icon.png). Next.js 14 picks it up automatically.
 import { ImageResponse } from "next/og";
 
 export const runtime = "edge";

@@ -1,3 +1,18 @@
+// ─────────────────────────────────────────────────────────────────────────
+// FAVICON / APP ICON — files to replace when the new logo lands.
+// Next.js 14 (App Router) picks these up automatically by file name.
+// To swap in a new logo, replace these files (no code changes needed):
+//
+//   src/app/favicon.ico              ICO bundle (16/32/48 — 32x32 minimum)
+//   src/app/icon.tsx                 DELETE, then add src/app/icon.png (32x32)
+//   src/app/apple-icon.tsx           DELETE, then add src/app/apple-icon.png (180x180)
+//   public/favicon.svg               Vector source (optional but recommended)
+//   public/site.webmanifest          Update theme_color / background_color
+//   public/og-image.svg              Open Graph card (1200x630)
+//
+// `metadata.icons` below pins the canonical entries so social and search
+// previews do not depend on Next.js convention discovery alone.
+// ─────────────────────────────────────────────────────────────────────────
 import type { Metadata } from "next";
 import { DM_Sans, Inter, Instrument_Serif } from "next/font/google";
 import { GeistSans } from "geist/font/sans";
@@ -48,6 +63,15 @@ export const metadata: Metadata = {
   creator: "ReviewPilot",
   publisher: "ReviewPilot",
   manifest: "/site.webmanifest",
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/icon", type: "image/png", sizes: "32x32" },
+      { url: "/favicon.svg", type: "image/svg+xml" },
+    ],
+    apple: [{ url: "/apple-icon", sizes: "180x180", type: "image/png" }],
+    shortcut: ["/favicon.ico"],
+  },
   openGraph: {
     type: "website",
     locale: "en_IN",
