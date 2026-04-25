@@ -96,7 +96,7 @@ export default function RootLayout({
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var p=window.location.pathname;var isApp=p.indexOf('/dashboard')===0||p.indexOf('/login')===0||p.indexOf('/signup')===0||p.indexOf('/forgot-password')===0||p.indexOf('/reset-password')===0||p.indexOf('/verified')===0||p.indexOf('/review-page')===0;var dark;if(isApp){var t=localStorage.getItem('theme');dark=t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches);}else{dark=true;}if(dark){document.documentElement.classList.add('dark');}else{document.documentElement.classList.remove('dark');}}catch(e){}})()`,
+            __html: `(function(){try{var p=window.location.pathname;var isApp=p.indexOf('/dashboard')===0||p.indexOf('/login')===0||p.indexOf('/signup')===0||p.indexOf('/forgot-password')===0||p.indexOf('/reset-password')===0||p.indexOf('/verified')===0||p.indexOf('/review-page')===0;var dark;if(isApp){var t=localStorage.getItem('theme');dark=t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches);}else{dark=false;}if(dark){document.documentElement.classList.add('dark');}else{document.documentElement.classList.remove('dark');}}catch(e){}})()`,
           }}
         />
         <Script

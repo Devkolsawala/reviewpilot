@@ -55,6 +55,18 @@ export default function DashboardLayout({
 
  const isBillingPage = pathname?.includes("/settings/billing");
 
+ // Re-apply the user's chosen theme on SPA-nav from marketing → dashboard
+ // (marketing strips the .dark class to force light).
+ useEffect(() => {
+ try {
+ const stored = localStorage.getItem("theme");
+ const dark =
+ stored === "dark" ||
+ (!stored && window.matchMedia("(prefers-color-scheme: dark)").matches);
+ document.documentElement.classList.toggle("dark", dark);
+ } catch {}
+ }, []);
+
  useEffect(() => {
  if (!isLoading && trialExpired && !isBillingPage) {
  router.replace("/dashboard/settings/billing");
