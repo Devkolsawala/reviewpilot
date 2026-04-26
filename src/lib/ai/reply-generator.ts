@@ -64,8 +64,8 @@ export async function generateReply(params: GenerateReplyParams): Promise<string
             { role: "user", content: prompt.user },
           ],
           temperature: 0.7,
-          max_tokens: 500,
-          top_p: 0.95,
+          max_tokens: 300,
+          top_p: 0.9,
           // Note: grok-4-1-fast-reasoning does NOT support
           // frequency_penalty or presence_penalty — do not add them here.
         }),

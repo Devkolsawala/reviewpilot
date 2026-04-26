@@ -21,131 +21,71 @@ export function buildReplyPrompt(params: ReplyPromptParams): {
       ? "Play Store"
       : source === "whatsapp"
         ? "WhatsApp"
-        : "Google Business Profile";
-  const entityType =
-    source === "play_store"
-      ? "app"
-      : source === "whatsapp"
-        ? "business"
-        : "business";
-
-  const businessName = appContext?.description
-    ? extractBusinessName(appContext.description)
-    : source === "play_store"
-      ? "our app"
-      : "our business";
+        : "Google Business";
+  const surface =
+    source === "whatsapp" ? "WhatsApp message" : `${platformName} review`;
 
   const toneInstructions: Record<string, string> = {
-    friendly:
-      "Warm and approachable. Write like a friendly human who genuinely cares. Use contractions (we're, you'll, it's).",
-    professional:
-      "Polished and respectful. Well-structured sentences. Avoid slang but still sound human, not robotic.",
-    casual:
-      'Relaxed and conversational. Light contractions are great. Can use phrases like "Hey!" or "Totally get it."',
-    apologetic:
-      "Empathetic and accountable. Lead with understanding. Acknowledge the issue clearly without being defensive.",
+    friendly: "Warm, human, uses contractions.",
+    professional: "Polished, respectful, well-structured. Not robotic.",
+    casual: "Relaxed, conversational, light contractions.",
+    apologetic: "Empathetic, accountable, leads with understanding.",
     custom: appContext?.custom_tone_example
-      ? `Match this example tone: "${appContext.custom_tone_example}"`
+      ? `Match this example: "${appContext.custom_tone_example}"`
       : "Warm and human.",
   };
-
   const toneGuide = toneInstructions[tone] || toneInstructions.friendly;
-  const contextSection = buildContextSection(appContext, entityType);
 
-  const roleLine =
-    source === "whatsapp"
-      ? `You are a customer support assistant replying to an incoming WhatsApp message on behalf of ${businessName}.`
-      : `You are responding to a customer review on the ${platformName} on behalf of ${businessName}.`;
+  const hasAdditionalInstructions = !!appContext?.additional_instructions?.trim();
 
-  const ratingStrategySection =
-    source === "whatsapp"
-      ? `RESPONSE STRATEGY:
-- This is a free-form chat message — there is no star rating. Infer sentiment and intent from the text.
-- If it's a question, answer directly and concretely.
-- If it's a complaint, acknowledge it, apologize, and offer a concrete next step (human handoff, support URL).
-- If it's positive feedback, thank them warmly and keep it brief.
-- Keep replies conversational — this is a chat, not a formal review response.`
-      : `RESPONSE STRATEGY BY RATING:
-- 5 stars: Thank them for the SPECIFIC thing they praised. Be warm. Keep it brief (2-3 sentences max).
-- 4 stars: Thank them, then briefly address what might have kept it from 5 stars if mentioned.
-- 3 stars: Acknowledge both the good and the concern. Ask what you could do better. Be genuine.
-- 2 stars: Empathize first. Address the specific complaint. Offer a concrete next step (support URL, reach out, etc).
-- 1 star: Lead with a sincere apology for their experience. Acknowledge the specific issue. Offer direct help — do not be defensive.`;
+  let system = `Reply to a ${surface}. Max ${charLimit} chars. Tone: ${tone} — ${toneGuide}`;
 
-  const system = `${roleLine}
+  if (hasAdditionalInstructions) {
+    system += `\n\nIMPORTANT USER INSTRUCTION (overrides everything else): ${appContext!.additional_instructions}`;
+  }
 
-${contextSection}
+  if (appContext?.description) {
+    system += `\n\nAbout: ${appContext.description}`;
+  }
+  if (appContext?.key_features?.length) {
+    system += `\nFeatures: ${appContext.key_features.join(", ")}`;
+  }
+  if (appContext?.known_issues?.length) {
+    system += `\nKnown issues (acknowledge if mentioned): ${appContext.known_issues.join("; ")}`;
+  }
+  if (appContext?.common_questions?.length) {
+    system += `\nFAQ (answer if asked): ${appContext.common_questions.join("; ")}`;
+  }
+  if (appContext?.support_url) {
+    system += `\nSupport URL (include when relevant): ${appContext.support_url}`;
+  }
 
-TONE: ${tone}
-${toneGuide}
+  // Language rule: default is English-only. User's additional_instructions can override.
+  const languageRule = hasAdditionalInstructions
+    ? `Follow the IMPORTANT USER INSTRUCTION above for language choice. If it does not specify a language, write the reply entirely in English regardless of the language of the review.`
+    : `Write the reply entirely in English, regardless of the language or script the reviewer used (Hindi, Hinglish, Gujarati, Tamil, Spanish, etc). Understand their meaning, but reply only in English.`;
 
-HARD RULES — you MUST follow all of these:
-1. Output ONLY the reply text. No preamble, no quotes around the reply, no meta-commentary, no markdown formatting.
-2. Keep reply UNDER ${charLimit} characters. This is a hard platform limit — going over will fail.
-3. Address the reviewer's SPECIFIC concerns. Never write generic "thank you for your feedback" replies.
-4. Write like a real human who cares, not a corporate bot. No phrases like "We value your feedback" or "Thank you for bringing this to our attention" — these are robotic.
-5. Do not include brackets, placeholders, or template variables like [Name] or {business}. Write the final reply ready to publish.
-6. LANGUAGE MATCHING — CRITICAL: Detect the language the reviewer used and reply in the EXACT SAME language, including the same script and the same code-mix. Examples:
-   - If the review is in Hindi (Devanagari script) → reply in Hindi (Devanagari script).
-   - If the review is in Hinglish (Hindi words written in Roman/English script, or a mix of Hindi + English words) → reply in Hinglish using the same mix and style.
-   - If the review is in Spanish → reply in Spanish.
-   - If the review is in English → reply in English.
-   - If the review is in Tamil / Telugu / Marathi / Bengali / Gujarati / any other language → reply in that same language and script.
-   - If the review mixes two languages (e.g. Spanglish, Tanglish, Tamil + English), match that same code-mix.
-   Do NOT translate the review into English and reply in English — match the reviewer's own language and style exactly. This makes the reply feel personal, not automated.
+  system += `\n\nRULES:
+1. Output ONLY the reply text. No preamble, no quotes, no markdown, no [placeholders].
+2. Stay UNDER ${charLimit} characters.
+3. ${languageRule}
+4. Do NOT quote, repeat, or echo non-English / slang / colloquial words from the review (e.g. "mast", "bahut accha", "mast che", "bohot", "kya baat", etc). Paraphrase the sentiment in clean English instead. Quoting these terms reads as unprofessional.
+5. Address what the reviewer actually said — never generic "thanks for your feedback".
+6. Sound like a real person, not a corporate bot.`;
 
-${ratingStrategySection}
-
-${
-  appContext?.known_issues?.length
-    ? `KNOWN ISSUES — if the review mentions one of these, acknowledge it and mention we're working on a fix:\n${appContext.known_issues.map((i) => `- ${i}`).join("\n")}\n`
-    : ""
-}${
-    appContext?.common_questions?.length
-      ? `COMMON QUESTIONS — if the review asks about any of these, answer directly:\n${appContext.common_questions.map((q) => `- ${q}`).join("\n")}\n`
-      : ""
-  }${appContext?.support_url ? `SUPPORT URL (include when relevant): ${appContext.support_url}\n` : ""}${appContext?.additional_instructions ? `ADDITIONAL INSTRUCTIONS: ${appContext.additional_instructions}\n` : ""}
-Remember: Output ONLY the reply text itself. No "Here's my reply:" prefix. No quotation marks. Just the clean reply ready to publish.`;
+  if (source === "whatsapp") {
+    system += `
+7. This is a chat message, not a review. Infer intent: question→answer, complaint→apologize+next step, positive→brief thanks.`;
+  } else {
+    system += `
+7. By rating: 5★ thank for specifics (brief). 4★ thank + address gap. 3★ acknowledge both sides, ask what to improve. 2★ empathize + concrete next step. 1★ sincere apology + direct help, never defensive.`;
+  }
 
   const rating = review.rating ?? 0;
   const user =
     source === "whatsapp"
-      ? `Incoming WhatsApp message from ${review.author_name}:
-"${review.review_text}"
-
-Write the reply now:`
-      : `Review from ${review.author_name}:
-${"★".repeat(rating)}${"☆".repeat(5 - rating)} (${rating} of 5 stars)
-"${review.review_text}"
-
-Write the reply now:`;
+      ? `WhatsApp from ${review.author_name}: "${review.review_text}"\n\nReply:`
+      : `${rating}★ review from ${review.author_name}: "${review.review_text}"\n\nReply:`;
 
   return { system, user };
-}
-
-function buildContextSection(
-  appContext: AppContext | undefined,
-  entityType: string
-): string {
-  const parts: string[] = [];
-
-  if (appContext?.description) {
-    parts.push(
-      `ABOUT THIS ${entityType.toUpperCase()}:\n${appContext.description}`
-    );
-  }
-
-  if (appContext?.key_features?.length) {
-    parts.push(
-      `KEY FEATURES:\n${appContext.key_features.map((f) => `- ${f}`).join("\n")}`
-    );
-  }
-
-  return parts.join("\n\n");
-}
-
-function extractBusinessName(description: string): string {
-  const firstSentence = description.split(/[.!?]/)[0];
-  const words = firstSentence.split(" ").slice(0, 4).join(" ");
-  return words || "our business";
 }

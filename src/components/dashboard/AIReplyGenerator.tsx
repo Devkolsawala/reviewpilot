@@ -122,7 +122,7 @@ export function AIReplyGenerator({
  inFlightRef.current = true;
  setState("generating");
  const controller = new AbortController();
- const timeout = setTimeout(() => controller.abort(), 15000);
+ const timeout = setTimeout(() => controller.abort(), 30000);
 
  try {
  const res = await fetch("/api/ai/generate-reply", {
@@ -160,16 +160,26 @@ export function AIReplyGenerator({
  setReply(data.reply || fallbackReply(review));
  // Notify sidebar + billing page to refresh usage counters
  window.dispatchEvent(new CustomEvent("reviewpilot:usage-updated"));
+ setState("review");
  } catch (err: unknown) {
  clearTimeout(timeout);
  const e = err as { name?: string };
  if (e.name === "AbortError") {
- toast({ title: "AI took too long", description: "Using a quick reply instead. You can edit it below." });
+ toast({
+ title: "AI is taking longer than usual",
+ description: "Click Regenerate to try again.",
+ variant: "destructive",
+ });
+ inFlightRef.current = false;
+ setState(reply ? "review" : "idle");
+ return;
  }
  setReply(fallbackReply(review));
- } finally {
  inFlightRef.current = false;
  setState("review");
+ return;
+ } finally {
+ inFlightRef.current = false;
  }
  }
 
