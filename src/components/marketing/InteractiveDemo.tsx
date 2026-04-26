@@ -51,7 +51,7 @@ export function InteractiveDemo() {
 
   return (
     <MotionProvider>
-      <section className="relative py-24 sm:py-32">
+      <section className="relative overflow-hidden py-24 sm:py-32">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-2xl text-center">
             <p className="mx-auto w-fit text-xs uppercase tracking-[0.2em] text-muted-foreground">

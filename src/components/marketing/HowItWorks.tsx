@@ -33,7 +33,7 @@ const STEPS = [
 export function HowItWorks() {
   return (
     <MotionProvider>
-      <section className="relative py-24 sm:py-32 bg-muted/20">
+      <section className="relative overflow-hidden py-24 sm:py-32 bg-muted/20">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-2xl text-center">
             <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
