@@ -1,13 +1,13 @@
 // ─────────────────────────────────────────────────────────────────────────
-// FAVICON / APP ICON — Variant C "White on Lilac" (#6B4DFF).
-// Static assets live in src/app/ (Next.js 14 file convention) and public/.
-//   src/app/favicon.ico         multi-res .ico (16/32/48)
-//   src/app/icon.png            32x32 browser tab
-//   src/app/apple-icon.png      180x180 iOS home screen
-//   public/favicon.svg          vector master
-//   public/favicon-{16,32,64,512}.png  PNG variants for legacy <link>
-//   public/apple-touch-icon.png  iOS fallback for crawlers
-// To swap, replace the files in place — no code changes needed.
+// FAVICON / APP ICON — gradient "RP" mark matching the Navbar/Footer logo
+// (linear-gradient indigo #6366f1 → violet #8b5cf6 → fuchsia #d946ef).
+//
+//   public/favicon.svg          vector source (preferred by modern browsers)
+//   src/app/icon.tsx            32x32 browser tab — runtime ImageResponse
+//   src/app/apple-icon.tsx      180x180 iOS home screen — runtime ImageResponse
+//
+// Both .tsx generators render the same gradient + bold white "RP" so the
+// favicon stays in lockstep with the in-page logo without manual rasters.
 // ─────────────────────────────────────────────────────────────────────────
 import type { Metadata, Viewport } from "next";
 import { DM_Sans, Inter, Instrument_Serif } from "next/font/google";
@@ -61,13 +61,11 @@ export const metadata: Metadata = {
   manifest: "/site.webmanifest",
   icons: {
     icon: [
-      { url: "/favicon.ico", sizes: "any" },
       { url: "/favicon.svg", type: "image/svg+xml" },
-      { url: "/favicon-16.png", type: "image/png", sizes: "16x16" },
-      { url: "/favicon-32.png", type: "image/png", sizes: "32x32" },
+      { url: "/icon", type: "image/png", sizes: "32x32" },
     ],
-    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
-    shortcut: ["/favicon.ico"],
+    apple: [{ url: "/apple-icon", sizes: "180x180", type: "image/png" }],
+    shortcut: ["/favicon.svg"],
   },
   openGraph: {
     type: "website",
@@ -104,7 +102,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#6B4DFF",
+  themeColor: "#8b5cf6",
 };
 
 export default function RootLayout({
