@@ -308,9 +308,9 @@ export default function InboxPage() {
  {/* Getting started guide — only shown when viewing sample data */}
  {isMock && <div className="shrink-0"><GettingStartedGuide /></div>}
 
- <div className="flex items-center justify-between mb-4 shrink-0">
- <div className="flex items-center gap-3">
- <h1 className="font-sans text- font-semibold tracking-tight">Review Inbox</h1>
+ <div className="flex flex-col gap-3 mb-4 shrink-0 md:flex-row md:items-center md:justify-between">
+ <div className="flex items-center flex-wrap gap-2 md:gap-3 min-w-0">
+ <h1 className="font-sans text-2xl md:text-3xl font-semibold tracking-tight">Review Inbox</h1>
  <Badge variant="secondary" className="font-semibold">
  {totalCount} reviews
  </Badge>
@@ -320,13 +320,13 @@ export default function InboxPage() {
  </Badge>
  )}
  </div>
- <div className="flex gap-2 flex-wrap">
+ <div className="flex w-full gap-2 md:w-auto">
  {pendingCount > 0 && (
  <Button
  size="sm"
  onClick={handleAiReplyAll}
  disabled={aiReplyingAll}
- className="bg-accent hover:bg-accent/90 text-white h-12 sm:h-9 px-4 sm:px-3"
+ className="bg-accent hover:bg-accent/90 text-white h-12 md:h-9 px-4 md:px-3 flex-1 md:flex-initial"
  >
  {aiReplyingAll ? (
  <>
@@ -343,7 +343,7 @@ export default function InboxPage() {
  )}
  </Button>
  )}
- <Button variant="outline" size="sm" className="h-11 sm:h-9" onClick={() => {
+ <Button variant="outline" size="sm" className="h-12 md:h-9 flex-1 md:flex-initial" onClick={() => {
  setLocalReviews((prev) => prev.map((r) => ({ ...r, is_read: true })));
  toast({ title: "All marked as read" });
  }}>
