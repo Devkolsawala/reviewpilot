@@ -17,7 +17,7 @@ export function FinalCTA() {
           />
 
           <div className="relative">
-            <h2 className="mx-auto max-w-2xl font-sans text-3xl font-semibold tracking-tight sm:text-4xl">
+            <h2 className="mx-auto max-w-2xl font-sans text-2xl font-semibold tracking-tight text-balance sm:text-3xl md:text-4xl">
               Stop losing stars you could have kept.
             </h2>
             <p className="mx-auto mt-4 max-w-xl text-muted-foreground">

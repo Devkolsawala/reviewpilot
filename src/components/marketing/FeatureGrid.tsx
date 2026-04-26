@@ -32,7 +32,7 @@ export function FeatureGrid() {
             <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
               Every tool you need
             </p>
-            <h2 className="mt-3 font-sans text-3xl font-semibold tracking-tight sm:text-4xl">
+            <h2 className="mt-3 font-sans text-2xl font-semibold tracking-tight text-balance sm:text-3xl md:text-4xl">
               The complete review toolkit,
               <br />
               <span className="text-gradient-brand">in one unified inbox.</span>
