@@ -220,8 +220,8 @@ export default function ConnectionsPage() {
  return (
  <Card key={conn.id} className="transition-shadow hover:shadow-sm">
  <CardContent className="p-4">
- <div className="flex items-start justify-between gap-3">
- <div className="flex items-center gap-3">
+ <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+ <div className="flex items-center gap-3 min-w-0">
  <div
  className="rounded-lg p-2.5 bg-accent/10 dark:bg-accent/10"
  style={
@@ -285,7 +285,7 @@ export default function ConnectionsPage() {
  </div>
  </div>
 
- <div className="flex items-center gap-2 shrink-0">
+ <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
  {conn.type === "google_business" &&
  (conn.credentials as { status?: string } | null)?.status === "pending_verification" ? (
  <Badge
@@ -319,7 +319,7 @@ export default function ConnectionsPage() {
  <Button
  variant="outline"
  size="sm"
- className="h-8 gap-1.5 opacity-60 cursor-not-allowed"
+ className="h-11 sm:h-8 gap-1.5 opacity-60 cursor-not-allowed"
  disabled
  >
  <RefreshCw className="h-3.5 w-3.5" />
@@ -340,7 +340,7 @@ export default function ConnectionsPage() {
  <Button
  variant="outline"
  size="sm"
- className="h-8 gap-1.5 opacity-60 cursor-not-allowed"
+ className="h-11 sm:h-8 gap-1.5 opacity-60 cursor-not-allowed"
  disabled
  >
  <RefreshCw className="h-3.5 w-3.5" />
@@ -357,7 +357,7 @@ export default function ConnectionsPage() {
  <Button
  variant="outline"
  size="sm"
- className="h-8 gap-1.5"
+ className="h-11 sm:h-8 gap-1.5"
  onClick={() => doSync(conn.id, false)}
  disabled={isSyncing}
  >
@@ -368,7 +368,7 @@ export default function ConnectionsPage() {
  <Button
  variant="ghost"
  size="icon"
- className="h-8 w-8 hover:text-destructive"
+ className="h-11 w-11 sm:h-8 sm:w-8 hover:text-destructive"
  onClick={() => setRemoveTarget(conn)}
  aria-label="Remove connection"
  >
