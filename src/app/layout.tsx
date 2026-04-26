@@ -1,13 +1,16 @@
 // ─────────────────────────────────────────────────────────────────────────
-// FAVICON / APP ICON — gradient "RP" mark matching the Navbar/Footer logo
-// (linear-gradient indigo #6366f1 → violet #8b5cf6 → fuchsia #d946ef).
+// FAVICON / APP ICON — Variant C "White on Lilac" static files
 //
-//   public/favicon.svg          vector source (preferred by modern browsers)
-//   src/app/icon.tsx            32x32 browser tab — runtime ImageResponse
-//   src/app/apple-icon.tsx      180x180 iOS home screen — runtime ImageResponse
+//   public/favicon.svg          Master vector (primary, SVG)
+//   public/favicon.ico          Multi-resolution .ico (16/32/48)
+//   public/favicon-16.png       16×16 PNG
+//   public/favicon-32.png       32×32 PNG
+//   public/apple-touch-icon.png 180×180 iOS home screen
+//   public/favicon-512.png      PWA / Android
 //
-// Both .tsx generators render the same gradient + bold white "RP" so the
-// favicon stays in lockstep with the in-page logo without manual rasters.
+//   src/app/favicon.ico         Next.js file convention (browser tab fallback)
+//   src/app/icon.png            32×32 – Next.js file convention
+//   src/app/apple-icon.png      180×180 – Next.js file convention
 // ─────────────────────────────────────────────────────────────────────────
 import type { Metadata, Viewport } from "next";
 import { DM_Sans, Inter, Instrument_Serif } from "next/font/google";
@@ -62,10 +65,11 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       { url: "/favicon.svg", type: "image/svg+xml" },
-      { url: "/icon", type: "image/png", sizes: "32x32" },
+      { url: "/favicon-32.png", type: "image/png", sizes: "32x32" },
+      { url: "/favicon-16.png", type: "image/png", sizes: "16x16" },
     ],
-    apple: [{ url: "/apple-icon", sizes: "180x180", type: "image/png" }],
-    shortcut: ["/favicon.svg"],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+    shortcut: ["/favicon.ico"],
   },
   openGraph: {
     type: "website",
@@ -102,7 +106,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#8b5cf6",
+  themeColor: "#6B4DFF",
 };
 
 export default function RootLayout({

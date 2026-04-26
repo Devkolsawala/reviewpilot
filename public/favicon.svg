@@ -1,11 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <defs>
-    <linearGradient id="rp" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#6366f1"/>
-      <stop offset="50%" stop-color="#8b5cf6"/>
-      <stop offset="100%" stop-color="#d946ef"/>
-    </linearGradient>
-  </defs>
-  <rect width="32" height="32" rx="7" fill="url(#rp)"/>
-  <text x="16" y="22" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="14" font-weight="800" fill="#ffffff" text-anchor="middle" letter-spacing="-0.5">RP</text>
+  <rect width="32" height="32" rx="7" fill="#E9E2FF"></rect>
+  <circle cx="16" cy="16" r="13" fill="#6B4DFF"></circle>
+  <path d="M16 3 A13 13 0 0 1 16 29 A6.5 6.5 0 0 1 16 16 A6.5 6.5 0 0 0 16 3 Z" fill="#FFFFFF"></path>
+  <path d="M16 6.5 L16.9 8.7 L19.3 8.9 L17.5 10.4 L18 12.7 L16 11.5 L14 12.7 L14.5 10.4 L12.7 8.9 L15.1 8.7 Z" fill="#F2B441"></path>
+  <path d="M13 19 Q13 17 15 17 L19 17 Q21 17 21 19 L21 22 Q21 24 19 24 L16 24 L14 26 L14.5 24 Q13 24 13 22 Z" fill="#6B4DFF"></path>
+  <circle cx="17" cy="20.5" r=".9" fill="#FFFFFF"></circle>
 </svg>
