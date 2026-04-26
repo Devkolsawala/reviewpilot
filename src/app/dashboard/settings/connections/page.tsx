@@ -145,15 +145,15 @@ export default function ConnectionsPage() {
 
  return (
  <div className="space-y-6 max-w-2xl">
- <div className="flex items-center justify-between">
- <div>
- <h1 className="font-sans text- font-semibold tracking-tight">Connections</h1>
+ <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+ <div className="min-w-0">
+ <h1 className="font-sans text-2xl sm:text-3xl font-semibold tracking-tight">Connections</h1>
  <p className="text-sm text-muted-foreground mt-1">
  Connect your Google Business Profile or Play Store to start managing reviews.
  </p>
  </div>
  {isOwner && !showWizard && (
- <Button onClick={() => setShowWizard(true)}>
+ <Button className="w-full sm:w-auto h-11 sm:h-10" onClick={() => setShowWizard(true)}>
  <Plus className="mr-2 h-4 w-4" />
  Add Connection
  </Button>
