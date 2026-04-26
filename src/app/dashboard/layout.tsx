@@ -73,6 +73,12 @@ export default function DashboardLayout({
  }
  }, [trialExpired, isLoading, isBillingPage, router]);
 
+ // Auto-close mobile sidebar when the route changes (sheet has no awareness
+ // of <Link> clicks otherwise — keeps user stuck on open sheet after nav).
+ useEffect(() => {
+ setMobileOpen(false);
+ }, [pathname]);
+
  if (!isLoading && trialExpired && !isBillingPage) {
  return <TrialExpiredLockout />;
  }
