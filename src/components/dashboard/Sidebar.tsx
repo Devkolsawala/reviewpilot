@@ -144,9 +144,12 @@ export function Sidebar({ collapsed, mobile }: { collapsed?: boolean; mobile?: b
  >
  {/* Logo */}
  <div className="flex h-16 items-center gap-2.5 border-b border-border/60 px-4">
- <div className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-[linear-gradient(135deg,#6366f1_0%,#8b5cf6_50%,#d946ef_100%)] text-white font-sans font-semibold text-sm shrink-0 shadow-[0_0_16px_-4px_hsl(var(--ring)/0.6)]">
- RP
- </div>
+ <img
+  src="/favicon.svg"
+  alt="ReviewPilot logo"
+  className="h-9 w-9 shrink-0"
+  aria-hidden="true"
+ />
  {!collapsed && (
  <span className="font-sans text-[15px] font-semibold tracking-tight">
  ReviewPilot

@@ -89,9 +89,12 @@ export function Navbar() {
           )}
         >
           <Link href="/" className="flex items-center gap-2 group">
-            <div className="relative flex h-8 w-8 items-center justify-center rounded-lg bg-[linear-gradient(135deg,#6366f1_0%,#8b5cf6_50%,#d946ef_100%)] text-white text-[13px] font-bold shadow-[0_0_20px_-4px_rgba(139,92,246,0.6)]">
-              RP
-            </div>
+            <img
+              src="/favicon.svg"
+              alt="ReviewPilot logo"
+              className="h-8 w-8 shrink-0"
+              aria-hidden="true"
+            />
             <span className="font-sans text-[15px] font-semibold tracking-tight text-foreground">
               ReviewPilot
             </span>

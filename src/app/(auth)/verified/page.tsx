@@ -5,9 +5,7 @@ export default function EmailVerifiedPage() {
   return (
     <div>
       <div className="lg:hidden flex items-center gap-2 mb-10">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[linear-gradient(135deg,#6366f1,#8b5cf6,#d946ef)] text-xs font-bold text-white shadow-[0_0_20px_-4px_rgba(139,92,246,0.5)]">
-          RP
-        </div>
+        <img src="/favicon.svg" alt="ReviewPilot logo" className="h-8 w-8 shrink-0" aria-hidden="true" />
         <span className="font-sans text-[15px] font-semibold tracking-tight">
           ReviewPilot
         </span>
