@@ -1,19 +1,15 @@
 // ─────────────────────────────────────────────────────────────────────────
-// FAVICON / APP ICON — files to replace when the new logo lands.
-// Next.js 14 (App Router) picks these up automatically by file name.
-// To swap in a new logo, replace these files (no code changes needed):
-//
-//   src/app/favicon.ico              ICO bundle (16/32/48 — 32x32 minimum)
-//   src/app/icon.tsx                 DELETE, then add src/app/icon.png (32x32)
-//   src/app/apple-icon.tsx           DELETE, then add src/app/apple-icon.png (180x180)
-//   public/favicon.svg               Vector source (optional but recommended)
-//   public/site.webmanifest          Update theme_color / background_color
-//   public/og-image.svg              Open Graph card (1200x630)
-//
-// `metadata.icons` below pins the canonical entries so social and search
-// previews do not depend on Next.js convention discovery alone.
+// FAVICON / APP ICON — Variant C "White on Lilac" (#6B4DFF).
+// Static assets live in src/app/ (Next.js 14 file convention) and public/.
+//   src/app/favicon.ico         multi-res .ico (16/32/48)
+//   src/app/icon.png            32x32 browser tab
+//   src/app/apple-icon.png      180x180 iOS home screen
+//   public/favicon.svg          vector master
+//   public/favicon-{16,32,64,512}.png  PNG variants for legacy <link>
+//   public/apple-touch-icon.png  iOS fallback for crawlers
+// To swap, replace the files in place — no code changes needed.
 // ─────────────────────────────────────────────────────────────────────────
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { DM_Sans, Inter, Instrument_Serif } from "next/font/google";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
@@ -66,10 +62,11 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "any" },
-      { url: "/icon", type: "image/png", sizes: "32x32" },
       { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: "/favicon-16.png", type: "image/png", sizes: "16x16" },
+      { url: "/favicon-32.png", type: "image/png", sizes: "32x32" },
     ],
-    apple: [{ url: "/apple-icon", sizes: "180x180", type: "image/png" }],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
     shortcut: ["/favicon.ico"],
   },
   openGraph: {
@@ -104,6 +101,10 @@ export const metadata: Metadata = {
       follow: true,
     },
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#6B4DFF",
 };
 
 export default function RootLayout({
