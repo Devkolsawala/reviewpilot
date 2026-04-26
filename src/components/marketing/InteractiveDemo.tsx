@@ -54,7 +54,7 @@ export function InteractiveDemo() {
       <section className="relative py-24 sm:py-32">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-2xl text-center">
-            <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+            <p className="mx-auto w-fit text-xs uppercase tracking-[0.2em] text-muted-foreground">
               Take the tour
             </p>
             <h2 className="mt-3 font-sans text-3xl font-semibold tracking-tight sm:text-4xl">
