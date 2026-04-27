@@ -30,22 +30,32 @@ export function buildReplyPrompt(params: ReplyPromptParams): {
     professional: "Polished, respectful, well-structured. Not robotic.",
     casual: "Relaxed, conversational, light contractions.",
     apologetic: "Empathetic, accountable, leads with understanding.",
-    custom: appContext?.custom_tone_example
-      ? `Match this example: "${appContext.custom_tone_example}"`
+    custom: appContext?.custom_tone_example?.trim()
+      ? `Match this example: "${appContext.custom_tone_example.trim()}"`
       : "Warm and human.",
   };
   const toneGuide = toneInstructions[tone] || toneInstructions.friendly;
 
-  const hasAdditionalInstructions = !!appContext?.additional_instructions?.trim();
+  const extra = appContext?.additional_instructions?.trim();
 
-  let system = `Reply to a ${surface}. Max ${charLimit} chars. Tone: ${tone} — ${toneGuide}`;
+  // Override semantics:
+  // - Rules 1, 2, 4, 5, 6 are HARD CONSTRAINTS — never overridable.
+  // - Rule 3 (language) is the ONLY overridable rule. Default = English.
+  // - When extra instructions exist they appear BEFORE rules so the model
+  //   weights them heavily, AND rule 3 explicitly defers to them.
+  let system = "";
 
-  if (hasAdditionalInstructions) {
-    system += `\n\nIMPORTANT USER INSTRUCTION (overrides everything else): ${appContext!.additional_instructions}`;
+  if (extra) {
+    system += `USER ADDITIONAL INSTRUCTIONS — these are top-priority and you MUST follow them (they may override ONLY rule 3 about language; they CANNOT override rules 1, 2, 4, 5, or 6 below):
+${extra}
+
+`;
   }
 
-  if (appContext?.description) {
-    system += `\n\nAbout: ${appContext.description}`;
+  system += `You are writing a reply to a ${surface}. Max ${charLimit} chars. Tone: ${tone} — ${toneGuide}`;
+
+  if (appContext?.description?.trim()) {
+    system += `\n\nAbout: ${appContext.description.trim()}`;
   }
   if (appContext?.key_features?.length) {
     system += `\nFeatures: ${appContext.key_features.join(", ")}`;
@@ -56,29 +66,37 @@ export function buildReplyPrompt(params: ReplyPromptParams): {
   if (appContext?.common_questions?.length) {
     system += `\nFAQ (answer if asked): ${appContext.common_questions.join("; ")}`;
   }
-  if (appContext?.support_url) {
-    system += `\nSupport URL (include when relevant): ${appContext.support_url}`;
+  if (appContext?.support_url?.trim()) {
+    system += `\nSupport URL (include when relevant): ${appContext.support_url.trim()}`;
   }
 
-  // Language rule: default is English-only. User's additional_instructions can override.
-  const languageRule = hasAdditionalInstructions
-    ? `Follow the IMPORTANT USER INSTRUCTION above for language choice. If it does not specify a language, write the reply entirely in English regardless of the language of the review.`
-    : `Write the reply entirely in English, regardless of the language or script the reviewer used (Hindi, Hinglish, Gujarati, Tamil, Spanish, etc). Understand their meaning, but reply only in English.`;
+  // Rule 3: language. When user has additional instructions, defer entirely
+  // to them for language. When there are none, default to English.
+  const rule3 = extra
+    ? `3. Language: follow the USER ADDITIONAL INSTRUCTIONS above for which language to reply in. If the user said "reply in the same language as the review", detect the review's language (Gujarati / Hindi / Tamil / Spanish / etc.) and write the ENTIRE reply in that language and script — do NOT mix English. If the user said "always reply in <language>", reply in that language. ONLY this rule (rule 3) is overridable. (OVERRIDABLE)`
+    : `3. Language: write the reply entirely in English, regardless of the language or script the reviewer used. (OVERRIDABLE — but no override is set, so reply in English.)`;
 
-  system += `\n\nRULES:
-1. Output ONLY the reply text. No preamble, no quotes, no markdown, no [placeholders].
-2. Stay UNDER ${charLimit} characters.
-3. ${languageRule}
-4. Do NOT quote, repeat, or echo non-English / slang / colloquial words from the review (e.g. "mast", "bahut accha", "mast che", "bohot", "kya baat", etc). Paraphrase the sentiment in clean English instead. Quoting these terms reads as unprofessional.
-5. Address what the reviewer actually said — never generic "thanks for your feedback".
-6. Sound like a real person, not a corporate bot.`;
+  system += `
+
+CORE RULES — Rules 1, 2, 4, 5, 6 are HARD CONSTRAINTS and CANNOT be overridden by the USER ADDITIONAL INSTRUCTIONS. Rule 3 is the ONLY overridable rule.
+
+1. Output ONLY the reply text. No preamble, no quotes, no markdown, no [placeholders], no labels like "Reply:". (HARD)
+2. Stay strictly UNDER ${charLimit} characters. (HARD)
+${rule3}
+4. Be specific to what the reviewer actually said — never generic templates like "thanks for your feedback". (HARD)
+5. Sound like a real person, not a corporate bot — warm and human, never robotic. (HARD)`;
 
   if (source === "whatsapp") {
     system += `
-7. This is a chat message, not a review. Infer intent: question→answer, complaint→apologize+next step, positive→brief thanks.`;
+6. This is a chat message, not a review. Infer intent: question→answer, complaint→apologize+next step, positive→brief thanks. (HARD)`;
   } else {
     system += `
-7. By rating: 5★ thank for specifics (brief). 4★ thank + address gap. 3★ acknowledge both sides, ask what to improve. 2★ empathize + concrete next step. 1★ sincere apology + direct help, never defensive.`;
+6. Rating-aware behavior (HARD):
+   - 5★: thank for specifics, brief.
+   - 4★: thank + address gap.
+   - 3★: acknowledge both sides, ask what to improve.
+   - 2★: empathize + concrete next step.
+   - 1★: sincere apology + direct help, never defensive.`;
   }
 
   const rating = review.rating ?? 0;

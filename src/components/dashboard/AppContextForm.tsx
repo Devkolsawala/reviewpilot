@@ -401,15 +401,19 @@ export function AppContextForm({ connectionId: connectionIdProp, disabled = fals
  const cleanQuestions = questions.filter((q) => q.trim());
  const cleanIssues = issues.filter((i) => i.trim());
 
+ const trimmedAdditional = additionalInstructions.trim();
+ const trimmedSupportUrl = supportUrl.trim();
+ const trimmedDescription = description.trim();
+ const trimmedCustomTone = customTone.trim();
  const payload = {
- description,
+ description: trimmedDescription,
  key_features: cleanFeatures,
  common_questions: cleanQuestions,
  known_issues: cleanIssues,
  tone,
- custom_tone_example: tone === "custom" ? customTone : null,
- support_url: supportUrl || null,
- additional_instructions: additionalInstructions || null,
+ custom_tone_example: tone === "custom" && trimmedCustomTone ? trimmedCustomTone : null,
+ support_url: trimmedSupportUrl || null,
+ additional_instructions: trimmedAdditional || null,
  auto_reply_enabled: replyMode !== "manual",
  auto_reply_mode:
  replyMode === "semi"

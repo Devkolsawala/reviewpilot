@@ -117,6 +117,14 @@ export async function POST(request: Request) {
     review_created_at: review?.review_created_at || new Date().toISOString(),
   };
 
+  console.log("[ai-generate]", {
+    review_id: reviewData.id,
+    has_app_context: !!context && !!context.connection_id,
+    has_additional_instructions: !!context.additional_instructions?.trim(),
+    additional_instructions_preview: context.additional_instructions?.slice(0, 80),
+    tone: tone || context.tone || "friendly",
+  });
+
   try {
     const reply = await generateReply({
       appContext: context,

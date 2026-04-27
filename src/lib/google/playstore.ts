@@ -155,12 +155,37 @@ export async function fetchPlayStoreReviews(
   return transformed;
 }
 
+// Sanity check: external Play Store review IDs are never UUIDs — they look like
+// "gp:AOqpTOH...". A UUID here means a caller passed reviews.id (Supabase row PK)
+// instead of reviews.external_review_id. Fail loudly with a clear engineering
+// message rather than a confusing Google 404.
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export async function replyToPlayStoreReview(
   packageName: string,
   reviewId: string,
   replyText: string,
   userCredentials?: Record<string, unknown> | null
 ): Promise<{ success: boolean; error?: string }> {
+  if (!reviewId) {
+    return {
+      success: false,
+      error:
+        "This review has no Play Store ID — likely an imported/historical review and cannot be replied to via the API.",
+    };
+  }
+  if (UUID_REGEX.test(reviewId)) {
+    console.error(
+      `[playstore] UUID detected in external_review_id (${reviewId}) for package ${packageName}. The review row in Supabase has a corrupted external_review_id and needs to be re-synced.`
+    );
+    return {
+      success: false,
+      error:
+        "This review was deleted from Play Store by the reviewer, so it can no longer be replied to.",
+    };
+  }
+
   try {
     const truncatedReply =
       replyText.length > 350

@@ -1,11 +1,31 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { replyToPlayStoreReview } from "@/lib/google/playstore";
+import { replyToPlayStoreReview, fetchPlayStoreReviews } from "@/lib/google/playstore";
 import { publishGBPReply } from "@/lib/google/gbp";
 import { sendWhatsAppText, decryptToken } from "@/lib/whatsapp/client";
 import { generateReply } from "@/lib/ai/reply-generator";
 import { checkUsageLimit, incrementUsage } from "@/lib/usage";
 import { GBP_ENABLED, GBP_COMING_SOON_MESSAGE } from "@/lib/feature-flags";
+
+const MAX_EDITS_PER_24H = 10;
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+const REVIEW_DELETED_MESSAGE =
+  "This review was deleted from Play Store by the reviewer, so it can no longer be replied to.";
+
+function friendlyPlayStoreError(raw: string | undefined | null): string {
+  const msg = raw || "Unknown error";
+  if (/could not find review|notfound|not.?found/i.test(msg)) {
+    return REVIEW_DELETED_MESSAGE;
+  }
+  if (/quota|rate.?limit/i.test(msg)) {
+    return "Google rate limit reached. Try again in a few minutes.";
+  }
+  if (/permission|forbidden|unauthorized/i.test(msg)) {
+    return "Permission denied. Reconnect your Play Console under Settings → Connections.";
+  }
+  return msg;
+}
 
 export async function POST(request: Request) {
   const supabase = createClient();
@@ -153,6 +173,25 @@ export async function POST(request: Request) {
     );
   }
 
+  // Soft per-review edit cap (publish only — drafts/discards exempt).
+  // Reset window: edits older than 24h don't count toward the cap.
+  const isEdit = !!review.reply_first_published_at;
+  if (isEdit && (review.source === "play_store" || review.source === "google_business")) {
+    const lastEdit = review.reply_last_edited_at
+      ? new Date(review.reply_last_edited_at).getTime()
+      : 0;
+    const within24h = lastEdit > 0 && Date.now() - lastEdit < 24 * 60 * 60 * 1000;
+    const currentCount = within24h ? (review.reply_edit_count ?? 0) : 0;
+    if (currentCount >= MAX_EDITS_PER_24H) {
+      return NextResponse.json(
+        {
+          error: `You've edited this reply ${MAX_EDITS_PER_24H} times in the last 24 hours. Please wait before editing again.`,
+        },
+        { status: 429 }
+      );
+    }
+  }
+
   let published = false;
 
   if (review.source === "whatsapp") {
@@ -195,10 +234,72 @@ export async function POST(request: Request) {
       );
     }
   } else if (review.source === "play_store") {
+    let resolvedExternalId = review.external_review_id as string | null | undefined;
+    const looksCorrupt = !resolvedExternalId || UUID_REGEX.test(resolvedExternalId);
+
+    // Auto-heal: if the stored external_review_id is missing or looks like a UUID
+    // (a known data-corruption mode where reviews.id was written into the column),
+    // try to recover by fetching live reviews from Play Store and matching on
+    // review_text + author_name. Patch the row when we find a match.
+    if (looksCorrupt && connection?.external_id) {
+      console.warn("[reply-publish] external_review_id looks corrupt — attempting auto-heal", {
+        internal_id: review.id,
+        stored_external_review_id: resolvedExternalId,
+      });
+      try {
+        const live = await fetchPlayStoreReviews(
+          connection.external_id,
+          connection.credentials as Record<string, unknown> | null
+        );
+        const match = live.find(
+          (r) =>
+            r.review_text === review.review_text &&
+            r.author_name === review.author_name
+        );
+        if (match?.external_review_id && !UUID_REGEX.test(match.external_review_id)) {
+          resolvedExternalId = match.external_review_id;
+          await supabase
+            .from("reviews")
+            .update({ external_review_id: resolvedExternalId })
+            .eq("id", review.id);
+          console.log("[reply-publish] auto-heal succeeded", {
+            internal_id: review.id,
+            recovered_external_review_id: resolvedExternalId,
+          });
+        } else {
+          console.warn("[reply-publish] auto-heal failed — no live match");
+        }
+      } catch (e) {
+        console.error("[reply-publish] auto-heal error:", e);
+      }
+    }
+
+    if (!resolvedExternalId || UUID_REGEX.test(resolvedExternalId)) {
+      await supabase
+        .from("reviews")
+        .update({ reply_text: finalReplyText, reply_status: "failed" })
+        .eq("id", reviewId);
+      return NextResponse.json(
+        {
+          success: false,
+          error: REVIEW_DELETED_MESSAGE,
+          message: REVIEW_DELETED_MESSAGE,
+        },
+        { status: 400 }
+      );
+    }
+
+    console.log("[reply-publish]", {
+      internal_id: review.id,
+      external_review_id: resolvedExternalId,
+      package: connection?.external_id,
+      is_edit: isEdit,
+      edit_count: review.reply_edit_count ?? 0,
+    });
     // connection.credentials is null for Invite Email method → lib falls back to shared env credentials
     const result = await replyToPlayStoreReview(
       connection?.external_id || "",
-      review.external_review_id,
+      resolvedExternalId,
       finalReplyText,
       connection?.credentials as Record<string, unknown> | null
     );
@@ -208,8 +309,9 @@ export async function POST(request: Request) {
         .from("reviews")
         .update({ reply_text: finalReplyText, reply_status: "failed" })
         .eq("id", reviewId);
+      const friendly = friendlyPlayStoreError(result.error);
       return NextResponse.json(
-        { success: false, error: result.error, message: "Failed to publish reply to Play Store" },
+        { success: false, error: friendly, message: friendly },
         { status: 500 }
       );
     }
@@ -233,14 +335,32 @@ export async function POST(request: Request) {
   }
 
   console.log("[API] Updating review after publish:", reviewId, { published });
+  const nowIso = new Date().toISOString();
+  const lastEditMs = review.reply_last_edited_at
+    ? new Date(review.reply_last_edited_at).getTime()
+    : 0;
+  const within24h = lastEditMs > 0 && Date.now() - lastEditMs < 24 * 60 * 60 * 1000;
+  const nextEditCount = published
+    ? isEdit
+      ? (within24h ? (review.reply_edit_count ?? 0) : 0) + 1
+      : 0
+    : (review.reply_edit_count ?? 0);
+
+  const updatePayload: Record<string, unknown> = {
+    reply_text: finalReplyText,
+    reply_status: published ? "published" : "failed",
+    reply_published_at: published ? nowIso : null,
+    is_read: true,
+  };
+  if (published) {
+    updatePayload.reply_first_published_at = review.reply_first_published_at ?? nowIso;
+    updatePayload.reply_last_edited_at = isEdit ? nowIso : null;
+    updatePayload.reply_edit_count = nextEditCount;
+  }
+
   const { data: updateRow, error: updateError } = await supabase
     .from("reviews")
-    .update({
-      reply_text: finalReplyText,
-      reply_status: published ? "published" : "failed",
-      reply_published_at: published ? new Date().toISOString() : null,
-      is_read: true,
-    })
+    .update(updatePayload)
     .eq("id", reviewId)
     .select("id, reply_status, reply_published_at")
     .single();
