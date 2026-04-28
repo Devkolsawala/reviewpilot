@@ -19,7 +19,6 @@ import {
  Zap,
  HelpCircle,
  ExternalLink,
- Video,
  BookOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -92,6 +91,7 @@ const STEPS = [
  "Customize your review request message and send",
  ],
  tip: "Send campaigns within 24–48 hours of a customer interaction for the best response rates.",
+ comingSoon: true,
  },
 ];
 
@@ -192,8 +192,8 @@ export default function DocsPage() {
  {STEPS.map((step) => (
  <Card key={step.number} className={cn("border-l-4 overflow-hidden", step.border)}>
  <CardContent className="p-0">
- <div className="p-5">
- <div className="flex items-start gap-4">
+ <div className={cn("p-5", step.comingSoon && "relative")}>
+ <div className={cn("flex items-start gap-4", step.comingSoon && "opacity-60")}>
  {/* Step number + icon */}
  <div className="shrink-0">
  <div className={cn("h-12 w-12 rounded-xl flex items-center justify-center", step.bg)}>
@@ -206,7 +206,14 @@ export default function DocsPage() {
  Step {step.number}
  </span>
  </div>
- <h3 className="font-sans font-semibold tracking-tight text-base mb-1">{step.title}</h3>
+ <div className="flex items-center gap-2 mb-1 flex-wrap">
+ <h3 className="font-sans font-semibold tracking-tight text-base">{step.title}</h3>
+ {step.comingSoon && (
+ <span className="inline-flex items-center rounded-full bg-violet-500/15 dark:bg-violet-400/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-violet-600 dark:text-violet-300 ring-1 ring-violet-500/30">
+ Coming Soon
+ </span>
+ )}
+ </div>
  <p className="text-sm text-muted-foreground mb-4">{step.description}</p>
 
  {/* Numbered checklist */}
@@ -238,26 +245,42 @@ export default function DocsPage() {
  </div>
  </div>
 
- {/* Video Tutorial Placeholder */}
- <Card className="overflow-hidden border-dashed">
+ {/* Video Tutorial */}
+ <a
+ href="https://youtu.be/WXVq7twjiVw"
+ target="_blank"
+ rel="noopener noreferrer"
+ className="group block"
+ aria-label="Watch the full ReviewPilot walkthrough on YouTube"
+ >
+ <Card className="overflow-hidden border transition-all duration-300 group-hover:scale-[1.01] group-hover:shadow-2xl">
  <CardContent className="p-0">
- <div className="relative bg-gradient-to-br from-slate-900 to-slate-800 dark:from-slate-950 dark:to-slate-900 rounded-xl overflow-hidden aspect-video flex items-center justify-center">
- {/* Fake thumbnail overlay */}
- <div className="absolute inset-0 bg-gradient-to-br from-accent/10 to-accent/5" />
- <div className="relative text-center">
- <div className="h-16 w-16 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center mx-auto mb-4">
- <Play className="h-7 w-7 text-white ml-1" />
+ <div className="relative rounded-xl overflow-hidden aspect-video bg-slate-900">
+ <img
+ src="https://img.youtube.com/vi/WXVq7twjiVw/maxresdefault.jpg"
+ alt="ReviewPilot walkthrough video thumbnail"
+ className="absolute inset-0 w-full h-full object-cover"
+ onError={(e) => {
+ const img = e.currentTarget;
+ if (!img.dataset.fallback) {
+ img.dataset.fallback = "true";
+ img.src = "https://img.youtube.com/vi/WXVq7twjiVw/hqdefault.jpg";
+ }
+ }}
+ />
+ <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-black/30 transition-colors duration-300 group-hover:from-black/70" />
+ <div className="absolute inset-0 flex items-center justify-center">
+ <div className="h-16 w-16 rounded-full bg-white/15 backdrop-blur-sm border border-white/30 flex items-center justify-center shadow-lg transition-transform duration-300 group-hover:scale-110 group-hover:bg-white/25">
+ <Play className="h-7 w-7 text-white ml-1 fill-white" />
  </div>
- <h3 className="font-sans font-semibold tracking-tight text-white text-lg mb-1">Video Tutorial</h3>
- <p className="text-white/60 text-sm">Full walkthrough coming soon</p>
- <Badge className="mt-3 bg-accent/20 text-accent border-accent/40 hover:bg-accent/20">
- <Video className="h-3 w-3 mr-1" />
- Coming Soon
- </Badge>
+ </div>
+ <div className="absolute bottom-3 left-4 right-4 text-white">
+ <p className="text-sm font-medium drop-shadow">Watch the full ReviewPilot walkthrough</p>
  </div>
  </div>
  </CardContent>
  </Card>
+ </a>
 
  {/* Keyboard Shortcuts Quick Reference */}
  <Card>
