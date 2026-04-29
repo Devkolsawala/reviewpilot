@@ -23,7 +23,19 @@
       "Bash(git ls-tree *)",
       "Bash(xargs grep *)",
       "Bash(set NODE_OPTIONS=--max-old-space-size=4096)",
-      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/dashboard/docs)"
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/dashboard/docs)",
+      "Bash(git stash *)",
+      "Bash(echo \"TSC=$?\")",
+      "Bash(echo \"BUILD_EXIT=$?\")",
+      "Bash(git checkout *)",
+      "Bash(dir \"C:\\\\Users\\\\devko\\\\Downloads\\\\Favicon\\\\downloads\")",
+      "Bash(icon)",
+      "Bash(apple\")",
+      "Bash(npx next@latest build --webpack)",
+      "Bash(npm install *)",
+      "Bash(awk 'NR==404,NR==413' src/components/dashboard/AppContextForm.tsx)",
+      "Bash(NODE_OPTIONS=\"--max-old-space-size=8192\" npm run build)",
+      "Bash(NODE_OPTIONS=\"--max-old-space-size=8192\" npx tsc --noEmit)"
     ]
   }
 }

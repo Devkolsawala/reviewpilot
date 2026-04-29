@@ -1,6 +1,7 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { AnalyticsCharts } from "@/components/dashboard/AnalyticsCharts";
@@ -11,10 +12,71 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useAnalytics, type AnalyticsRange, RANGE_DAYS } from "@/hooks/useAnalytics";
 import { usePlan } from "@/hooks/usePlan";
 import { cn } from "@/lib/utils";
-import { Zap, CheckCircle2, Clock, Info, Timer, TrendingUp, Bot, IndianRupee } from "lucide-react";
+import { Zap, CheckCircle2, Clock, Info, Timer, TrendingUp, Bot, IndianRupee, Mail, X } from "lucide-react";
 import { UpgradeGate } from "@/components/dashboard/UpgradeGate";
 
+const DIGEST_BANNER_DISMISS_KEY = "reviewpilot_digest_banner_dismissed";
+
+function DigestBanner() {
+  const [show, setShow] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function check() {
+      try {
+        if (typeof window !== "undefined" &&
+            window.localStorage.getItem(DIGEST_BANNER_DISMISS_KEY) === "1") {
+          return;
+        }
+        const res = await fetch("/api/digest/preferences");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled && data.preferences?.daily_enabled === false) {
+          setShow(true);
+        }
+      } catch {
+        /* silent — banner is optional */
+      }
+    }
+    check();
+    return () => { cancelled = true; };
+  }, []);
+
+  if (!show) return null;
+
+  function dismiss() {
+    try { window.localStorage.setItem(DIGEST_BANNER_DISMISS_KEY, "1"); } catch {}
+    setShow(false);
+  }
+
+  return (
+    <div className="flex items-center gap-3 rounded-lg border border-accent/30 bg-accent/5 px-4 py-3">
+      <Mail className="h-4 w-4 text-accent shrink-0" />
+      <div className="flex-1 text-sm">
+        <span className="font-semibold">Get this delivered to your inbox</span>
+        <span className="text-muted-foreground ml-2">
+          Skip checking the dashboard, get a daily summary at your preferred time.
+        </span>
+      </div>
+      <Link
+        href="/dashboard/settings/notifications"
+        className="text-xs font-semibold text-accent hover:underline whitespace-nowrap"
+      >
+        Set up daily digest →
+      </Link>
+      <button
+        onClick={dismiss}
+        aria-label="Dismiss"
+        className="text-muted-foreground hover:text-foreground"
+      >
+        <X className="h-4 w-4" />
+      </button>
+    </div>
+  );
+}
+
 const PERIODS: { label: string; value: AnalyticsRange }[] = [
+  { label: "Today", value: "1d" },
   { label: "7d", value: "7d" },
   { label: "30d", value: "30d" },
   { label: "90d", value: "90d" },
@@ -30,7 +92,9 @@ function AnalyticsPageInner() {
   const searchParams = useSearchParams();
   const rawRange = searchParams.get("range");
   const range: AnalyticsRange =
-    rawRange === "7d" || rawRange === "30d" || rawRange === "90d" ? rawRange : "30d";
+    rawRange === "1d" || rawRange === "7d" || rawRange === "30d" || rawRange === "90d"
+      ? rawRange
+      : "30d";
 
   function setRange(r: AnalyticsRange) {
     const params = new URLSearchParams(Array.from(searchParams.entries()));
@@ -64,6 +128,8 @@ function AnalyticsPageInner() {
   return (
     <PageTransition>
       <div className="space-y-6">
+        <DigestBanner />
+
         {isMock && (
           <div className="flex items-center gap-2 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/20 px-4 py-2.5">
             <Info className="h-4 w-4 text-blue-500 shrink-0" />

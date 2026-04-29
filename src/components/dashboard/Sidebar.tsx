@@ -13,6 +13,7 @@ import {
  Bot,
  Users,
  CreditCard,
+ Bell,
  ChevronDown,
  Sparkles,
  HelpCircle,
@@ -110,6 +111,7 @@ const SETTINGS_NAV = [
  { label: "General", href: "/dashboard/settings", icon: Settings },
  { label: "Connections", href: "/dashboard/settings/connections", icon: Link2 },
  { label: "AI Configuration", href: "/dashboard/settings/ai-config", icon: Bot },
+ { label: "Notifications", href: "/dashboard/settings/notifications", icon: Bell },
  { label: "Team", href: "/dashboard/settings/team", icon: Users },
  { label: "Billing", href: "/dashboard/settings/billing", icon: CreditCard },
 ];

@@ -11,7 +11,7 @@ interface StatsCardsProps {
   avgRating: number;
   responseRate: number | null;
   pendingCount: number;
-  /** e.g. "7d" | "30d" | "90d" — controls comparison sublabel */
+  /** e.g. "1d" | "7d" | "30d" | "90d" — controls comparison sublabel */
   rangeLabel?: string;
   /** Previous-period comparison values */
   previousTotals?: number;
@@ -49,9 +49,12 @@ export function StatsCards({
   previousTotals = 0,
   previousAvgRating = 0,
 }: StatsCardsProps) {
-  const days = rangeLabel === "7d" ? 7 : rangeLabel === "90d" ? 90 : 30;
-  const rangeText = `Last ${days} days`;
-  const vsPrev = `vs previous ${days} days`;
+  const days =
+    rangeLabel === "1d" ? 1 :
+    rangeLabel === "7d" ? 7 :
+    rangeLabel === "90d" ? 90 : 30;
+  const rangeText = days === 1 ? "Today" : `Last ${days} days`;
+  const vsPrev = `vs previous ${days} day${days === 1 ? "" : "s"}`;
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

@@ -217,6 +217,23 @@ export function getSyncCadence(planId: string): SyncCadence {
 }
 
 /**
+ * Max number of CC recipients allowed on digest emails per plan.
+ * Free trial / Starter: 0 (no CC). Growth: 3. Pro/Agency: 5.
+ */
+export function getDigestCcLimit(planId: string): number {
+  switch (planId) {
+    case "agency":
+      return 5;
+    case "growth":
+      return 3;
+    case "starter":
+    case "free":
+    default:
+      return 0;
+  }
+}
+
+/**
  * Max number of WhatsApp connections allowed on each plan.
  * Returns 0 when the plan doesn't include WhatsApp (upsell required).
  * Returns -1 for unlimited.

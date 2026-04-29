@@ -2,9 +2,10 @@
 import { useState, useEffect, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 
-export type AnalyticsRange = "7d" | "30d" | "90d";
+export type AnalyticsRange = "1d" | "7d" | "30d" | "90d";
 
 export const RANGE_DAYS: Record<AnalyticsRange, number> = {
+  "1d": 1,
   "7d": 7,
   "30d": 30,
   "90d": 90,
@@ -174,11 +175,16 @@ function isoWeekStart(d: Date): string {
 function computeTrend(rows: MinReview[], range: AnalyticsRange): { date: string; avg_rating: number; count: number }[] {
   const bucket: Record<string, { sum: number; count: number }> = {};
   const useWeekly = range === "90d";
+  const useHourly = range === "1d";
   for (const r of rows) {
     // Skip rating-less rows (WhatsApp) from the rating trend
     if (r.rating == null) continue;
     const d = new Date(r.review_created_at);
-    const key = useWeekly ? isoWeekStart(d) : d.toISOString().split("T")[0];
+    const key = useHourly
+      ? `${d.toISOString().slice(0, 13)}:00` // YYYY-MM-DDTHH:00
+      : useWeekly
+      ? isoWeekStart(d)
+      : d.toISOString().split("T")[0];
     if (!bucket[key]) bucket[key] = { sum: 0, count: 0 };
     bucket[key].sum += r.rating || 0;
     bucket[key].count += 1;
