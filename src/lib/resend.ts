@@ -6,12 +6,20 @@ export async function sendEmail(params: {
   from?: string;
   cc?: string[];
   replyTo?: string;
+  /**
+   * Custom email headers (e.g. List-Unsubscribe / List-Unsubscribe-Post for
+   * RFC 8058 one-click unsubscribe). Resend forwards these to the recipient.
+   */
+  headers?: Record<string, string>;
 }): Promise<{ success: boolean; id?: string; error?: string }> {
   if (!process.env.RESEND_API_KEY) {
     console.log(`[STUB] Email would be sent to ${params.to}`);
     if (params.cc?.length) console.log(`[STUB] CC: ${params.cc.join(", ")}`);
     console.log(`[STUB] Subject: ${params.subject}`);
     console.log(`[STUB] Body: ${params.html.substring(0, 200)}...`);
+    if (params.headers) {
+      console.log(`[STUB] Headers: ${JSON.stringify(params.headers)}`);
+    }
     console.log("[STUB] Set RESEND_API_KEY to enable real email sending");
     return { success: true, id: `stub-${Date.now()}` };
   }
@@ -25,6 +33,9 @@ export async function sendEmail(params: {
   if (params.text) body.text = params.text;
   if (params.cc && params.cc.length > 0) body.cc = params.cc;
   if (params.replyTo) body.reply_to = params.replyTo;
+  if (params.headers && Object.keys(params.headers).length > 0) {
+    body.headers = params.headers;
+  }
 
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",

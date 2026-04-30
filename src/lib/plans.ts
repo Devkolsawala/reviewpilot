@@ -218,7 +218,12 @@ export function getSyncCadence(planId: string): SyncCadence {
 
 /**
  * Max number of CC recipients allowed on digest emails per plan.
- * Free trial / Starter: 0 (no CC). Growth: 3. Pro/Agency: 5.
+ * The daily digest itself is available to ALL plans including Free.
+ * Only the CC recipients field is plan-gated.
+ *   free    -> 0
+ *   starter -> 1
+ *   growth  -> 3
+ *   agency  -> 5
  */
 export function getDigestCcLimit(planId: string): number {
   switch (planId) {
@@ -227,6 +232,7 @@ export function getDigestCcLimit(planId: string): number {
     case "growth":
       return 3;
     case "starter":
+      return 1;
     case "free":
     default:
       return 0;

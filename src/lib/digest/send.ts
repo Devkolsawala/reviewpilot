@@ -5,12 +5,20 @@
  *   - idempotency check against digest_logs (unique index handles race)
  *   - unsubscribe check against email_unsubscribes (list='digest' or 'all')
  *   - skip-if-no-activity logic
- *   - rendering + sending via the Resend wrapper
- *   - audit log row insert (sent / skipped_* / failed)
+ *   - rendering + sending via the Resend wrapper (incl. List-Unsubscribe header)
+ *   - audit log row insert (sent / skipped_* / failed / disabled / no_recipient)
  *
- * Test sends bypass enable flags, unsubscribe checks, and idempotency, but
- * do not write a digest_logs row (so they don't block real sends for the
- * same period).
+ * Test sends (isTest=true):
+ *   - bypass enable flags, unsubscribe checks, skip-if-no-activity, and
+ *     idempotency
+ *   - ALWAYS write a digest_logs row with is_test=true so the user can see
+ *     the result in the recent-history panel
+ *   - use period_start = now() (a unique value) and rely on the partial
+ *     unique index (where is_test=false) so they cannot collide with each
+ *     other or with real sends
+ *
+ * already_sent path is the only status that does NOT write a log row, since
+ * the existing log already represents that send.
  */
 
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -31,8 +39,10 @@ type SendResult = {
   error?: string;
 };
 
+type AdminClient = ReturnType<typeof createAdminClient>;
+
 async function getOrCreateUnsubscribeToken(
-  supabase: ReturnType<typeof createAdminClient>,
+  supabase: AdminClient,
   userId: string
 ): Promise<string> {
   const { data: existing } = await supabase
@@ -52,6 +62,28 @@ async function getOrCreateUnsubscribeToken(
   return token;
 }
 
+async function writeLog(
+  supabase: AdminClient,
+  row: {
+    user_id: string;
+    digest_type: DigestPeriod;
+    period_start: string;
+    period_end: string;
+    status: string;
+    is_test: boolean;
+    recipient_email?: string | null;
+    cc_emails?: string[];
+    error_message?: string | null;
+    payload?: Record<string, unknown> | null;
+    resend_message_id?: string | null;
+  }
+) {
+  const { error } = await supabase.from("digest_logs").insert(row);
+  if (error) {
+    console.error("[digest_logs insert]", error.message, "row:", row);
+  }
+}
+
 export async function sendDigestForUser(opts: {
   userId: string;
   period: DigestPeriod;
@@ -68,15 +100,10 @@ export async function sendDigestForUser(opts: {
     .eq("user_id", userId)
     .maybeSingle();
 
-  if (!prefs && !isTest) return { ok: false, status: "disabled" };
-  const enabled =
-    period === "daily" ? prefs?.daily_enabled : prefs?.weekly_enabled;
-  if (!enabled && !isTest) return { ok: false, status: "disabled" };
-
+  // Compute period_start. Test sends use `now()` so they're unique per send
+  // and don't collide with real sends or with each other.
   const timezone = prefs?.timezone || "Asia/Kolkata";
-
-  // 2. Compute period_start
-  const periodStart =
+  const realPeriodStart =
     period === "daily"
       ? startOfTodayInTzAsUtc(now, timezone)
       : mostRecentWeeklySlotAsUtc(
@@ -85,23 +112,48 @@ export async function sendDigestForUser(opts: {
           prefs?.weekly_send_dow ?? 1,
           prefs?.weekly_send_hour ?? 9
         );
+  const periodStart = isTest ? now : realPeriodStart;
   const periodEnd = now;
 
-  // 3. Idempotency check (skip for test sends)
+  const baseLog = {
+    user_id: userId,
+    digest_type: period,
+    period_start: periodStart.toISOString(),
+    period_end: periodEnd.toISOString(),
+    is_test: isTest,
+  };
+
+  // 2. Disabled check (real sends only — test sends always proceed)
+  if (!isTest) {
+    if (!prefs) {
+      await writeLog(supabase, { ...baseLog, status: "disabled" });
+      return { ok: false, status: "disabled" };
+    }
+    const enabled =
+      period === "daily" ? prefs.daily_enabled : prefs.weekly_enabled;
+    if (!enabled) {
+      await writeLog(supabase, { ...baseLog, status: "disabled" });
+      return { ok: false, status: "disabled" };
+    }
+  }
+
+  // 3. Idempotency check (real sends only)
   if (!isTest) {
     const { data: priorLog } = await supabase
       .from("digest_logs")
       .select("id, status")
       .eq("user_id", userId)
       .eq("digest_type", period)
-      .eq("period_start", periodStart.toISOString())
+      .eq("period_start", realPeriodStart.toISOString())
+      .eq("is_test", false)
       .maybeSingle();
     if (priorLog) {
+      // Don't double-log — the existing row already represents this send.
       return { ok: true, status: "already_sent" };
     }
   }
 
-  // 4. Profile lookup (recipient email, plan, name)
+  // 4. Profile lookup
   const { data: profile } = await supabase
     .from("profiles")
     .select("plan, full_name, company_name")
@@ -112,20 +164,15 @@ export async function sendDigestForUser(opts: {
 
   const recipientEmail = prefs?.recipient_email || profileEmail;
   if (!recipientEmail) {
-    if (!isTest) {
-      await supabase.from("digest_logs").insert({
-        user_id: userId,
-        digest_type: period,
-        period_start: periodStart.toISOString(),
-        period_end: periodEnd.toISOString(),
-        status: "failed",
-        error_message: "No recipient email available",
-      });
-    }
+    await writeLog(supabase, {
+      ...baseLog,
+      status: "no_recipient",
+      error_message: "No recipient email available",
+    });
     return { ok: false, status: "no_recipient" };
   }
 
-  // 5. Unsubscribe check (skip for test sends, but only if unsubscribed from THIS list)
+  // 5. Unsubscribe check (real sends only)
   if (!isTest) {
     const { data: unsubRow } = await supabase
       .from("email_unsubscribes")
@@ -135,11 +182,8 @@ export async function sendDigestForUser(opts: {
       .limit(1)
       .maybeSingle();
     if (unsubRow) {
-      await supabase.from("digest_logs").insert({
-        user_id: userId,
-        digest_type: period,
-        period_start: periodStart.toISOString(),
-        period_end: periodEnd.toISOString(),
+      await writeLog(supabase, {
+        ...baseLog,
         status: "skipped_unsubscribed",
         recipient_email: recipientEmail,
       });
@@ -150,17 +194,14 @@ export async function sendDigestForUser(opts: {
   // 6. Build payload
   const payload = await buildDigest(userId, period, now);
 
-  // 7. Skip-if-no-activity (skip for test sends)
+  // 7. Skip-if-no-activity (real sends only)
   if (
     !isTest &&
     !payload.hasActivity &&
     (prefs?.skip_if_no_activity ?? true)
   ) {
-    await supabase.from("digest_logs").insert({
-      user_id: userId,
-      digest_type: period,
-      period_start: periodStart.toISOString(),
-      period_end: periodEnd.toISOString(),
+    await writeLog(supabase, {
+      ...baseLog,
       status: "skipped_no_activity",
       recipient_email: recipientEmail,
     });
@@ -186,44 +227,42 @@ export async function sendDigestForUser(opts: {
     includeQuotaUsage: prefs?.include_quota_usage ?? true,
   });
 
-  // 10. Send
+  // 10. Send. RFC 8058 one-click headers — Gmail/Apple Mail render a native
+  // "Unsubscribe" affordance from these. The HTTP target accepts POST via
+  // a middleware rewrite (POST /u/[token] → /api/digest/oneclick).
+  const listUnsubHeaders: Record<string, string> = {
+    "List-Unsubscribe": `<${appUrl}/u/${unsubToken}?list=digest>, <mailto:unsubscribe@reviewpilot.co.in?subject=unsubscribe-digest>`,
+    "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+  };
+
   const sendRes = await sendEmail({
     to: recipientEmail,
     subject,
     html,
     text,
     cc: ccEmails.length > 0 ? ccEmails : undefined,
+    headers: listUnsubHeaders,
   });
 
-  // 11. Audit log
+  // 11. Audit log — always written, including for test sends
   if (sendRes.success) {
-    if (!isTest) {
-      await supabase.from("digest_logs").insert({
-        user_id: userId,
-        digest_type: period,
-        period_start: periodStart.toISOString(),
-        period_end: periodEnd.toISOString(),
-        status: "sent",
-        recipient_email: recipientEmail,
-        cc_emails: ccEmails,
-        payload: payload as unknown as Record<string, unknown>,
-        resend_message_id: sendRes.id,
-      });
-    }
+    await writeLog(supabase, {
+      ...baseLog,
+      status: "sent",
+      recipient_email: recipientEmail,
+      cc_emails: ccEmails,
+      payload: payload as unknown as Record<string, unknown>,
+      resend_message_id: sendRes.id,
+    });
     return { ok: true, status: "sent", messageId: sendRes.id };
   } else {
-    if (!isTest) {
-      await supabase.from("digest_logs").insert({
-        user_id: userId,
-        digest_type: period,
-        period_start: periodStart.toISOString(),
-        period_end: periodEnd.toISOString(),
-        status: "failed",
-        recipient_email: recipientEmail,
-        cc_emails: ccEmails,
-        error_message: sendRes.error || "send failed",
-      });
-    }
+    await writeLog(supabase, {
+      ...baseLog,
+      status: "failed",
+      recipient_email: recipientEmail,
+      cc_emails: ccEmails,
+      error_message: sendRes.error || "send failed",
+    });
     return { ok: false, status: "failed", error: sendRes.error };
   }
 }

@@ -109,8 +109,10 @@ function buildText(
   }
   lines.push("");
   lines.push("———");
-  lines.push(`Manage email preferences: ${opts.appUrl}/dashboard/settings/notifications`);
-  lines.push(`Unsubscribe: ${opts.appUrl}/u/${opts.unsubscribeToken}?list=digest`);
+  lines.push(
+    "You're receiving this because daily digest is enabled. To stop, go to Settings → Notifications in your ReviewPilot dashboard."
+  );
+  lines.push(`Manage notification settings: ${opts.appUrl}/dashboard/settings/notifications`);
   return lines.join("\n");
 }
 
@@ -285,9 +287,11 @@ export function renderDailyDigest(
           <tr>
             <td style="padding:16px 24px 24px 24px;border-top:1px solid ${BORDER};background:${WARM_WHITE};">
               <div style="font:12px ${FONT_STACK};color:${MUTED};text-align:center;line-height:1.6;">
-                <a href="${opts.appUrl}/dashboard/settings/notifications" style="color:${MUTED};text-decoration:underline;">Manage email preferences</a>
-                &nbsp;·&nbsp;
-                <a href="${opts.appUrl}/u/${opts.unsubscribeToken}?list=digest" style="color:${MUTED};text-decoration:underline;">Unsubscribe from digest</a>
+                You&apos;re receiving this because daily digest is enabled. To stop, go to
+                Settings &rarr; Notifications in your ReviewPilot dashboard.
+                <div style="margin-top:8px;">
+                  <a href="${opts.appUrl}/dashboard/settings/notifications" style="color:${NAVY};text-decoration:underline;font-weight:600;">Manage notification settings &rarr;</a>
+                </div>
               </div>
             </td>
           </tr>

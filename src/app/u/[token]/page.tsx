@@ -56,7 +56,9 @@ export default async function UnsubscribePage({ params, searchParams }: Props) {
       ? searchParams.list
       : "digest";
   const result = await applyUnsubscribe(params.token, list);
-  const label = LIST_LABEL[list];
+  // LIST_LABEL is referenced for non-digest lists in the future; the daily-digest
+  // copy is now hard-coded since it's the only list this page is reached for today.
+  void LIST_LABEL;
 
   if (!result.ok) {
     return (
@@ -80,11 +82,11 @@ export default async function UnsubscribePage({ params, searchParams }: Props) {
   return (
     <main style={{ maxWidth: 480, margin: "80px auto", padding: 24, fontFamily: "system-ui" }}>
       <h1 style={{ fontSize: 22, fontWeight: 600, marginBottom: 12 }}>
-        You&apos;ve been unsubscribed
+        You&apos;ve been unsubscribed from daily digest emails
       </h1>
       <p style={{ color: "#475569", lineHeight: 1.6 }}>
-        {result.email ? <strong>{result.email}</strong> : "This address"} won&apos;t receive{" "}
-        {label} from ReviewPilot anymore.
+        To re-enable, go to Settings &rarr; Notifications in your dashboard, or click
+        the button below.
       </p>
       <p style={{ color: "#64748B", lineHeight: 1.6, marginTop: 12, fontSize: 14 }}>
         Transactional emails (password resets, billing receipts, review-reply notifications)

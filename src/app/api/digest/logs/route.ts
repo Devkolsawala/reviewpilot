@@ -13,7 +13,7 @@ export async function GET() {
   const { data, error } = await admin
     .from("digest_logs")
     .select(
-      "id, digest_type, period_start, period_end, status, recipient_email, created_at, error_message"
+      "id, digest_type, period_start, period_end, status, recipient_email, created_at, error_message, is_test"
     )
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -44,6 +45,7 @@ type LogRow = {
   created_at: string;
   period_start: string;
   error_message: string | null;
+  is_test: boolean;
 };
 
 const TIMEZONES = [
@@ -81,6 +83,10 @@ function statusLabel(s: string): { text: string; variant: "default" | "secondary
       return { text: "Skipped — no activity", variant: "secondary" };
     case "skipped_unsubscribed":
       return { text: "Skipped — unsubscribed", variant: "secondary" };
+    case "disabled":
+      return { text: "Disabled", variant: "secondary" };
+    case "no_recipient":
+      return { text: "No recipient", variant: "destructive" };
     case "failed":
       return { text: "Failed", variant: "destructive" };
     default:
@@ -100,12 +106,22 @@ export default function NotificationsPage() {
   const [testingWeekly, setTestingWeekly] = useState(false);
   const [ccDraft, setCcDraft] = useState("");
 
+  async function refetchLogs() {
+    try {
+      const res = await fetch("/api/digest/logs", { cache: "no-store" });
+      const data = await res.json();
+      setLogs((data.logs || []).slice(0, 7));
+    } catch {
+      /* silent — main UI still works */
+    }
+  }
+
   useEffect(() => {
     async function load() {
       try {
         const [prefsRes, logsRes] = await Promise.all([
           fetch("/api/digest/preferences"),
-          fetch("/api/digest/logs"),
+          fetch("/api/digest/logs", { cache: "no-store" }),
         ]);
         const p = await prefsRes.json();
         const l = await logsRes.json();
@@ -159,6 +175,8 @@ export default function NotificationsPage() {
           title: "Test digest sent",
           description: `Check your inbox for the ${period} digest preview.`,
         });
+        // Surface the new entry in the history immediately
+        await refetchLogs();
       } else {
         toast({
           title: "Could not send test",
@@ -305,63 +323,64 @@ export default function NotificationsPage() {
               />
             </div>
 
-            <div className="space-y-1.5">
-              <div className="flex items-center gap-2">
-                <Label>CC recipients</Label>
-                {ccLimit === 0 ? (
-                  <Badge variant="outline" className="text-[10px]">
-                    Upgrade to add CCs
-                  </Badge>
-                ) : (
-                  <span className="text-[11px] text-muted-foreground">
-                    Up to {ccLimit} on the {planId} plan
-                  </span>
-                )}
+            {ccLimit === 0 ? (
+              <div className="rounded-md border border-dashed bg-muted/30 px-3 py-2 text-[12px] text-muted-foreground">
+                Add CC recipients with the Starter plan or higher.{" "}
+                <Link
+                  href="/dashboard/settings/billing"
+                  className="font-semibold text-accent hover:underline"
+                >
+                  Upgrade
+                </Link>
               </div>
-              {ccLimit > 0 && (
-                <>
-                  <div className="flex flex-wrap gap-1.5 mb-2">
-                    {prefs.cc_emails.map((e) => (
-                      <span
-                        key={e}
-                        className="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-0.5 text-xs"
-                      >
-                        {e}
-                        <button
-                          onClick={() => removeCc(e)}
-                          aria-label={`Remove ${e}`}
-                          className="text-muted-foreground hover:text-foreground"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="cc@example.com"
-                      value={ccDraft}
-                      onChange={(e) => setCcDraft(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          addCc();
-                        }
-                      }}
-                      disabled={prefs.cc_emails.length >= ccLimit}
-                    />
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      onClick={addCc}
-                      disabled={prefs.cc_emails.length >= ccLimit}
+            ) : (
+              <div className="space-y-1.5">
+                <Label>CC recipients</Label>
+                <p className="text-[11px] text-muted-foreground">
+                  You can add up to {ccLimit} CC recipient{ccLimit === 1 ? "" : "s"} on
+                  your {planId} plan.
+                </p>
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {prefs.cc_emails.map((e) => (
+                    <span
+                      key={e}
+                      className="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-0.5 text-xs"
                     >
-                      Add
-                    </Button>
-                  </div>
-                </>
-              )}
-            </div>
+                      {e}
+                      <button
+                        onClick={() => removeCc(e)}
+                        aria-label={`Remove ${e}`}
+                        className="text-muted-foreground hover:text-foreground"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="cc@example.com"
+                    value={ccDraft}
+                    onChange={(e) => setCcDraft(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        addCc();
+                      }
+                    }}
+                    disabled={prefs.cc_emails.length >= ccLimit}
+                  />
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={addCc}
+                    disabled={prefs.cc_emails.length >= ccLimit}
+                  >
+                    Add
+                  </Button>
+                </div>
+              </div>
+            )}
 
             <div className="space-y-2.5 pt-2 border-t">
               <ToggleRow
@@ -482,20 +501,36 @@ export default function NotificationsPage() {
         </CardHeader>
         <CardContent>
           {logs.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No digests sent yet.</p>
+            <p className="text-sm text-muted-foreground">
+              No digests sent yet. Click &ldquo;Send test digest&rdquo; to preview, or
+              wait for your scheduled send.
+            </p>
           ) : (
             <ul className="divide-y divide-border">
               {logs.map((row) => {
                 const s = statusLabel(row.status);
                 return (
-                  <li key={row.id} className="flex items-center justify-between py-2.5 text-sm">
-                    <div>
-                      <span className="font-medium capitalize">{row.digest_type}</span>
-                      <span className="text-muted-foreground ml-2">
-                        {new Date(row.created_at).toLocaleString()}
-                      </span>
+                  <li key={row.id} className="py-2.5 text-sm">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-muted-foreground whitespace-nowrap">
+                          {new Date(row.created_at).toLocaleString()}
+                        </span>
+                        <span className="text-muted-foreground">·</span>
+                        <span className="font-medium capitalize">{row.digest_type}</span>
+                        {row.is_test && (
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                            Test
+                          </Badge>
+                        )}
+                      </div>
+                      <Badge variant={s.variant}>{s.text}</Badge>
                     </div>
-                    <Badge variant={s.variant}>{s.text}</Badge>
+                    {row.status === "failed" && row.error_message && (
+                      <p className="text-[11px] text-muted-foreground mt-1 ml-1 truncate">
+                        {row.error_message}
+                      </p>
+                    )}
                   </li>
                 );
               })}
