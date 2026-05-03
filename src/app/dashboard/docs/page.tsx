@@ -124,7 +124,7 @@ const FAQS = [
  {
  question: "How many AI replies do I get per month?",
  answer:
- "The Free plan includes 10 AI replies per month. The Pro plan ($49/mo) includes 500 replies, and the Agency plan ($149/mo) includes unlimited replies. Replies reset on your billing date each month.",
+ "The Free plan includes 30 AI replies per week. The Pro plan ($49/mo) includes 500 replies, and the Agency plan ($149/mo) includes unlimited replies. Replies reset on your billing date each month.",
  },
  {
  question: "Is my data secure?",

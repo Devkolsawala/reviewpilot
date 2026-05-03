@@ -13,7 +13,7 @@ export const PLANS = {
     price_usd: 0,
     sync_cadence: 'every_2h' as SyncCadence,   // every 2 hours (all plans)
     limits: {
-      ai_replies_per_period: 10,
+      ai_replies_per_period: 30,
       sms_per_period: 5,
       connections: 1,
       team_members: 1,  // total seats (owner only — no invites on free)
@@ -28,7 +28,7 @@ export const PLANS = {
       analytics_advanced: false,
       inbox_ai_reply: true,
       inbox_bulk_reply: false,
-      inbox_auto_reply: false,
+      inbox_auto_reply: true,
       campaigns_sms: false,
       campaigns_email: false,
     },

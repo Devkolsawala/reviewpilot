@@ -10,7 +10,6 @@ import { Slider } from "@/components/ui/slider";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, X, Bot, Sparkles, Clock, Shield, Calendar, Loader2, Zap } from "lucide-react";
-import { UpgradeGate } from "@/components/dashboard/UpgradeGate";
 import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
 import { createClient } from "@/lib/supabase/client";
@@ -677,8 +676,7 @@ export function AppContextForm({ connectionId: connectionIdProp, disabled = fals
  </CardContent>
  </Card>
 
- {/* Review Reply Mode + Scheduled Auto-Reply — gated behind inbox_auto_reply */}
- <UpgradeGate feature="inbox_auto_reply">
+ {/* Review Reply Mode + Scheduled Auto-Reply — available on all plans */}
  {/* Review Reply Mode */}
  <Card>
  <CardHeader>
@@ -921,7 +919,6 @@ export function AppContextForm({ connectionId: connectionIdProp, disabled = fals
  </CardContent>
  )}
  </Card>
- </UpgradeGate>
 
  <div className="flex gap-3">
  <Button onClick={handleSave} disabled={disabled || saving || applyingAutoReply} className="flex-1" title={disabled ? "Your role is read-only" : undefined}>
