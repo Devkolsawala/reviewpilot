@@ -40,13 +40,13 @@ export const metadata: Metadata = {
   title:
     "Features — AI Review Reply, Team Collaboration, Analytics | ReviewPilot",
   description:
-    "All ReviewPilot features in one place — AI-generated Play Store and Google review replies, team collaboration with role-based access, sentiment analytics, and more. Plans from ₹1,500/month.",
+    "All ReviewPilot features in one place — AI-generated Play Store and Google review replies, team collaboration with role-based access, sentiment analytics, and more. Plans from $16/month.",
   alternates: { canonical: "/features" },
   openGraph: {
     title:
       "Features — AI Review Reply, Team Collaboration, Analytics | ReviewPilot",
     description:
-      "AI replies for Play Store and Google reviews, team collaboration with admin and read-only roles, sentiment analytics, daily digests, and more. Plans from ₹1,500/mo.",
+      "AI replies for Play Store and Google reviews, team collaboration with admin and read-only roles, sentiment analytics, daily digests, and more. Plans from $16/mo.",
     url: PAGE_URL,
     type: "website",
     siteName: "ReviewPilot",
@@ -63,7 +63,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Every ReviewPilot feature, in one place",
     description:
-      "AI Play Store and Google review replies, team collaboration, sentiment analytics, daily digest. Plans from ₹1,500/month.",
+      "AI Play Store and Google review replies, team collaboration, sentiment analytics, daily digest. Plans from $16/month.",
     images: ["/og-image.svg"],
   },
 };
@@ -128,7 +128,7 @@ const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "How is ReviewPilot different from Birdeye or AppFollow?",
-    a: "ReviewPilot is built in India for Indian buyers. Pricing starts at ₹1,500/month, billed in INR through Razorpay. We focus on Play Store review automation today, with Google Business Profile shipping next. Compare us directly to Birdeye, Famepilot, Podium, and Simplify360 in our compare pages.",
+    a: "ReviewPilot is built in India for Indian buyers. Pricing starts at $16/month, billed in INR equivalent through Razorpay at checkout. We focus on Play Store review automation today, with Google Business Profile shipping next. Compare us directly to Birdeye, Famepilot, Podium, and Simplify360 in our compare pages.",
   },
 ];
 
@@ -149,22 +149,22 @@ const softwareSchema = {
     {
       "@type": "Offer",
       name: PLANS.starter.name,
-      price: PLANS.starter.price_inr.toString(),
-      priceCurrency: "INR",
+      price: PLANS.starter.price_usd.toString(),
+      priceCurrency: "USD",
       url: `${SITE_URL}/pricing`,
     },
     {
       "@type": "Offer",
       name: PLANS.growth.name,
-      price: PLANS.growth.price_inr.toString(),
-      priceCurrency: "INR",
+      price: PLANS.growth.price_usd.toString(),
+      priceCurrency: "USD",
       url: `${SITE_URL}/pricing`,
     },
     {
       "@type": "Offer",
       name: PLANS.agency.name,
-      price: PLANS.agency.price_inr.toString(),
-      priceCurrency: "INR",
+      price: PLANS.agency.price_usd.toString(),
+      priceCurrency: "USD",
       url: `${SITE_URL}/pricing`,
     },
   ],
@@ -221,7 +221,7 @@ export default function FeaturesPage() {
               </Button>
             </div>
             <p className="mt-3 text-xs text-muted-foreground">
-              No credit card required. Plans from ₹1,500/month.
+              No credit card required. Plans from $16/month.
             </p>
           </div>
         </section>
@@ -590,7 +590,7 @@ export default function FeaturesPage() {
             <h2 className="mt-3 font-sans text-2xl font-semibold tracking-tight sm:text-3xl md:text-4xl">
               Plans from{" "}
               <span className="text-gradient-brand">
-                ₹1,500/month
+                $16/month
               </span>
               .
             </h2>
