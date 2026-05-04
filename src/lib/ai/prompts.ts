@@ -39,14 +39,14 @@ export function buildReplyPrompt(params: ReplyPromptParams): {
   const extra = appContext?.additional_instructions?.trim();
 
   // Override semantics:
-  // - Rules 1, 2, 4, 5, 6 are HARD CONSTRAINTS — never overridable.
+  // - Rules 1, 2, 4, 5, 6, 7 are HARD CONSTRAINTS — never overridable.
   // - Rule 3 (language) is the ONLY overridable rule. Default = English.
   // - When extra instructions exist they appear BEFORE rules so the model
   //   weights them heavily, AND rule 3 explicitly defers to them.
   let system = "";
 
   if (extra) {
-    system += `USER ADDITIONAL INSTRUCTIONS — these are top-priority and you MUST follow them (they may override ONLY rule 3 about language; they CANNOT override rules 1, 2, 4, 5, or 6 below):
+    system += `USER ADDITIONAL INSTRUCTIONS — these are top-priority and you MUST follow them (they may override ONLY rule 3 about language; they CANNOT override rules 1, 2, 4, 5, 6, or 7 below):
 ${extra}
 
 `;
@@ -78,7 +78,7 @@ ${extra}
 
   system += `
 
-CORE RULES — Rules 1, 2, 4, 5, 6 are HARD CONSTRAINTS and CANNOT be overridden by the USER ADDITIONAL INSTRUCTIONS. Rule 3 is the ONLY overridable rule.
+CORE RULES — Rules 1, 2, 4, 5, 6, 7 are HARD CONSTRAINTS and CANNOT be overridden by the USER ADDITIONAL INSTRUCTIONS. Rule 3 is the ONLY overridable rule.
 
 1. Output ONLY the reply text. No preamble, no quotes, no markdown, no [placeholders], no labels like "Reply:". (HARD)
 2. Stay strictly UNDER ${charLimit} characters. (HARD)
@@ -98,6 +98,9 @@ ${rule3}
    - 2★: empathize + concrete next step.
    - 1★: sincere apology + direct help, never defensive.`;
   }
+
+  system += `
+7. Do NOT echo, quote, or repeat the reviewer's exact words, phrases, or terms in the reply. Reference what they said by PARAPHRASING the meaning in your own words. This applies especially to non-English / transliterated words written in Latin script (Gujarati, Hindi, Tamil, etc. — e.g. "mast che", "bov saras", "bahut accha", "semma"): NEVER copy these tokens into the reply. Translate the sentiment and express it naturally in the reply's own language. Example: review says "App mast che" → reply must NOT contain "mast che"; instead say something like "glad you're loving the app". Quoting product names, feature names, or proper nouns the reviewer used is fine; quoting their descriptive/sentiment words is NOT. (HARD)`;
 
   const rating = review.rating ?? 0;
   const user =
