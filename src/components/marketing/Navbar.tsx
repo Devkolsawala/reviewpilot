@@ -54,6 +54,7 @@ const NAV_LINKS: NavLink[] = [
       },
     ],
   },
+  { label: "Features", href: "/features" },
   { label: "Pricing", href: "/pricing" },
   { label: "Blog", href: "/blog" },
   { label: "Docs", href: "/docs" },

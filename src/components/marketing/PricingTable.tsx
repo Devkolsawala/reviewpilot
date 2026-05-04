@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { m, MotionProvider } from "@/components/motion/primitives";
+import { PLANS as PLAN_CONFIG } from "@/lib/plans";
 
 type Billing = "monthly" | "annual";
 
@@ -19,7 +20,7 @@ const PLANS = [
       "1 location OR 1 app",
       "100 AI replies/week",
       "50 SMS/week (Coming soon)",
-      "3 team seats",
+      `${PLAN_CONFIG.starter.limits.team_members} team seats`,
       "Basic analytics",
     ],
     cta: "Start free trial",
@@ -35,7 +36,7 @@ const PLANS = [
       "3 locations OR 3 apps",
       "500 AI replies/week",
       "200 SMS/week (Coming soon)",
-      "5 team seats",
+      `${PLAN_CONFIG.growth.limits.team_members} team seats`,
       "Full analytics + sentiment",
     ],
     cta: "Start free trial",
@@ -51,7 +52,7 @@ const PLANS = [
       "10 locations or apps",
       "Unlimited AI replies",
       "1,000 SMS/week (Coming soon)",
-      "10 team seats",
+      `${PLAN_CONFIG.agency.limits.team_members} team seats`,
       "Priority support",
     ],
     cta: "Start free trial",

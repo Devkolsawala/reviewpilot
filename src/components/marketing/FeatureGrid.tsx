@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import {
   Bot,
   MessageSquareText,
@@ -9,6 +10,8 @@ import {
   Sparkles,
   Star,
   Zap,
+  Users,
+  ArrowRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { m, MotionProvider, fadeUp, stagger } from "@/components/motion/primitives";
@@ -84,6 +87,15 @@ export function FeatureGrid() {
               visual={<SmsVisual />}
               soon
             />
+
+            {/* Wide — Team collaboration */}
+            <BentoCard
+              className="lg:col-span-3"
+              icon={Users}
+              title="Built for teams"
+              description="Invite teammates as Admins (full reply and connection access) or Read-only viewers — collaborate on Play Store and Google replies without sharing a login or your billing details."
+              visual={<TeamVisual />}
+            />
           </m.div>
 
           {/* Secondary row — smaller utility cards */}
@@ -98,6 +110,16 @@ export function FeatureGrid() {
             <MiniCard icon={Zap} title="3-second drafts" />
             <MiniCard icon={Sparkles} title="Auto-publish rules" />
           </m.div>
+
+          <div className="mt-10 text-center">
+            <Link
+              href="/features"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-foreground underline-offset-4 hover:underline"
+            >
+              See all features
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
         </div>
       </section>
     </MotionProvider>
@@ -231,6 +253,41 @@ function SentimentVisual() {
         <span>Mon</span>
         <span>Sun</span>
       </div>
+    </div>
+  );
+}
+
+function TeamVisual() {
+  const ROWS = [
+    { name: "Priya S.", role: "Owner", badge: "bg-accent/15 text-accent" },
+    { name: "Aman R.", role: "Admin", badge: "bg-blue-500/15 text-blue-600" },
+    {
+      name: "Neha K.",
+      role: "Read-only",
+      badge: "bg-muted-foreground/15 text-muted-foreground",
+    },
+  ];
+  return (
+    <div className="grid gap-1.5 sm:grid-cols-3">
+      {ROWS.map((m) => (
+        <div
+          key={m.name}
+          className="flex items-center gap-2 rounded-md border border-border/60 bg-background/60 px-2 py-1.5 text-[11px]"
+        >
+          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-semibold">
+            {m.name.charAt(0)}
+          </span>
+          <span className="flex-1 truncate text-foreground/80">{m.name}</span>
+          <span
+            className={cn(
+              "rounded px-1.5 py-0.5 text-[10px] font-medium",
+              m.badge,
+            )}
+          >
+            {m.role}
+          </span>
+        </div>
+      ))}
     </div>
   );
 }

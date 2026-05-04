@@ -9,6 +9,7 @@ import {
   Clock,
   Users,
   ShieldCheck,
+  Crown,
 } from "lucide-react";
 import { AuroraBackground } from "@/components/ui/aurora-background";
 import { GridPattern } from "@/components/ui/grid-pattern";
@@ -166,6 +167,73 @@ export default function ForLocalBusinessPage() {
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* Team collaboration */}
+      <section className="relative py-24 sm:py-32 bg-muted/20">
+        <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+              Team collaboration
+            </p>
+            <h2 className="mt-3 font-sans text-3xl font-semibold tracking-tight sm:text-4xl">
+              Hand off review replies to your team.
+            </h2>
+            <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
+              You don&apos;t have time to reply to every review yourself. Bring in
+              your store manager, receptionist, or marketing assistant to draft
+              and publish replies — without ever giving them access to your
+              billing or your Google login.{" "}
+              <Link href="/features#team-collaboration" className="text-foreground underline-offset-4 hover:underline">
+                See all features
+              </Link>
+              .
+            </p>
+          </div>
+
+          <div className="mt-12 grid gap-5 md:grid-cols-2">
+            <div className="rounded-2xl border border-border/60 bg-card/40 p-6 backdrop-blur-sm">
+              <div className="flex items-center gap-2">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-border/60 bg-background/60 text-accent">
+                  <Crown className="h-4 w-4" />
+                </div>
+                <h3 className="font-sans text-base font-semibold tracking-tight">
+                  Owner-managers
+                </h3>
+              </div>
+              <ul className="mt-4 space-y-2 text-sm text-foreground/85">
+                <li>Connect Google Business Profile and locations</li>
+                <li>Manage Razorpay billing and subscription</li>
+                <li>Invite, promote, or remove staff members</li>
+                <li>Set the brand voice and auto-reply rules</li>
+              </ul>
+            </div>
+            <div className="rounded-2xl border border-border/60 bg-card/40 p-6 backdrop-blur-sm">
+              <div className="flex items-center gap-2">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-border/60 bg-background/60 text-accent">
+                  <Users className="h-4 w-4" />
+                </div>
+                <h3 className="font-sans text-base font-semibold tracking-tight">
+                  Store managers &amp; staff
+                </h3>
+              </div>
+              <ul className="mt-4 space-y-2 text-sm text-foreground/85">
+                <li>Admins reply to reviews and edit AI drafts</li>
+                <li>Admins update app context, FAQs, and tone</li>
+                <li>Read-only staff can monitor reviews and analytics</li>
+                <li>No access to billing, plan, or location credentials</li>
+              </ul>
+            </div>
+          </div>
+
+          <p className="mt-8 text-center text-xs text-muted-foreground">
+            Team seats: Starter 3 · Growth 5 · Agency 10. See{" "}
+            <Link href="/pricing" className="text-foreground underline-offset-4 hover:underline">
+              pricing
+            </Link>{" "}
+            for details.
+          </p>
         </div>
       </section>
 

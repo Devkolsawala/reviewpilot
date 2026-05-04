@@ -36,6 +36,7 @@ module.exports = {
     const priorities = {
       '/': 1.0,
       '/pricing': 0.9,
+      '/features': 0.95,
       '/how-it-works': 0.9,
       '/features/google-play-reviews': 0.9,
       '/features/google-business-profile': 0.9,

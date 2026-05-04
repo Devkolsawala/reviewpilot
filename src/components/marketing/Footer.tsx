@@ -26,10 +26,12 @@ const COLUMNS: { heading: string; links: { label: string; href: string }[] }[] =
   {
     heading: "Product",
     links: [
+      { label: "Features", href: "/features" },
       { label: "Pricing", href: "/pricing" },
       { label: "How it works", href: "/how-it-works" },
       { label: "Play Store reviews", href: "/features/google-play-reviews" },
       { label: "Google Business Profile", href: "/features/google-business-profile" },
+      { label: "Team Collaboration", href: "/features#team-collaboration" },
       { label: "Request a demo", href: "/demo" },
     ],
   },
