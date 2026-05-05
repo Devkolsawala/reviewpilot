@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Hero } from "@/components/marketing/Hero";
+import { LiveStatsBar } from "@/components/marketing/LiveStatsBar";
+import { InteractiveAIDemo } from "@/components/marketing/InteractiveAIDemo";
 import { TrustBar } from "@/components/marketing/TrustBar";
 import { PersonaSplit } from "@/components/marketing/PersonaSplit";
 import { FeatureGrid } from "@/components/marketing/FeatureGrid";
@@ -108,7 +110,8 @@ export default function HomePage() {
       <JsonLd
         data={[organizationSchema, softwareSchema, websiteSchema, faqSchema]}
       />
-      <Hero />
+      <Hero statsBar={<LiveStatsBar />} />
+      <InteractiveAIDemo />
       <TrustBar />
       <PersonaSplit />
       <FeatureGrid />

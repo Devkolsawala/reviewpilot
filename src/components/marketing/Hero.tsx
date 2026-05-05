@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { YOUTUBE_DEMO_URL } from "@/lib/constants";
@@ -21,7 +21,20 @@ import {
   MousePointer2,
 } from "lucide-react";
 
-export function Hero() {
+interface HeroProps {
+  /** Server-rendered live stats bar, slotted under the trial microcopy. */
+  statsBar?: ReactNode;
+}
+
+function handleTryAiClick(e: React.MouseEvent<HTMLAnchorElement>) {
+  e.preventDefault();
+  const target = document.getElementById("try-the-ai");
+  if (target) {
+    target.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+}
+
+export function Hero({ statsBar }: HeroProps = {}) {
   return (
     <MotionProvider>
       <section className="relative isolate overflow-hidden pt-20 pb-16 sm:pt-28 sm:pb-20 lg:pt-32 lg:pb-24">
@@ -104,6 +117,20 @@ export function Hero() {
             >
               7-day free trial · No credit card · Setup in 5 minutes
             </m.p>
+
+            {/* Live stats bar — slotted from page.tsx as a server component */}
+            {statsBar && <m.div variants={fadeUp}>{statsBar}</m.div>}
+
+            {/* Tertiary scroll-to-demo link */}
+            <m.a
+              variants={fadeUp}
+              href="#try-the-ai"
+              onClick={handleTryAiClick}
+              className="mt-4 inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <ChevronDown className="h-3 w-3" aria-hidden />
+              Or try the AI right now
+            </m.a>
           </m.div>
 
           {/* Product preview — 3-step automation flow */}
