@@ -509,10 +509,6 @@ export function InteractiveAIDemo() {
           </div>
         </div>
 
-        <p className="mt-6 text-center text-[11px] text-muted-foreground">
-          Powered by the same xAI prompt that runs in production · 5 demos per
-          hour per visitor
-        </p>
       </div>
     </section>
   );

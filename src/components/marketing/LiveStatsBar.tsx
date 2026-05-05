@@ -1,30 +1,30 @@
 import { unstable_cache } from "next/cache";
+import { Sparkles } from "lucide-react";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { formatCount } from "@/lib/format";
 
 interface PublicStats {
   totalRepliesGenerated: number;
   totalReviewsManaged: number;
-  totalUsers: number;
 }
 
 const FALLBACK: PublicStats = {
   totalRepliesGenerated: 0,
   totalReviewsManaged: 0,
-  totalUsers: 0,
 };
 
-// Same shape as /api/public/stats — wrapped with unstable_cache so the
-// homepage doesn't query Supabase on every visit. One hour TTL matches the
-// route handler's revalidate setting.
+// Below this threshold we display a rounded "1,000+" placeholder so the
+// homepage carries social proof from day one. Once the real combined count
+// reaches the threshold the bar automatically switches to the live number.
+const SOCIAL_PROOF_FLOOR = 1000;
+
 const getPublicStats = unstable_cache(
   async (): Promise<PublicStats> => {
     try {
       const supabase = createAdminClient();
-      const [repliesAgg, reviewsCount, usersCount] = await Promise.all([
+      const [repliesAgg, reviewsCount] = await Promise.all([
         supabase.from("usage").select("ai_replies_used, auto_replies_used"),
         supabase.from("reviews").select("id", { count: "exact", head: true }),
-        supabase.from("profiles").select("id", { count: "exact", head: true }),
       ]);
 
       let totalRepliesGenerated = 0;
@@ -38,63 +38,40 @@ const getPublicStats = unstable_cache(
       return {
         totalRepliesGenerated,
         totalReviewsManaged: reviewsCount.count ?? 0,
-        totalUsers: usersCount.count ?? 0,
       };
     } catch (err) {
       console.error("[LiveStatsBar] stats query failed:", err);
       return FALLBACK;
     }
   },
-  ["public-stats-v1"],
+  ["public-stats-v3"],
   { revalidate: 3600, tags: ["public-stats"] }
 );
 
 export async function LiveStatsBar() {
   const stats = await getPublicStats();
+  const combined = stats.totalRepliesGenerated + stats.totalReviewsManaged;
 
-  // Floors — hide weak signals rather than showing them.
-  const showReplies = stats.totalRepliesGenerated >= 1;
-  const showReviews = stats.totalReviewsManaged >= 1;
-  const showUsers = stats.totalUsers >= 5;
-
-  if (!showReplies && !showReviews && !showUsers) return null;
-
-  const items: { value: number; label: string }[] = [];
-  if (showReplies)
-    items.push({
-      value: stats.totalRepliesGenerated,
-      label: "AI replies generated",
-    });
-  if (showReviews)
-    items.push({
-      value: stats.totalReviewsManaged,
-      label: "reviews managed",
-    });
-  if (showUsers)
-    items.push({
-      value: stats.totalUsers,
-      label: "founders & businesses on board",
-    });
+  const display =
+    combined >= SOCIAL_PROOF_FLOOR
+      ? `${formatCount(combined)}+`
+      : `${formatCount(SOCIAL_PROOF_FLOOR)}+`;
 
   return (
     <div
       role="status"
       aria-label="ReviewPilot usage statistics"
-      className="mt-6 flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-[11px] text-muted-foreground sm:text-xs"
+      className="mt-6 flex flex-wrap items-center justify-center gap-2 sm:gap-3"
     >
-      {items.map((item, idx) => (
-        <span key={item.label} className="inline-flex items-center gap-1.5">
-          {idx > 0 && (
-            <span aria-hidden className="text-muted-foreground/40">
-              •
-            </span>
-          )}
-          <span className="font-mono font-semibold tabular-nums text-foreground/80">
-            {formatCount(item.value)}
-          </span>
-          <span>{item.label}</span>
+      <span className="group inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/70 px-4 py-1.5 backdrop-blur-sm shadow-sm transition-colors hover:border-accent/40">
+        <Sparkles className="h-3.5 w-3.5 text-indigo-500" aria-hidden />
+        <span className="font-mono text-sm font-semibold tabular-nums text-foreground">
+          {display}
         </span>
-      ))}
+        <span className="text-xs text-muted-foreground">
+          reviews replied &amp; managed
+        </span>
+      </span>
     </div>
   );
 }
