@@ -38,6 +38,7 @@ import {
 import { GBP_ENABLED, GBP_STATUS_LABEL, GBP_COMING_SOON_MESSAGE } from "@/lib/feature-flags";
 import type { Connection } from "@/types/connection";
 import { WhatsAppConnectWizard } from "@/components/dashboard/WhatsAppConnectWizard";
+import { EmbeddedSignupButton } from "@/components/whatsapp/embedded-signup-button";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -172,7 +173,7 @@ export function ConnectionWizard({
 
  if (mode === "whatsapp") {
  return (
- <WhatsAppConnectWizard
+ <WhatsAppMethodChooser
  onBack={() => setMode("choose")}
  onComplete={onComplete}
  />
@@ -181,6 +182,115 @@ export function ConnectionWizard({
 
  return (
  <PlayStoreWizard onBack={() => setMode("choose")} onComplete={onComplete} />
+ );
+}
+
+// ---------------------------------------------------------------------------
+// WhatsApp Method Chooser — two-tab approach (Embedded Signup vs Manual)
+// ---------------------------------------------------------------------------
+
+type WAMethod = "embedded_signup" | "manual";
+
+function WhatsAppMethodChooser({
+ onBack,
+ onComplete,
+}: {
+ onBack: () => void;
+ onComplete?: (connection: Connection) => void;
+}) {
+ const [method, setMethod] = useState<WAMethod>("embedded_signup");
+
+ return (
+ <div className="space-y-4">
+ {/* Method tabs */}
+ <div className="grid grid-cols-2 gap-2">
+ <button
+ onClick={() => setMethod("embedded_signup")}
+ className={cn(
+ "rounded-xl border-2 p-4 text-left transition-all",
+ method === "embedded_signup"
+ ? "border-accent/40 bg-accent/10 dark:bg-accent/10"
+ : "border-border hover:border-accent/40 bg-card"
+ )}
+ >
+ <div className="flex items-center gap-2 mb-1">
+ <span
+ className={cn(
+ "h-3 w-3 rounded-full border-2",
+ method === "embedded_signup"
+ ? "border-accent/40 bg-accent"
+ : "border-muted-foreground"
+ )}
+ />
+ <span className="text-sm font-semibold">Continue with Facebook</span>
+ <Badge
+ variant="secondary"
+ className="text-[10px] bg-accent/10 text-accent dark:bg-accent/10 dark:text-accent"
+ >
+ Recommended
+ </Badge>
+ </div>
+ <p className="text-xs text-muted-foreground pl-5">
+ OAuth via Meta — takes about 60 seconds
+ </p>
+ </button>
+
+ <button
+ onClick={() => setMethod("manual")}
+ className={cn(
+ "rounded-xl border-2 p-4 text-left transition-all",
+ method === "manual"
+ ? "border-blue-500 bg-blue-50/60 dark:bg-blue-950/20"
+ : "border-border hover:border-blue-300 bg-card"
+ )}
+ >
+ <div className="flex items-center gap-2 mb-1">
+ <span
+ className={cn(
+ "h-3 w-3 rounded-full border-2",
+ method === "manual"
+ ? "border-blue-500 bg-blue-500"
+ : "border-muted-foreground"
+ )}
+ />
+ <span className="text-sm font-semibold">System User Token</span>
+ <Badge variant="secondary" className="text-[10px]">
+ Advanced
+ </Badge>
+ </div>
+ <p className="text-xs text-muted-foreground pl-5">
+ For existing Meta Business setups
+ </p>
+ </button>
+ </div>
+
+ {/* Wizard body */}
+ {method === "embedded_signup" ? (
+ <Card>
+ <CardHeader>
+ <CardTitle className="text-base">Continue with Facebook</CardTitle>
+ <CardDescription>
+ Authorize ReviewPilot with your Meta Business account. We&apos;ll
+ detect your WhatsApp Business Account and phone number, subscribe
+ webhooks, and finish setup automatically.
+ </CardDescription>
+ </CardHeader>
+ <CardContent className="space-y-4">
+ <ul className="text-xs text-muted-foreground space-y-1.5 list-disc pl-5">
+ <li>You&apos;ll sign in with Facebook in a popup</li>
+ <li>Pick the WhatsApp Business Account to connect</li>
+ <li>We handle webhook subscription and phone registration</li>
+ </ul>
+ <EmbeddedSignupButton />
+ <Button variant="ghost" size="sm" onClick={onBack}>
+ <ArrowLeft className="mr-2 h-4 w-4" /> Back
+ </Button>
+ </CardContent>
+ </Card>
+ ) : (
+ <WhatsAppConnectWizard onBack={onBack} onComplete={onComplete} />
+ )}
+ </div>
  );
 }
 

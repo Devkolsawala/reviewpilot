@@ -271,6 +271,22 @@ export default function ConnectionsPage() {
  {GBP_STATUS_LABEL}
  </Badge>
  )}
+ {conn.type === "whatsapp" && conn.connection_method === "embedded_signup" && (
+ <Badge
+ variant="secondary"
+ className="text-[10px] bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400"
+ >
+ Facebook
+ </Badge>
+ )}
+ {conn.type === "whatsapp" && conn.connection_method !== "embedded_signup" && (
+ <Badge
+ variant="secondary"
+ className="text-[10px] bg-gray-100 text-gray-600 dark:bg-gray-900 dark:text-gray-400"
+ >
+ Manual setup
+ </Badge>
+ )}
  </div>
  <p className="text-xs text-muted-foreground capitalize">
  {conn.type === "play_store"

@@ -17,6 +17,10 @@ export interface Connection {
   whatsapp_business_account_id?: string | null;
   whatsapp_display_phone_number?: string | null;
   whatsapp_access_token_encrypted?: string | null;
+  // How the connection was established (Phase 6 — Embedded Signup).
+  connection_method?: "manual" | "embedded_signup" | null;
+  ess_user_id?: string | null;
+  ess_business_id?: string | null;
 }
 
 /** Metadata for a WhatsApp connection — the raw access token is NEVER stored in the frontend type. */
