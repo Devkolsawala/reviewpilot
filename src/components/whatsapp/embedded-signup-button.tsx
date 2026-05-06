@@ -131,7 +131,7 @@ export function EmbeddedSignupButton() {
     <Button
       onClick={launchEmbeddedSignup}
       disabled={!sdkLoaded || isLaunching}
-      className="w-full bg-[#1877F2] hover:bg-[#166FE5] text-white"
+      className="w-full"
       size="lg"
     >
       {isLaunching

@@ -81,8 +81,8 @@ export function useReviews() {
   const [activeConnectionId, setActiveConnectionId] = useState<string | null>(null);
   const [mockKey, setMockKey] = useState<string>(getMockKey("anon"));
 
-  const fetchReviews = useCallback(async () => {
-    setLoading(true);
+  const fetchReviews = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       // Fast-path: env var forces mock mode (no Supabase round-trip)
       if (process.env.NEXT_PUBLIC_USE_MOCK === "true") {
@@ -166,12 +166,60 @@ export function useReviews() {
       setReviews([]);
       setIsMock(false);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
     fetchReviews();
+  }, [fetchReviews]);
+
+  // Auto-refresh so realtime sources (e.g. WhatsApp webhook inserts) appear
+  // without a manual page refresh. Polls every 20s while the tab is visible,
+  // and refetches immediately when the user returns to the tab. Skipped in
+  // mock mode to avoid log spam.
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    if (process.env.NEXT_PUBLIC_USE_MOCK === "true") return;
+
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+
+    function silentRefetch() {
+      fetchReviews(true);
+    }
+
+    function startPolling() {
+      if (intervalId !== null) return;
+      intervalId = setInterval(() => {
+        if (document.visibilityState === "visible") silentRefetch();
+      }, 20000);
+    }
+
+    function stopPolling() {
+      if (intervalId !== null) {
+        clearInterval(intervalId);
+        intervalId = null;
+      }
+    }
+
+    function handleVisibilityChange() {
+      if (document.visibilityState === "visible") {
+        silentRefetch();
+        startPolling();
+      } else {
+        stopPolling();
+      }
+    }
+
+    if (document.visibilityState === "visible") startPolling();
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", silentRefetch);
+
+    return () => {
+      stopPolling();
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", silentRefetch);
+    };
   }, [fetchReviews]);
 
   async function updateReview(reviewId: string, updates: Partial<Review>) {

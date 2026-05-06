@@ -276,6 +276,14 @@ function WhatsAppMethodChooser({
  </CardDescription>
  </CardHeader>
  <CardContent className="space-y-4">
+ <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
+ <p className="font-medium mb-1">Before you continue</p>
+ <p>
+ Make sure your <strong>Meta Business Portfolio is verified</strong> in
+ Business Manager. Connecting an unverified portfolio will fail at the
+ final step.
+ </p>
+ </div>
  <ul className="text-xs text-muted-foreground space-y-1.5 list-disc pl-5">
  <li>You&apos;ll sign in with Facebook in a popup</li>
  <li>Pick the WhatsApp Business Account to connect</li>
