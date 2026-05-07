@@ -28,14 +28,21 @@ export function getRazorpayPlanId(planName: string): string {
   return planId;
 }
 
-// Create a subscription for a user
-export async function createSubscription(
-  planName: string,
-  customerEmail: string,
-  customerName?: string
-) {
+// Create a subscription for a user.
+//
+// CRITICAL: notes.user_id and notes.plan are read by the activation webhook
+// to resolve the right user and set the right plan. Do NOT remove them.
+// Without notes.user_id, an activation webhook arriving before the DB write
+// (or for a sub_id that we deliberately don't store pre-activation) would
+// have no way to find the user.
+export async function createSubscription(params: {
+  planName: 'starter' | 'growth' | 'agency';
+  userId: string;
+  customerEmail: string;
+  customerName?: string;
+}) {
   const razorpay = getRazorpay();
-  const razorpayPlanId = getRazorpayPlanId(planName);
+  const razorpayPlanId = getRazorpayPlanId(params.planName);
 
   const subscription = await razorpay.subscriptions.create({
     plan_id: razorpayPlanId,
@@ -43,9 +50,10 @@ export async function createSubscription(
     quantity: 1,
     customer_notify: 1,
     notes: {
-      email: customerEmail,
-      name: customerName || '',
-      plan: planName,
+      user_id: params.userId,        // CRITICAL: webhook reads this to find the user
+      plan: params.planName,         // CRITICAL: webhook reads this to set the right plan
+      email: params.customerEmail,
+      name: params.customerName || '',
     },
   });
 

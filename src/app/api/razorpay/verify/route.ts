@@ -11,13 +11,12 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { razorpay_payment_id, razorpay_subscription_id, razorpay_signature, planName } = body;
+    const { razorpay_payment_id, razorpay_subscription_id, razorpay_signature } = body;
 
     if (!razorpay_payment_id || !razorpay_subscription_id || !razorpay_signature) {
       return NextResponse.json({ error: 'Missing parameters' }, { status: 400 });
     }
 
-    // Verify signature
     const isValid = verifyPaymentSignature({
       razorpay_payment_id,
       razorpay_subscription_id,
@@ -25,36 +24,19 @@ export async function POST(request: NextRequest) {
     });
 
     if (!isValid) {
-      console.error('[RAZORPAY] Invalid payment signature');
+      console.error('[RAZORPAY] Invalid payment signature', { user: user.id, sub: razorpay_subscription_id });
       return NextResponse.json({ error: 'Invalid payment signature' }, { status: 400 });
     }
 
-    const validPlans = ['starter', 'growth', 'agency'];
-    const selectedPlan = validPlans.includes(planName) ? planName : null;
+    console.log(`[RAZORPAY] Payment signature verified for user ${user.id}, subscription ${razorpay_subscription_id}. Awaiting activation webhook for DB update.`);
 
-    // Payment verified — update the user's plan
-    const { error: updateError } = await supabase
-      .from('profiles')
-      .update({
-        plan: selectedPlan ?? 'starter',
-        razorpay_subscription_id: razorpay_subscription_id,
-        razorpay_customer_id: razorpay_payment_id,
-        trial_ends_at: null,           // Clear trial — they're a paying customer
-        subscription_cancel_at: null,  // Clear any pending cancellation
-      })
-      .eq('id', user.id);
-
-    if (updateError) {
-      console.error('[RAZORPAY] Profile update error:', updateError);
-      return NextResponse.json({ error: 'Failed to update plan' }, { status: 500 });
-    }
-
-    console.log(`[RAZORPAY] Plan upgraded to ${selectedPlan} for user ${user.id}`);
-
+    // DO NOT update profiles.plan, razorpay_subscription_id, or razorpay_customer_id here.
+    // The subscription.activated webhook is the source of truth — it uses notes.user_id
+    // to find the user, notes.plan to set the plan, and the Razorpay API to fetch the
+    // real customer_id (cust_xxx, not pay_xxx).
     return NextResponse.json({
       success: true,
-      plan: selectedPlan,
-      message: `Successfully upgraded to ${selectedPlan} plan!`,
+      message: 'Payment verified. Your plan will activate shortly.',
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';

@@ -184,10 +184,39 @@ export default function BillingPage() {
  const verifyData = await verifyRes.json();
  if (verifyData.success) {
  toast({
- title: "Payment successful!",
- description: `You're now on the ${planName.charAt(0).toUpperCase() + planName.slice(1)} plan. Refreshing...`,
+ title: "Payment received",
+ description: "Activating your plan…",
  });
- setTimeout(() => window.location.reload(), 1500);
+ // The subscription.activated webhook is the source of truth for the plan
+ // flip. Poll /api/plan every 2s for up to 30s waiting for it to land.
+ let activated = false;
+ for (let i = 0; i < 15; i++) {
+ await new Promise((r) => setTimeout(r, 2000));
+ try {
+ const planRes = await fetch("/api/plan", { cache: "no-store" });
+ if (planRes.ok) {
+ const planData = await planRes.json();
+ if (planData.plan === planName) {
+ activated = true;
+ break;
+ }
+ }
+ } catch { /* keep polling */ }
+ }
+ if (activated) {
+ toast({
+ title: "Plan activated!",
+ description: `You're now on the ${planName.charAt(0).toUpperCase() + planName.slice(1)} plan.`,
+ });
+ setTimeout(() => window.location.reload(), 1000);
+ } else {
+ toast({
+ title: "Still processing",
+ description: "Your payment is being processed — refresh in a minute.",
+ variant: "destructive",
+ });
+ setLoading(null);
+ }
  } else {
  toast({
  title: "Verification failed",
