@@ -17,6 +17,7 @@ interface SessionInfo {
 interface CallbackBody {
   code: string;
   session_info: SessionInfo | null;
+  pin: string | null;
 }
 
 function parseBody(raw: unknown): CallbackBody | null {
@@ -27,7 +28,9 @@ function parseBody(raw: unknown): CallbackBody | null {
     r.session_info && typeof r.session_info === "object"
       ? (r.session_info as SessionInfo)
       : null;
-  return { code: r.code, session_info };
+  const pin =
+    typeof r.pin === "string" && /^\d{6}$/.test(r.pin) ? r.pin : null;
+  return { code: r.code, session_info, pin };
 }
 
 const APP_ID = process.env.NEXT_PUBLIC_FB_APP_ID;
@@ -35,16 +38,32 @@ const APP_SECRET = process.env.FB_APP_SECRET;
 const GRAPH_VERSION = process.env.NEXT_PUBLIC_FB_GRAPH_VERSION || "v21.0";
 const REDIRECT_URI = process.env.ESS_OAUTH_REDIRECT_URI;
 
-// TODO v2: Exchange short-lived token for long-lived token
-// GET https://graph.facebook.com/{version}/oauth/access_token?
-//   grant_type=fb_exchange_token&
-//   client_id={app_id}&client_secret={app_secret}&
-//   fb_exchange_token={short_token}
-// This extends the token from ~1 hour to ~60 days.
-// For System User tokens (which the WABA actually uses), we should
-// generate a non-expiring token via the Business Manager API.
+// Token expiry depends on FB Login config "Token Expiration" setting.
+// "Never"               → fb_exchange_token returns a non-expiring token.
+// "60 days (Recommended)" → fb_exchange_token returns a 60-day token.
+// Verify in Meta dashboard → Use Cases → WhatsApp Business Management → Customizations.
+// As of last check, ReviewPilot config is set to "Never".
+const REQUIRED_SCOPES = [
+  "whatsapp_business_management",
+  "whatsapp_business_messaging",
+];
 
 export async function POST(req: NextRequest) {
+  let connectionId: string | null = null;
+  const supabase = createClient();
+
+  // Helper: write the failure state back to the row that was created early.
+  async function markExchangeFailed(reason: string) {
+    if (!connectionId) return;
+    await supabase
+      .from("connections")
+      .update({
+        token_status: "exchange_failed",
+        token_exchange_error: reason.slice(0, 1000),
+      })
+      .eq("id", connectionId);
+  }
+
   try {
     if (!APP_ID || !APP_SECRET || !REDIRECT_URI) {
       return NextResponse.json(
@@ -65,9 +84,8 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
-    const { code, session_info } = parsed;
+    const { code, session_info, pin } = parsed;
 
-    const supabase = createClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -75,6 +93,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { success: false, error: "Not authenticated" },
         { status: 401 }
+      );
+    }
+
+    // TASK 5 — STRICT session_info enforcement. The Embedded Signup popup is
+    // required to return the WABA + phone the customer selected; without it
+    // we cannot pick the right one and silent "first WABA" fallbacks have
+    // caused production wrong-WABA bugs. Fail fast instead.
+    const wabaId = session_info?.data?.waba_id;
+    const phoneNumberId = session_info?.data?.phone_number_id;
+    if (!wabaId || !phoneNumberId) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Selection not received from Meta — please retry the connection and choose a WhatsApp Business Account inside the popup.",
+        },
+        { status: 400 }
       );
     }
 
@@ -114,7 +149,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Step 1 — Exchange the OAuth code for a short-lived access token.
+    // ── Step 1: Exchange OAuth code → short-lived USER access token. ────────
     const tokenResp = await fetch(
       `https://graph.facebook.com/${GRAPH_VERSION}/oauth/access_token?` +
         new URLSearchParams({
@@ -141,44 +176,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Step 2 — Resolve WABA + phone number.
-    let wabaId = session_info?.data?.waba_id;
-    let phoneNumberId = session_info?.data?.phone_number_id;
-    const businessId = session_info?.data?.business_id;
-
-    if (!wabaId) {
-      const businessesResp = await fetch(
-        `https://graph.facebook.com/${GRAPH_VERSION}/me/businesses?access_token=${shortToken}`
-      );
-      const businesses = await businessesResp.json();
-      const fallbackBusinessId = businesses?.data?.[0]?.id;
-      if (!fallbackBusinessId) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: "No business portfolio found for this user",
-          },
-          { status: 400 }
-        );
-      }
-      const wabasResp = await fetch(
-        `https://graph.facebook.com/${GRAPH_VERSION}/${fallbackBusinessId}/owned_whatsapp_business_accounts?access_token=${shortToken}`
-      );
-      const wabas = await wabasResp.json();
-      wabaId = wabas?.data?.[0]?.id;
-      if (!wabaId) {
-        return NextResponse.json(
-          { success: false, error: "No WhatsApp Business Account found" },
-          { status: 400 }
-        );
-      }
-    }
-
-    let displayPhoneNumber: string | null = null;
-    let verifiedName: string | null = null;
-
-    // Always query the phone numbers list so we can populate the display name
-    // and pick a phone if session_info didn't include one.
+    // ── Step 2: Look up the customer's display number + verified name. ──────
     const phonesResp = await fetch(
       `https://graph.facebook.com/${GRAPH_VERSION}/${wabaId}/phone_numbers?access_token=${shortToken}`
     );
@@ -188,23 +186,86 @@ export async function POST(req: NextRequest) {
       display_phone_number?: string;
       verified_name?: string;
     }> = phones?.data || [];
+    const matched = phoneList.find((p) => p.id === phoneNumberId);
+    const displayPhoneNumber = matched?.display_phone_number || null;
+    const verifiedName = matched?.verified_name || null;
 
-    if (!phoneNumberId) {
-      phoneNumberId = phoneList[0]?.id;
+    // ── Step 3: Insert the connection EARLY in 'pending_exchange' state, ────
+    //           encrypting the short-lived token as a placeholder so the
+    //           webhook handler still has *something* to authenticate with
+    //           if a message arrives during the brief exchange window.
+    let encryptedShort: string;
+    try {
+      encryptedShort = encryptToken(shortToken);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Encryption failed";
+      return NextResponse.json({ success: false, error: msg }, { status: 500 });
     }
-    if (!phoneNumberId) {
+
+    let encryptedPin: string | null = null;
+    if (pin) {
+      try {
+        encryptedPin = encryptToken(pin);
+      } catch {
+        // Non-fatal — we'll proceed without a stored PIN.
+        encryptedPin = null;
+      }
+    }
+
+    await supabase
+      .from("profiles")
+      .upsert({ id: user.id }, { onConflict: "id" });
+
+    const { data: insertedRow, error: insertError } = await supabase
+      .from("connections")
+      .insert({
+        user_id: user.id,
+        type: "whatsapp",
+        name: verifiedName || displayPhoneNumber || "WhatsApp",
+        external_id: phoneNumberId,
+        whatsapp_phone_number_id: phoneNumberId,
+        whatsapp_business_account_id: wabaId,
+        whatsapp_display_phone_number: displayPhoneNumber,
+        whatsapp_access_token_encrypted: encryptedShort,
+        is_active: true,
+        review_count: 0,
+        connection_method: "embedded_signup",
+        ess_user_id: user.id,
+        ess_business_id: session_info?.data?.business_id || null,
+        token_status: "pending_exchange",
+        phone_pin_encrypted: encryptedPin,
+      })
+      .select("id")
+      .single();
+
+    if (insertError || !insertedRow) {
+      console.error("[ESS] DB insert failed:", insertError);
       return NextResponse.json(
-        { success: false, error: "No phone number found in WABA" },
-        { status: 400 }
+        { success: false, error: insertError?.message || "Insert failed" },
+        { status: 500 }
       );
     }
-    const matched = phoneList.find((p) => p.id === phoneNumberId);
-    displayPhoneNumber = matched?.display_phone_number || null;
-    verifiedName = matched?.verified_name || null;
+    connectionId = insertedRow.id as string;
 
-    // Step 3 — Subscribe our app to webhooks for this WABA. Failures are
-    // logged but do not block connection creation; surfaced via connection
-    // status checks.
+    // ── Step 4: Verify token has the required scopes via debug_token. ───────
+    const debugResp = await fetch(
+      `https://graph.facebook.com/${GRAPH_VERSION}/debug_token?input_token=${shortToken}&access_token=${APP_ID}|${APP_SECRET}`
+    );
+    const debugData = await debugResp.json();
+    const scopes: string[] = debugData?.data?.scopes || [];
+    const missing = REQUIRED_SCOPES.filter((s) => !scopes.includes(s));
+    if (missing.length > 0) {
+      await markExchangeFailed(
+        `Missing required scopes: ${missing.join(", ")}. Granted: ${scopes.join(", ") || "(none)"}.`
+      );
+      return NextResponse.json({
+        success: true,
+        connection_id: connectionId,
+        warning: `Connection saved but token is missing scopes: ${missing.join(", ")}. Customer must reconnect.`,
+      });
+    }
+
+    // ── Step 5: Subscribe our app to webhooks for the WABA. Idempotent. ─────
     const subscribeResp = await fetch(
       `https://graph.facebook.com/${GRAPH_VERSION}/${wabaId}/subscribed_apps`,
       {
@@ -215,10 +276,30 @@ export async function POST(req: NextRequest) {
     if (!subscribeResp.ok) {
       const err = await subscribeResp.text();
       console.error("[ESS] Webhook subscription failed:", err);
+      // Not fatal for the long-lived exchange — surface via token_exchange_error
+      // only if the long-lived exchange itself also fails below.
     }
 
-    // Step 4 — Register the phone number for Cloud API. May 200 or 400
-    // (already registered); either is fine.
+    // ── Step 6: Resolve customer business portfolio ID. ─────────────────────
+    let customerBusinessId: string | null =
+      session_info?.data?.business_id || null;
+    try {
+      const wabaInfoResp = await fetch(
+        `https://graph.facebook.com/${GRAPH_VERSION}/${wabaId}?fields=on_behalf_of_business_info,owner_business_info&access_token=${shortToken}`
+      );
+      const wabaInfo = await wabaInfoResp.json();
+      customerBusinessId =
+        wabaInfo?.on_behalf_of_business_info?.id ||
+        wabaInfo?.owner_business_info?.id ||
+        customerBusinessId;
+    } catch (e) {
+      console.warn("[ESS] WABA info lookup failed:", e);
+    }
+
+    // ── Step 7: Register the phone number for Cloud API with the customer's
+    //           PIN (or the legacy 000000 only if the customer didn't supply
+    //           one — which the frontend now blocks, so this should be rare).
+    const registerPin = pin || "000000";
     const registerResp = await fetch(
       `https://graph.facebook.com/${GRAPH_VERSION}/${phoneNumberId}/register`,
       {
@@ -227,7 +308,7 @@ export async function POST(req: NextRequest) {
           Authorization: `Bearer ${shortToken}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ messaging_product: "whatsapp", pin: "000000" }),
+        body: JSON.stringify({ messaging_product: "whatsapp", pin: registerPin }),
       }
     );
     if (!registerResp.ok) {
@@ -237,47 +318,81 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Step 5 — Persist.
-    let encrypted: string;
+    // ── Step 8: Exchange short-lived → long-lived (Option A). ───────────────
+    //   With FB Login config "Token Expiration: Never", this returns a
+    //   non-expiring token; with "60 days", it returns a 60-day token.
+    const exchangeResp = await fetch(
+      `https://graph.facebook.com/${GRAPH_VERSION}/oauth/access_token?` +
+        new URLSearchParams({
+          grant_type: "fb_exchange_token",
+          client_id: APP_ID,
+          client_secret: APP_SECRET,
+          fb_exchange_token: shortToken,
+        })
+    );
+    if (!exchangeResp.ok) {
+      const err = await exchangeResp.text();
+      await markExchangeFailed(`Long-lived exchange HTTP ${exchangeResp.status}: ${err}`);
+      return NextResponse.json({
+        success: true,
+        connection_id: connectionId,
+        warning: "Connection saved but long-lived token exchange failed. Customer can retry from the connection detail page.",
+      });
+    }
+    const exchangeData = await exchangeResp.json();
+    const longLivedToken: string | undefined = exchangeData?.access_token;
+    if (!longLivedToken) {
+      await markExchangeFailed(
+        `Long-lived exchange returned no access_token: ${JSON.stringify(exchangeData).slice(0, 500)}`
+      );
+      return NextResponse.json({
+        success: true,
+        connection_id: connectionId,
+        warning: "Long-lived token exchange returned no access_token. Customer can retry.",
+      });
+    }
+
+    // ── Step 9: Replace placeholder token with the long-lived one + mark active.
+    let encryptedLong: string;
     try {
-      encrypted = encryptToken(shortToken);
+      encryptedLong = encryptToken(longLivedToken);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Encryption failed";
-      return NextResponse.json({ success: false, error: msg }, { status: 500 });
+      await markExchangeFailed(`Encryption failed: ${msg}`);
+      return NextResponse.json({
+        success: true,
+        connection_id: connectionId,
+        warning: "Long-lived token received but encryption failed.",
+      });
     }
 
-    await supabase
-      .from("profiles")
-      .upsert({ id: user.id }, { onConflict: "id" });
+    const nowIso = new Date().toISOString();
+    const { error: updateError } = await supabase
+      .from("connections")
+      .update({
+        whatsapp_access_token_encrypted: encryptedLong,
+        token_status: "active",
+        token_last_validated_at: nowIso,
+        onboarding_completed_at: nowIso,
+        token_exchange_error: null,
+        ess_business_id: customerBusinessId,
+      })
+      .eq("id", connectionId);
 
-    const { error: insertError } = await supabase.from("connections").insert({
-      user_id: user.id,
-      type: "whatsapp",
-      name: verifiedName || displayPhoneNumber || "WhatsApp",
-      external_id: phoneNumberId,
-      whatsapp_phone_number_id: phoneNumberId,
-      whatsapp_business_account_id: wabaId,
-      whatsapp_display_phone_number: displayPhoneNumber,
-      whatsapp_access_token_encrypted: encrypted,
-      is_active: true,
-      review_count: 0,
-      connection_method: "embedded_signup",
-      ess_user_id: user.id,
-      ess_business_id: businessId || null,
-    });
-
-    if (insertError) {
-      console.error("[ESS] DB insert failed:", insertError);
-      return NextResponse.json(
-        { success: false, error: insertError.message },
-        { status: 500 }
-      );
+    if (updateError) {
+      console.error("[ESS] Final update failed:", updateError);
+      return NextResponse.json({
+        success: true,
+        connection_id: connectionId,
+        warning: `Token stored but row update failed: ${updateError.message}`,
+      });
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, connection_id: connectionId });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Unexpected error";
     console.error("[ESS] OAuth callback error:", err);
+    if (connectionId) await markExchangeFailed(msg);
     return NextResponse.json({ success: false, error: msg }, { status: 500 });
   }
 }

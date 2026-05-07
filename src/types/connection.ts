@@ -21,6 +21,18 @@ export interface Connection {
   connection_method?: "manual" | "embedded_signup" | null;
   ess_user_id?: string | null;
   ess_business_id?: string | null;
+  // Phase 6 v2 — token-health tracking (only meaningful when
+  // connection_method === 'embedded_signup').
+  token_status?:
+    | "active"
+    | "expired"
+    | "revoked"
+    | "pending_exchange"
+    | "exchange_failed"
+    | null;
+  token_last_validated_at?: string | null;
+  token_exchange_error?: string | null;
+  onboarding_completed_at?: string | null;
 }
 
 /** Metadata for a WhatsApp connection — the raw access token is NEVER stored in the frontend type. */

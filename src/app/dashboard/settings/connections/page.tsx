@@ -125,11 +125,27 @@ export default function ConnectionsPage() {
  setRemoving(true);
  setRemoveError(null);
  try {
+ // WhatsApp deletes route through the dedicated endpoint so we can
+ // unsubscribe webhooks and revoke the token in Meta before clearing
+ // the row. Other source types still use the direct client-side delete.
+ if (removeTarget.type === "whatsapp") {
+ const res = await fetch("/api/connections/whatsapp/disconnect", {
+ method: "POST",
+ headers: { "Content-Type": "application/json" },
+ body: JSON.stringify({ connectionId: removeTarget.id }),
+ });
+ const data = await res.json().catch(() => ({}));
+ if (!res.ok || data.error) {
+ setRemoveError("Couldn't remove the connection. Please try again.");
+ return;
+ }
+ } else {
  const supabase = createClient();
  const { error } = await supabase.from("connections").delete().eq("id", removeTarget.id);
  if (error) {
  setRemoveError("Couldn't remove the connection. Please try again.");
  return;
+ }
  }
  setRemoveTarget(null);
  toast({ title: "Connection removed" });
@@ -278,6 +294,32 @@ export default function ConnectionsPage() {
  >
  Facebook
  </Badge>
+ )}
+ {conn.type === "whatsapp" && conn.connection_method === "embedded_signup" && conn.token_status && conn.token_status !== "active" && (
+ <TooltipProvider delayDuration={150}>
+ <Tooltip>
+ <TooltipTrigger asChild>
+ <span
+ className={cn(
+ "inline-block h-2 w-2 rounded-full",
+ conn.token_status === "pending_exchange"
+ ? "bg-amber-500"
+ : "bg-red-500"
+ )}
+ aria-label={`Token status: ${conn.token_status}`}
+ />
+ </TooltipTrigger>
+ <TooltipContent side="top" className="max-w-xs text-xs">
+ {conn.token_status === "pending_exchange"
+ ? "Setup in progress…"
+ : conn.token_status === "exchange_failed"
+ ? "Token exchange failed — click to view"
+ : conn.token_status === "expired"
+ ? "Connection expired — reconnect required"
+ : "Connection revoked — reconnect required"}
+ </TooltipContent>
+ </Tooltip>
+ </TooltipProvider>
  )}
  {conn.type === "whatsapp" && conn.connection_method !== "embedded_signup" && (
  <Badge

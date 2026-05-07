@@ -19,7 +19,7 @@ export default async function ConnectionDetailPage({
   const { data: conn, error } = await supabase
     .from("connections")
     .select(
-      "id, user_id, type, name, external_id, created_at, whatsapp_business_account_id, whatsapp_phone_number_id, whatsapp_display_phone_number"
+      "id, user_id, type, name, external_id, created_at, whatsapp_business_account_id, whatsapp_phone_number_id, whatsapp_display_phone_number, connection_method, token_status, token_last_validated_at, token_exchange_error, onboarding_completed_at"
     )
     .eq("id", params.id)
     .eq("user_id", user.id)
@@ -60,6 +60,23 @@ export default async function ConnectionDetailPage({
           (conn.whatsapp_display_phone_number as string) ||
           (conn.external_id as string) ||
           null,
+        connectionMethod:
+          (conn.connection_method as
+            | "manual"
+            | "embedded_signup"
+            | null) || null,
+        tokenStatus:
+          (conn.token_status as
+            | "active"
+            | "expired"
+            | "revoked"
+            | "pending_exchange"
+            | "exchange_failed"
+            | null) || null,
+        tokenLastValidatedAt:
+          (conn.token_last_validated_at as string | null) || null,
+        tokenExchangeError:
+          (conn.token_exchange_error as string | null) || null,
       }}
     />
   );
