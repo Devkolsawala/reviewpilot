@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { processAutoReplyForReview } from "@/lib/reviews/auto-reply";
 import { checkUsageLimitAdmin, incrementUsageAdmin } from "@/lib/usage";
 import { GBP_ENABLED } from "@/lib/feature-flags";
+import { extractCountryFromLocale } from "@/lib/utils/locale-to-country";
 import type { AppContext } from "@/types/database";
 
 function getAdminClient() {
@@ -295,6 +296,7 @@ async function handleCron(request: NextRequest) {
                 rating: review.rating,
                 review_text: review.review_text,
                 review_language: review.review_language,
+                reviewer_country: extractCountryFromLocale(review.review_language),
                 device_info: review.device_info,
                 sentiment: review.sentiment,
                 keywords: review.keywords,

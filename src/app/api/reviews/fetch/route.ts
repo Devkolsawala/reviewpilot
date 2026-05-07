@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { fetchPlayStoreReviews } from "@/lib/google/playstore";
 import { processAutoReplyForReview } from "@/lib/reviews/auto-reply";
 import { GBP_ENABLED, GBP_COMING_SOON_MESSAGE } from "@/lib/feature-flags";
+import { extractCountryFromLocale } from "@/lib/utils/locale-to-country";
 import type { AppContext } from "@/types/database";
 
 export async function POST(request: Request) {
@@ -160,6 +161,7 @@ export async function POST(request: Request) {
         rating: review.rating,
         review_text: review.review_text,
         review_language: review.review_language,
+        reviewer_country: extractCountryFromLocale(review.review_language),
         device_info: review.device_info ?? null,
         sentiment: review.sentiment,
         keywords: review.keywords,

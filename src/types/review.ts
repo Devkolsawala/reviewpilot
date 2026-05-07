@@ -10,6 +10,8 @@ export interface Review {
   rating: number | null;
   review_text: string;
   review_language: string;
+  /** ISO 3166-1 alpha-2 derived from review_language locale region. Null when locale has no region. */
+  reviewer_country?: string | null;
   device_info?: Record<string, unknown>;
   /** For WhatsApp, the customer's phone number in E.164 format (e.g. +919812345678) */
   author_id?: string | null;
