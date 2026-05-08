@@ -274,8 +274,8 @@ export default function TermsPage() {
             </p>
             <p className="mt-3">
               We encourage you to contact us first at{" "}
-              <a href="mailto:dev.kolsawala45@gmail.com" className="text-accent hover:underline">
-                dev.kolsawala45@gmail.com
+              <a href="mailto:hello@reviewpilot.co.in" className="text-accent hover:underline">
+                hello@reviewpilot.co.in
               </a>{" "}
               to resolve any dispute informally before initiating legal proceedings.
             </p>
@@ -295,8 +295,8 @@ export default function TermsPage() {
               <p>Attn: Dev Kolsawala</p>
               <p>
                 Email:{" "}
-                <a href="mailto:dev.kolsawala45@gmail.com" className="text-accent hover:underline">
-                  dev.kolsawala45@gmail.com
+                <a href="mailto:hello@reviewpilot.co.in" className="text-accent hover:underline">
+                  hello@reviewpilot.co.in
                 </a>
               </p>
               <p>Website: <Link href="/" className="text-accent hover:underline">reviewpilot.co.in</Link></p>

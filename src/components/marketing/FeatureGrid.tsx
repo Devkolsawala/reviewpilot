@@ -104,7 +104,7 @@ export function FeatureGrid() {
 
             {/* Wide — Team collaboration */}
             <BentoCard
-              className="lg:col-span-3"
+              className="lg:col-span-2"
               icon={Users}
               title="Built for teams"
               description="Invite teammates as Admins (full reply and connection access) or Read-only viewers — collaborate on Play Store and Google replies without sharing a login or your billing details."
@@ -361,8 +361,8 @@ function WhatsAppVisual() {
 
 function SentimentVisual() {
   return (
-    <div className="space-y-3">
-      <div className="flex items-end gap-1 h-16">
+    <div className="flex h-full min-h-[140px] flex-col">
+      <div className="flex flex-1 items-end gap-1">
         {[40, 55, 48, 70, 62, 85, 95].map((h, i) => (
           <div
             key={i}
@@ -371,7 +371,7 @@ function SentimentVisual() {
           />
         ))}
       </div>
-      <div className="flex items-center justify-between text-[10px] text-muted-foreground font-mono">
+      <div className="mt-2 flex items-center justify-between text-[10px] text-muted-foreground font-mono">
         <span>Mon</span>
         <span>Sun</span>
       </div>

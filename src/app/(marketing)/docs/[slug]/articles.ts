@@ -1096,7 +1096,7 @@ To change your payment method or update billing address, go to **Settings → Bi
 1. The 7-day trial is genuinely full-featured — you know exactly what you're buying before you buy it.
 2. Skipping refund operations lets us keep the Starter plan at $16/month. Enterprise tools that offer refunds typically charge $213–$266/month to cover those ops.
 
-**Billing issues or accidental charges?** If you were charged in error (duplicate payment, charge after cancellation, etc.), email **dev.kolsawala45@gmail.com** with your registered email and payment date — we resolve genuine billing errors within 5–7 business days.
+**Billing issues or accidental charges?** If you were charged in error (duplicate payment, charge after cancellation, etc.), email **hello@reviewpilot.co.in** with your registered email and payment date — we resolve genuine billing errors within 5–7 business days.
 
 ## GST
 

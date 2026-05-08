@@ -155,7 +155,11 @@ export function Footer() {
           </p>
           <div className="flex items-center gap-1">
             <SocialLink href="https://twitter.com" label="Twitter" icon={TwitterIcon} />
-            <SocialLink href="https://linkedin.com" label="LinkedIn" icon={LinkedinIcon} />
+            <SocialLink
+              href="https://www.linkedin.com/company/reviewpilot"
+              label="LinkedIn"
+              icon={LinkedinIcon}
+            />
             <SocialLink href="https://github.com" label="GitHub" icon={GithubIcon} />
           </div>
         </div>

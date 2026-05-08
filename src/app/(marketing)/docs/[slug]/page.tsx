@@ -226,8 +226,8 @@ export default function DocArticlePage({ params }: { params: { slug: string } })
           <h3 className="font-sans text-lg font-semibold tracking-tight mb-2">Still have questions?</h3>
           <p className="text-sm text-muted-foreground mb-5">
             Email us at{" "}
-            <a href="mailto:dev.kolsawala45@gmail.com" className="text-accent hover:underline">
-              dev.kolsawala45@gmail.com
+            <a href="mailto:hello@reviewpilot.co.in" className="text-accent hover:underline">
+              hello@reviewpilot.co.in
             </a>{" "}
             or book a live demo and we&apos;ll walk you through it.
           </p>

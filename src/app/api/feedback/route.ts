@@ -81,7 +81,7 @@ async function sendFeedbackEmail(params: {
         },
         body: JSON.stringify({
           from: 'ReviewPilot Feedback <onboarding@resend.dev>',
-          to: ['dev.kolsawala45@gmail.com'],
+          to: ['hello@reviewpilot.co.in'],
           subject: `[ReviewPilot Feedback] ${params.type} from ${params.userName}`,
           html: `
             <div style="font-family: sans-serif; max-width: 600px;">

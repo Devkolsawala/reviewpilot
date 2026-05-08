@@ -34,6 +34,7 @@ import { AuroraBackground } from "@/components/ui/aurora-background";
 import { GridPattern } from "@/components/ui/grid-pattern";
 import { JsonLd, SITE_URL, SITE_OG } from "@/components/marketing/JsonLd";
 import { PricingTable } from "@/components/marketing/PricingTable";
+import { FeaturesAnchorNav } from "@/components/marketing/FeaturesAnchorNav";
 import { PLANS } from "@/lib/plans";
 
 const PAGE_URL = `${SITE_URL}/features`;
@@ -236,25 +237,7 @@ export default function FeaturesPage() {
         </section>
 
         {/* ── Sticky anchor nav ────────────────────────────────── */}
-        <nav
-          aria-label="Feature sections"
-          className="sticky top-14 z-30 hidden border-y border-border/60 bg-background/80 backdrop-blur-md lg:block"
-        >
-          <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-            <ul className="flex items-center gap-1 overflow-x-auto py-2 text-xs font-medium">
-              {SECTIONS.map((s) => (
-                <li key={s.id}>
-                  <a
-                    href={`#${s.id}`}
-                    className="inline-flex shrink-0 rounded-md px-2.5 py-1.5 text-muted-foreground transition-colors hover:bg-accent/10 hover:text-foreground"
-                  >
-                    {s.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </nav>
+        <FeaturesAnchorNav sections={SECTIONS} />
 
         {/* ── Feature sections ─────────────────────────────────── */}
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-20 sm:py-24 space-y-24">
