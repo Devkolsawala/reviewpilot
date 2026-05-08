@@ -150,20 +150,32 @@ export async function POST(req: NextRequest) {
     }
 
     // ── Step 1: Exchange OAuth code → short-lived USER access token. ────────
+    // IMPORTANT: When the FB JavaScript SDK launches the OAuth popup with
+    // response_type='code', it uses an EMPTY string as redirect_uri internally.
+    // Our token exchange MUST match that exactly — Meta validates the redirect_uri
+    // matches between the dialog request and the code exchange. If we send the
+    // configured ESS_OAUTH_REDIRECT_URI here, Meta returns
+    // "Error validating verification code" because the URIs don't match.
+    // See: https://developers.facebook.com/docs/facebook-login/access-tokens
     const tokenResp = await fetch(
       `https://graph.facebook.com/${GRAPH_VERSION}/oauth/access_token?` +
         new URLSearchParams({
           client_id: APP_ID,
           client_secret: APP_SECRET,
-          redirect_uri: REDIRECT_URI,
+          redirect_uri: "",
           code,
         }),
       { method: "GET" }
     );
     if (!tokenResp.ok) {
-      const err = await tokenResp.text();
+      const errorBody = await tokenResp.text();
+      console.error("[oauth_callback] Token exchange failed", {
+        status: tokenResp.status,
+        body: errorBody,
+        code: code.substring(0, 10) + "...",
+      });
       return NextResponse.json(
-        { success: false, error: `Token exchange failed: ${err}` },
+        { success: false, error: `Token exchange failed: ${errorBody}` },
         { status: 400 }
       );
     }
