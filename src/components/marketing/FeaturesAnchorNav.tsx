@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type MouseEvent } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type Section = { id: string; label: string };
 
@@ -36,7 +36,7 @@ export function FeaturesAnchorNav({ sections }: { sections: Section[] }) {
     }
   }, [activeId]);
 
-  const handleClick = (id: string) => (_e: MouseEvent<HTMLAnchorElement>) => {
+  const handleClick = (id: string) => () => {
     setActiveId(id);
   };
 
