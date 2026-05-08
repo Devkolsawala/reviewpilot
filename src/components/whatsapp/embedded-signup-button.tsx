@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -36,6 +36,7 @@ const SESSION_KEY = "ess_session_info";
 export function EmbeddedSignupButton() {
   const [sdkLoaded, setSdkLoaded] = useState(false);
   const [isLaunching, setIsLaunching] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [pinModalOpen, setPinModalOpen] = useState(false);
   const [pin, setPin] = useState("");
   const [pinConfirm, setPinConfirm] = useState("");
@@ -132,6 +133,7 @@ export function EmbeddedSignupButton() {
     window.FB.login(
       function (response) {
         if (response.authResponse?.code) {
+          setIsProcessing(true);
           const sessionInfo = sessionStorage.getItem(SESSION_KEY);
           const storedPin = sessionStorage.getItem(PIN_KEY);
           fetch("/api/whatsapp/oauth/callback", {
@@ -151,9 +153,14 @@ export function EmbeddedSignupButton() {
               sessionStorage.removeItem(PIN_KEY);
               sessionStorage.removeItem(SESSION_KEY);
               if (data.success) {
-                window.location.href =
-                  "/dashboard/settings/connections?connected=whatsapp";
+                // Use location.assign for a full page load — the connections
+                // list is a client component with hook-cached state, so a
+                // soft router push would not show the new row.
+                window.location.assign(
+                  "/dashboard/settings/connections?connected=whatsapp"
+                );
               } else {
+                setIsProcessing(false);
                 toast({
                   title: "Connection failed",
                   description: data.error || "Unknown error",
@@ -163,6 +170,7 @@ export function EmbeddedSignupButton() {
             })
             .catch((err) => {
               setIsLaunching(false);
+              setIsProcessing(false);
               sessionStorage.removeItem(PIN_KEY);
               sessionStorage.removeItem(SESSION_KEY);
               toast({
@@ -192,6 +200,18 @@ export function EmbeddedSignupButton() {
 
   return (
     <>
+      {isProcessing && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+          <div className="bg-card p-8 rounded-lg flex flex-col items-center gap-4 max-w-sm text-center">
+            <Loader2 className="animate-spin" size={32} />
+            <p className="font-medium">Setting up your WhatsApp connection...</p>
+            <p className="text-sm text-muted-foreground">
+              This usually takes a few seconds
+            </p>
+          </div>
+        </div>
+      )}
+
       <Button
         onClick={openPinModal}
         disabled={!sdkLoaded || isLaunching}

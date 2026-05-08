@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { ConnectionWizard } from "@/components/dashboard/ConnectionWizard";
 import { useConnections } from "@/hooks/useConnection";
 import { usePlan } from "@/hooks/usePlan";
@@ -58,6 +59,7 @@ export default function ConnectionsPage() {
  const { connections, loading, refetch } = useConnections();
  const { planId } = usePlan();
  const { isOwner } = useTeamRole();
+ const searchParams = useSearchParams();
  const [showWizard, setShowWizard] = useState(false);
  const [syncingId, setSyncingId] = useState<string | null>(null);
  const [removeTarget, setRemoveTarget] = useState<Connection | null>(null);
@@ -72,6 +74,17 @@ export default function ConnectionsPage() {
  requestAnimationFrame(() => cancelRemoveBtnRef.current?.focus());
  }
  }, [removeTarget]);
+
+ useEffect(() => {
+ if (searchParams.get("connected") === "whatsapp") {
+ toast({
+ title: "WhatsApp connected successfully!",
+ description: "Your WhatsApp Business connection is now active.",
+ });
+ // Strip the query param so a refresh doesn't re-fire the toast.
+ window.history.replaceState({}, "", window.location.pathname);
+ }
+ }, [searchParams]);
 
  const doSync = useCallback(async (connId: string, silent = false) => {
  if (!silent) {
