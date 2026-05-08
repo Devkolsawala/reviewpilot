@@ -3,7 +3,7 @@ import { CompareLayout } from "@/components/marketing/CompareLayout";
 import { JsonLd, SITE_URL, SITE_OG } from "@/components/marketing/JsonLd";
 
 export const metadata: Metadata = {
-  title: "ReviewPilot vs Famepilot — India Review Management | ReviewPilot",
+  title: "ReviewPilot vs Famepilot — India Review Management",
   description:
     "ReviewPilot vs Famepilot compared: pricing, Play Store support, AI replies, India focus. Two Indian review management tools — which fits your SMB?",
   alternates: { canonical: "/compare/reviewpilot-vs-famepilot" },

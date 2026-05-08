@@ -3,12 +3,12 @@ import Link from "next/link";
 import { SITE_URL } from "@/components/marketing/JsonLd";
 
 export const metadata: Metadata = {
-  title: "Terms of Service | ReviewPilot",
+  title: "Terms of Service",
   description:
     "ReviewPilot's terms of service — rules for using our AI review management platform, subscription terms, refund policy, and limitations of liability.",
   alternates: { canonical: "/terms" },
   openGraph: {
-    title: "Terms of Service | ReviewPilot",
+    title: "Terms of Service",
     description: "Terms governing use of the ReviewPilot platform.",
     url: `${SITE_URL}/terms`,
   },

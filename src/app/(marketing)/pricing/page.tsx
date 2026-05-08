@@ -11,12 +11,12 @@ import { GridPattern } from "@/components/ui/grid-pattern";
 import { JsonLd, SITE_URL } from "@/components/marketing/JsonLd";
 
 export const metadata: Metadata = {
-  title: "Pricing — AI Review Management from $16/mo | ReviewPilot",
+  title: "Pricing — Review Management Software from $16/mo",
   description:
-    "Simple review management software pricing. Starter $16/mo, Growth $32, Agency $85. Billed in INR equivalent at checkout. Start your 7-day free trial — no card required.",
+    "Review management software pricing for India. Play Store, Google, and WhatsApp Business automation included on every plan. Starter $16/mo. 7-day free trial.",
   alternates: { canonical: "/pricing" },
   openGraph: {
-    title: "Pricing — AI Review Management from $16/mo | ReviewPilot",
+    title: "Pricing — AI Review Management from $16/mo",
     description:
       "Transparent India-first pricing for AI review management. Plans from $16/mo. Start your free 7-day trial.",
     url: `${SITE_URL}/pricing`,
@@ -51,7 +51,9 @@ const FAQ = [
   { q: "What payment methods do you accept?", a: "All major credit/debit cards, UPI, net banking, and wallets via Razorpay." },
   { q: "What happens after the trial ends?", a: "If you don't subscribe, your account moves to the free plan with limited features. Your data is preserved for 30 days." },
   { q: "Do you offer refunds?", a: "We don't offer refunds on subscription payments — and here's why that's actually good for you. Every plan includes a 7-day free trial with full access to every feature, no credit card required. That's your evaluation window: connect your Play Store, train the AI on your brand voice, reply to real reviews, and see the results before you ever pay. If it's not right for you, simply don't subscribe. By skipping refund processing, we keep prices at $16/month instead of the $266+ that enterprise competitors charge. If you cancel a paid plan, it stays active until the end of your current billing cycle — you keep everything you paid for." },
-  { q: "Can I use ReviewPilot for both Google Business and Play Store?", a: "Google Play Store review management is live today. Google Business Profile automation is launching soon and will be included in every plan at no extra cost." },
+  { q: "Can I use ReviewPilot for both Google Business and Play Store?", a: "Yes. Play Store review management is fully live, and Google Business Profile is supported via OAuth on every paid plan." },
+  { q: "Is WhatsApp Business automation included?", a: "Yes — WhatsApp Business automation is included on every plan, from Free to Agency. Connect via Meta's Embedded Signup in 60 seconds. Inbound messages land in your unified inbox alongside Play Store and Google reviews. Replies inside Meta's 24-hour customer service window are free; outside-window template messages are billed by Meta directly to your WhatsApp Business Account." },
+  { q: "Are WhatsApp message charges extra?", a: "WhatsApp conversation charges are billed by Meta directly to your WhatsApp Business Account, not by ReviewPilot. Because ReviewPilot replies fire within minutes of a customer message — well inside Meta's 24-hour customer service window — replies are nearly always free." },
 ];
 
 const faqSchema = {

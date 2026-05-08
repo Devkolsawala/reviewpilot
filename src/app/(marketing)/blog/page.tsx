@@ -4,12 +4,12 @@ import { ArrowRight } from "lucide-react";
 import { JsonLd, SITE_URL } from "@/components/marketing/JsonLd";
 
 export const metadata: Metadata = {
-  title: "Review Management Blog — Tips & Guides | ReviewPilot",
+  title: "Review Management Blog — Tips & Guides",
   description:
     "Expert guides on Google review management, Play Store ratings, AI reply automation, and local SEO for Indian businesses. Practical advice, real templates.",
   alternates: { canonical: "/blog" },
   openGraph: {
-    title: "Review Management Blog — Tips & Guides | ReviewPilot",
+    title: "Review Management Blog — Tips & Guides",
     description:
       "Practical guides on AI review management, Google Business Profile, Play Store ratings, and local SEO for Indian SMBs.",
     url: `${SITE_URL}/blog`,
@@ -89,6 +89,46 @@ const POSTS = [
     date: "April 12, 2026",
     author: "Dev Kolsawala",
     readTime: "10 min read",
+  },
+  {
+    slug: "whatsapp-business-automation-india-2026",
+    title: "How to automate WhatsApp Business replies in India: a complete 2026 guide",
+    excerpt:
+      "Cloud API vs Business App, Embedded Signup in 60 seconds, the 24-hour free window, AI replies in 8 Indian languages, and the mistakes that wreck your WABA quality rating.",
+    category: "WhatsApp",
+    date: "May 8, 2026",
+    author: "Dev Kolsawala",
+    readTime: "13 min read",
+  },
+  {
+    slug: "birdeye-pricing-india-vs-alternatives",
+    title: "Birdeye pricing in India vs affordable alternatives (2026)",
+    excerpt:
+      "What Birdeye actually charges in India, the annual contract trap, three affordable alternatives, and a 60-second decision tree to pick the right tool for your SMB.",
+    category: "Pricing",
+    date: "May 8, 2026",
+    author: "Dev Kolsawala",
+    readTime: "11 min read",
+  },
+  {
+    slug: "google-business-profile-review-management-india-2026",
+    title: "Google Business Profile review management: a 2026 playbook for Indian SMBs",
+    excerpt:
+      "Reply latency and Map Pack ranking, smart routing, multi-location playbook, the Indian-language opportunity nobody's using, and a 60-day plan to lift your average rating.",
+    category: "Google Business",
+    date: "May 8, 2026",
+    author: "Aditya Raj Singh",
+    readTime: "12 min read",
+  },
+  {
+    slug: "unified-review-inbox",
+    title: "Unified review inbox: why single-platform tools cost you time",
+    excerpt:
+      "What a unified inbox actually is, the three levels of unification, and why context-switching across Play Console, Google Business, and WhatsApp Business compounds wasted hours.",
+    category: "Workflow",
+    date: "May 8, 2026",
+    author: "Dev Kolsawala",
+    readTime: "9 min read",
   },
 ];
 

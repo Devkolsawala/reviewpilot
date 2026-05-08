@@ -20,6 +20,8 @@ import {
   Eye,
   Languages,
   Sparkles,
+  MessageCircle,
+  Inbox,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -38,15 +40,15 @@ const PAGE_URL = `${SITE_URL}/features`;
 
 export const metadata: Metadata = {
   title:
-    "Features — AI Review Reply, Team Collaboration, Analytics | ReviewPilot",
+    "Features — AI Replies, Unified Inbox, WhatsApp Automation",
   description:
-    "All ReviewPilot features in one place — AI-generated Play Store and Google review replies, team collaboration with role-based access, sentiment analytics, and more. Plans from $16/month.",
+    "Every ReviewPilot feature: AI replies for Play Store, Google Business Profile, and WhatsApp Business; unified inbox; team collaboration; sentiment analytics. Plans from $16/month.",
   alternates: { canonical: "/features" },
   openGraph: {
     title:
-      "Features — AI Review Reply, Team Collaboration, Analytics | ReviewPilot",
+      "Features — AI Replies, Unified Inbox, WhatsApp Automation",
     description:
-      "AI replies for Play Store and Google reviews, team collaboration with admin and read-only roles, sentiment analytics, daily digests, and more. Plans from $16/mo.",
+      "AI replies for Play Store, Google Business Profile, and WhatsApp Business — unified inbox, team collaboration, sentiment analytics, daily digests. From $16/mo.",
     url: PAGE_URL,
     type: "website",
     siteName: "ReviewPilot",
@@ -63,7 +65,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Every ReviewPilot feature, in one place",
     description:
-      "AI Play Store and Google review replies, team collaboration, sentiment analytics, daily digest. Plans from $16/month.",
+      "AI replies for Play Store, Google Business, and WhatsApp. Unified inbox. From $16/month.",
     images: ["/og-image.svg"],
   },
 };
@@ -73,8 +75,10 @@ export const metadata: Metadata = {
 // ─────────────────────────────────────────────────────────────────────────────
 const SECTIONS: { id: string; label: string }[] = [
   { id: "ai-replies", label: "AI replies" },
+  { id: "unified-inbox", label: "Unified inbox" },
   { id: "play-store", label: "Play Store" },
   { id: "google-business", label: "Google Business" },
+  { id: "whatsapp", label: "WhatsApp" },
   { id: "auto-reply", label: "Auto-reply" },
   { id: "bulk-reply", label: "Bulk reply" },
   { id: "sentiment", label: "Sentiment" },
@@ -128,7 +132,11 @@ const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "How is ReviewPilot different from Birdeye or AppFollow?",
-    a: "ReviewPilot is built in India for Indian buyers. Pricing starts at $16/month, billed in INR equivalent through Razorpay at checkout. We focus on Play Store review automation today, with Google Business Profile shipping next. Compare us directly to Birdeye, Famepilot, Podium, and Simplify360 in our compare pages.",
+    a: "ReviewPilot is built in India for Indian buyers. Pricing starts at $16/month, billed in INR equivalent through Razorpay at checkout. We support Play Store reviews, Google Business Profile reviews, and WhatsApp Business messages — all in one unified inbox with one AI engine. See the side-by-side comparison on our /vs/birdeye and /vs/appfollow pages.",
+  },
+  {
+    q: "Can ReviewPilot reply to WhatsApp Business messages?",
+    a: "Yes. ReviewPilot is a Meta-approved Tech Provider with the official WhatsApp Cloud API. Connect via Embedded Signup in 60 seconds, and inbound messages land in your unified inbox alongside Play Store and Google reviews. AI drafts replies inside Meta's 24-hour customer service window, so replies are nearly always free.",
   },
 ];
 
@@ -205,9 +213,10 @@ export default function FeaturesPage() {
               .
             </h1>
             <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground leading-relaxed">
-              AI replies for Google Play Store reviews today, Google Business
-              Profile review management coming soon. Built in India for Indian
-              app developers and local businesses, billed in INR.
+              AI replies for Google Play Store reviews, Google Business Profile
+              reviews, and WhatsApp Business messages — all in one unified
+              inbox. Built in India for Indian app developers and local
+              businesses, billed in INR.
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
               <Button variant="gradient" size="xl" asChild>
@@ -254,13 +263,31 @@ export default function FeaturesPage() {
             id="ai-replies"
             icon={Bot}
             kicker="Drafting"
-            h2="AI-powered review replies in your brand voice"
-            body="ReviewPilot drafts every reply in three seconds, in the reviewer's language, and in your brand voice. The AI is told about your app or business through your App Context Profile, so the response is specific — not generic. Replies are written to land within platform character limits and never echo back the customer's name."
+            h2="AI-powered review and message replies in your brand voice"
+            body="ReviewPilot drafts every reply in three seconds, in the customer's language, in your brand voice — across Play Store reviews, Google reviews, and WhatsApp Business messages. The AI is told about your business through your App Context Profile, so the response is specific — not generic. Drafts respect each platform's character limits."
             bullets={[
               "Replies in your brand voice, tuned per connection",
-              "Auto-detects the reviewer's language and responds in kind",
+              "Auto-detects the customer's language and responds in kind",
               "350-character Play Store enforcement, baked into the prompt",
             ]}
+          />
+
+          {/* Unified Inbox */}
+          <FeatureSection
+            id="unified-inbox"
+            icon={Inbox}
+            kicker="Unified inbox"
+            h2="One inbox for Play Store, Google, and WhatsApp"
+            body="Every customer signal — a Play Store review, a Google Business Profile review, a WhatsApp Business message — lands in the same queue. One AI engine. One workflow. Filter by source when you want to focus, or work the whole queue when you want speed."
+            bullets={[
+              "Single source-typed view across all three platforms",
+              "Filter by source, rating, status, or date",
+              "Same App Context Profile across every channel",
+            ]}
+            link={{
+              href: "/unified-inbox",
+              label: "Read the unified inbox deep-dive",
+            }}
           />
 
           {/* Play Store */}
@@ -297,6 +324,27 @@ export default function FeaturesPage() {
             link={{
               href: "/features/google-business-profile",
               label: "Read the Google Business Profile deep-dive",
+            }}
+          />
+
+          {/* WhatsApp Business */}
+          <FeatureSection
+            id="whatsapp"
+            icon={MessageCircle}
+            kicker="WhatsApp Business automation"
+            h2="WhatsApp Business automation with AI replies"
+            body="ReviewPilot is a Meta-approved Tech Provider with the official WhatsApp Cloud API. Connect via Embedded Signup in 60 seconds, and inbound customer messages land in your unified inbox in real time. The AI drafts replies inside Meta's 24-hour customer service window, so replies are nearly always free. Multi-WABA, multi-phone, template management, and business-profile management all live inside the dashboard."
+            bullets={[
+              "Embedded Signup via Facebook Login for Business",
+              "Cloud API webhook delivery (real time, not polling)",
+              "Meta-approved with whatsapp_business_messaging + management",
+              "Free replies inside Meta's 24-hour service window",
+              "Multi-WABA and multi-phone-number support",
+              "Template + business-profile management inside ReviewPilot",
+            ]}
+            link={{
+              href: "/whatsapp-automation",
+              label: "Read the WhatsApp automation deep-dive",
             }}
           />
 

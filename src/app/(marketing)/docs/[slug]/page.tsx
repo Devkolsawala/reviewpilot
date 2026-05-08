@@ -15,7 +15,7 @@ export function generateMetadata({ params }: { params: { slug: string } }): Meta
   if (!article) return {};
   const url = `${SITE_URL}/docs/${params.slug}`;
   return {
-    title: `${article.title} | ReviewPilot Help`,
+    title: `${article.title} — Help Center`,
     description: article.description,
     alternates: { canonical: `/docs/${params.slug}` },
     openGraph: {

@@ -56,11 +56,11 @@ export function Hero({ statsBar }: HeroProps = {}) {
             {/* Eyebrow pill */}
             <m.div variants={fadeUp}>
               <Link
-                href="/features/google-business-profile"
+                href="/whatsapp-automation"
                 className="group inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/60 px-3 py-1 text-xs text-muted-foreground backdrop-blur-sm transition-colors hover:border-accent/50 hover:text-foreground"
               >
                 <span className="inline-flex h-1.5 w-1.5 rounded-full bg-[linear-gradient(135deg,#6366f1,#d946ef)] animate-pulse" />
-                New — Google Business Profile automation
+                New — WhatsApp Business automation, Meta-approved
                 <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
               </Link>
             </m.div>
@@ -70,20 +70,20 @@ export function Hero({ statsBar }: HeroProps = {}) {
               variants={fadeUp}
               className="mt-6 max-w-4xl text-balance font-sans text-4xl font-semibold tracking-tight text-foreground leading-[1.1] sm:text-5xl lg:text-6xl lg:leading-[1.05]"
             >
-              Turn{" "}
+              AI replies for every Play Store review, Google review, and{" "}
               <span className="text-gradient-brand font-serif italic font-normal">
-                every review
-              </span>{" "}
-              into revenue.
+                WhatsApp message
+              </span>
+              .
             </m.h1>
 
             <m.p
               variants={fadeUp}
               className="mt-6 max-w-2xl text-balance text-base text-muted-foreground sm:text-lg leading-relaxed"
             >
-              AI-drafted replies for Google Play Store reviews and Google
-              Business Profile — built for Indian app makers and local businesses.
-              From{" "}
+              ReviewPilot drafts on-brand replies for every review and WhatsApp
+              Business message — across all three platforms, in one unified
+              inbox. Built for Indian SMBs and app developers. From{" "}
               <span className="font-mono text-foreground">$16/mo</span>.
             </m.p>
 

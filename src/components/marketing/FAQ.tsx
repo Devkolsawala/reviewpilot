@@ -12,12 +12,24 @@ const FAQ_ITEMS = [
     a: "Starter is $16/mo (1 location or app, 100 AI replies/week). Growth is $32/mo, Agency is $85/mo, and Enterprise is custom. All prices billed in INR equivalent at checkout. All paid plans include a 7-day free trial — no credit card required to start.",
   },
   {
+    q: "Does ReviewPilot work with WhatsApp Business?",
+    a: "Yes. ReviewPilot is a Meta-approved Tech Provider with the official WhatsApp Cloud API. Connect via Embedded Signup in 60 seconds, and inbound messages land in your unified inbox in real time alongside Play Store and Google reviews. AI drafts replies inside Meta's 24-hour customer service window, so replies are nearly always free.",
+  },
+  {
+    q: "Is the WhatsApp integration official and Meta-approved?",
+    a: "Yes. ReviewPilot has whatsapp_business_messaging and whatsapp_business_management permissions in Meta Advanced Access — the production tier of WhatsApp Cloud API permissions. This is the official integration, not a grey-market scraper or unofficial WhatsApp Web bridge.",
+  },
+  {
+    q: "Can I reply to WhatsApp messages and Play Store reviews from the same inbox?",
+    a: "Yes. ReviewPilot's unified inbox combines Play Store reviews, Google Business Profile reviews, and WhatsApp Business messages in one queue, with one AI engine drafting replies in your tone — across all three platforms.",
+  },
+  {
     q: "Does ReviewPilot actually work with Google Play Store reviews?",
     a: "Yes. ReviewPilot connects to Google Play Console via a service account you upload in under 5 minutes. We respect the 350-character reply limit automatically, and drafts arrive in the reviewer's language.",
   },
   {
     q: "Is Google Business Profile supported?",
-    a: "GBP automation is launching soon and is included on every paid plan. You can connect your GBP today; full auto-reply ships when GBP leaves beta.",
+    a: "Yes. Connect Google Business Profile via OAuth — multi-location aware. Reviews land in the unified inbox alongside Play Store reviews and WhatsApp messages.",
   },
   {
     q: "How does the AI know our brand voice?",

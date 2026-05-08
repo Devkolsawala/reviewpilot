@@ -5,12 +5,12 @@ import { AuroraBackground } from "@/components/ui/aurora-background";
 import { GridPattern } from "@/components/ui/grid-pattern";
 
 export const metadata: Metadata = {
-  title: "Book a Live Demo — AI Review Management India | ReviewPilot",
+  title: "Book a Live Demo — AI Review Management India",
   description:
     "See ReviewPilot live: AI replies for Google & Play Store reviews, SMS collection, analytics. Book your free 20-minute demo with our India team today.",
   alternates: { canonical: "/demo" },
   openGraph: {
-    title: "Book a Live Demo | ReviewPilot",
+    title: "Book a Live Demo",
     description:
       "See AI review management in action. Free 20-minute walkthrough with our India team.",
     url: "https://www.reviewpilot.co.in/demo",

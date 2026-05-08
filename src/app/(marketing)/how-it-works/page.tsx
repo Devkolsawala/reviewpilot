@@ -7,12 +7,12 @@ import { GridPattern } from "@/components/ui/grid-pattern";
 import { JsonLd, SITE_URL } from "@/components/marketing/JsonLd";
 
 export const metadata: Metadata = {
-  title: "How AI Review Management Works — Setup in Minutes | ReviewPilot",
+  title: "How AI Review Management Works — Setup in Minutes",
   description:
     "How does AI review management work? Connect Google Business Profile or Play Store, train brand voice, set auto-reply rules, go live. Full walkthrough here.",
   alternates: { canonical: "/how-it-works" },
   openGraph: {
-    title: "How AI Review Management Works | ReviewPilot",
+    title: "How AI Review Management Works",
     description:
       "A 6-step walkthrough of automated Google review reply setup with ReviewPilot.",
     url: `${SITE_URL}/how-it-works`,

@@ -149,7 +149,7 @@ export function ConnectionWizard({
  WhatsApp Business
  </h3>
  <p className="text-sm text-muted-foreground">
- Manage incoming WhatsApp customer messages with AI replies.
+ Connect via Facebook Login (Meta Embedded Signup) — AI replies to every customer DM, in your tone.
  </p>
  <Badge
  variant="secondary"
@@ -159,7 +159,7 @@ export function ConnectionWizard({
  color: WHATSAPP_GREEN,
  }}
  >
- Cloud API
+ Meta-approved · Cloud API
  </Badge>
  </button>
  </div>

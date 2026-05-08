@@ -3,12 +3,12 @@ import Link from "next/link";
 import { SITE_URL } from "@/components/marketing/JsonLd";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy | ReviewPilot",
+  title: "Privacy Policy",
   description:
     "ReviewPilot's privacy policy — how we collect, use, and protect your data. Made-in-India review management software.",
   alternates: { canonical: "/privacy" },
   openGraph: {
-    title: "Privacy Policy | ReviewPilot",
+    title: "Privacy Policy",
     description: "How ReviewPilot collects, uses, and protects your data.",
     url: `${SITE_URL}/privacy`,
   },

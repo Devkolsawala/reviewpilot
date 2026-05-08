@@ -29,10 +29,19 @@ const COLUMNS: { heading: string; links: { label: string; href: string }[] }[] =
       { label: "Features", href: "/features" },
       { label: "Pricing", href: "/pricing" },
       { label: "How it works", href: "/how-it-works" },
-      { label: "Play Store reviews", href: "/features/google-play-reviews" },
-      { label: "Google Business Profile", href: "/features/google-business-profile" },
-      { label: "Team Collaboration", href: "/features#team-collaboration" },
+      { label: "Unified inbox", href: "/unified-inbox" },
+      { label: "WhatsApp Business automation", href: "/whatsapp-automation" },
+      { label: "Team collaboration", href: "/features#team-collaboration" },
       { label: "Request a demo", href: "/demo" },
+    ],
+  },
+  {
+    heading: "Integrations",
+    links: [
+      { label: "All integrations", href: "/integrations" },
+      { label: "WhatsApp Business API", href: "/integrations/whatsapp-business" },
+      { label: "Google Play Store", href: "/integrations/google-play-store" },
+      { label: "Google Business Profile", href: "/integrations/google-business-profile" },
     ],
   },
   {
@@ -40,7 +49,8 @@ const COLUMNS: { heading: string; links: { label: string; href: string }[] }[] =
     links: [
       { label: "For app developers", href: "/for-app-developers" },
       { label: "For local businesses", href: "/for-local-business" },
-      { label: "Birdeye alternative", href: "/alternatives/birdeye-alternative" },
+      { label: "Birdeye alternative", href: "/vs/birdeye" },
+      { label: "AppFollow alternative", href: "/vs/appfollow" },
       { label: "vs Podium", href: "/compare/reviewpilot-vs-podium" },
       { label: "vs Famepilot", href: "/compare/reviewpilot-vs-famepilot" },
     ],
@@ -62,7 +72,7 @@ export function Footer() {
   return (
     <footer className="relative border-t border-border/60 bg-muted/20">
       <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8">
-        <div className="grid gap-12 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
+        <div className="grid gap-12 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr_1fr]">
           {/* Brand + newsletter */}
           <div>
             <Link href="/" className="flex items-center gap-2">
@@ -77,8 +87,9 @@ export function Footer() {
               </span>
             </Link>
             <p className="mt-4 max-w-sm text-sm text-muted-foreground leading-relaxed">
-              AI review management for Indian app makers and local businesses.
-              From $16/mo — built for the teams who care about every star.
+              AI replies for Play Store reviews, Google Business Profile
+              reviews, and WhatsApp Business messages — one unified inbox
+              built for Indian SMBs and app developers. From $16/mo.
             </p>
 
             {/* Newsletter — disabled until backend wiring lands */}

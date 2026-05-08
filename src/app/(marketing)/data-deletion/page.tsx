@@ -8,7 +8,7 @@ export const metadata: Metadata = {
     "How to delete your ReviewPilot account, disconnect integrations, and permanently remove stored data including WhatsApp messages and reviews.",
   alternates: { canonical: "/data-deletion" },
   openGraph: {
-    title: "Data Deletion — ReviewPilot",
+    title: "Data Deletion",
     description:
       "How to delete your ReviewPilot data — connections, messages, reviews, and your account.",
     url: `${SITE_URL}/data-deletion`,

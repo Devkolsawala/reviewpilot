@@ -7,25 +7,33 @@ const STEPS = [
   {
     num: "01",
     icon: Link2,
-    title: "Connect in two minutes",
+    title: "Connect Play Store, Google, or WhatsApp",
     description:
-      "Link Google Business Profile in one click or upload a Play Console service account. Your existing reviews sync instantly.",
+      "One click each — service-account or invite-email for Play Store, OAuth for Google Business Profile, Meta Embedded Signup for WhatsApp Business.",
     snippet: <ConnectSnippet />,
   },
   {
     num: "02",
     icon: Bot,
-    title: "AI drafts every reply",
+    title: "Reviews and messages land in real time",
     description:
-      "ReviewPilot watches new reviews, drafts replies in your brand voice, and respects each platform's character limits and language.",
+      "ReviewPilot pulls every Play Store review every 2 hours and receives Google reviews and WhatsApp messages via real-time Cloud API webhooks.",
     snippet: <DraftSnippet />,
   },
   {
     num: "03",
     icon: TrendingUp,
-    title: "Approve or auto-publish",
+    title: "AI drafts a reply in your tone",
     description:
-      "Review the queue in seconds, set auto-publish rules for high-confidence ratings, and watch your response rate climb to 98%.",
+      "Trained on your App Context Profile — your tone, hours, FAQs. Drafts arrive in 3 seconds, in the customer's language, within each platform's character limits.",
+    snippet: <PublishSnippet />,
+  },
+  {
+    num: "04",
+    icon: TrendingUp,
+    title: "Approve, edit, or auto-publish",
+    description:
+      "Approve every draft yourself or set auto-publish rules per category. WhatsApp replies inside the 24-hour window are free.",
     snippet: <PublishSnippet />,
   },
 ];
@@ -49,7 +57,7 @@ export function HowItWorks() {
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true, margin: "-80px" }}
-            className="relative mt-16 grid gap-8 md:grid-cols-3"
+            className="relative mt-16 grid gap-8 sm:grid-cols-2 lg:grid-cols-4"
           >
             {/* Connecting timeline */}
             <div

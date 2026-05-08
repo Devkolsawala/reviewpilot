@@ -4,6 +4,7 @@ import Link from "next/link";
 import {
   Bot,
   MessageSquareText,
+  MessageCircle,
   Inbox,
   BarChart3,
   Globe2,
@@ -13,6 +14,8 @@ import {
   Users,
   ArrowRight,
 } from "lucide-react";
+
+const WHATSAPP_GREEN = "#25D366";
 import { cn } from "@/lib/utils";
 import { m, MotionProvider, fadeUp, stagger } from "@/components/motion/primitives";
 
@@ -65,9 +68,10 @@ export function FeatureGrid() {
             {/* Medium — Unified inbox */}
             <BentoCard
               icon={Inbox}
-              title="One inbox, every surface"
-              description="Google Business Profile and Play Store reviews land in one queue. Filter, search, bulk-approve."
+              title="One unified inbox, three platforms"
+              description="Play Store, Google Business Profile, and WhatsApp Business messages all land in one queue. Filter, search, bulk-approve."
               visual={<InboxVisual />}
+              href="/unified-inbox"
             />
 
             {/* Medium — Analytics */}
@@ -78,12 +82,22 @@ export function FeatureGrid() {
               visual={<SentimentVisual />}
             />
 
-            {/* Large — SMS collection */}
+            {/* Large — WhatsApp Business */}
             <BentoCard
               className="lg:col-span-2"
+              icon={MessageCircle}
+              iconAccent={WHATSAPP_GREEN}
+              title="WhatsApp Business automation, AI-powered"
+              description="AI replies to every customer WhatsApp message — connected in 60 seconds via Meta Embedded Signup, fully Meta-approved. Replies inside the 24-hour window are free."
+              visual={<WhatsAppVisual />}
+              href="/whatsapp-automation"
+            />
+
+            {/* Medium — SMS collection */}
+            <BentoCard
               icon={MessageSquareText}
               title="Collect 5★ reviews on autopilot"
-              description="SMS campaigns route happy customers straight to Google; critical ones land in private feedback. Protect the public rating automatically."
+              description="SMS campaigns route happy customers straight to Google; critical ones land in private feedback."
               visual={<SmsVisual />}
               soon
             />
@@ -133,6 +147,8 @@ function BentoCard({
   visual,
   className,
   soon,
+  href,
+  iconAccent,
 }: {
   icon: typeof Bot;
   title: string;
@@ -140,19 +156,17 @@ function BentoCard({
   visual: React.ReactNode;
   className?: string;
   soon?: boolean;
+  href?: string;
+  iconAccent?: string;
 }) {
-  return (
-    <m.div
-      variants={fadeUp}
-      className={cn(
-        "group relative flex flex-col overflow-hidden rounded-2xl border border-border/60 bg-card/60 p-6 backdrop-blur-sm",
-        "transition-all duration-300 hover:border-accent/40 hover:shadow-[0_0_40px_-12px_hsl(var(--ring)/0.4)]",
-        className,
-      )}
-    >
+  const inner = (
+    <>
       <div className="relative flex items-center gap-2">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-border/60 bg-background/60 text-accent">
-          <Icon className="h-4 w-4" />
+        <div
+          className="flex h-9 w-9 items-center justify-center rounded-lg border border-border/60 bg-background/60"
+          style={iconAccent ? { color: iconAccent } : undefined}
+        >
+          <Icon className={cn("h-4 w-4", !iconAccent && "text-accent")} />
         </div>
         {soon && (
           <span className="inline-flex items-center rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-600 dark:text-amber-400">
@@ -167,6 +181,33 @@ function BentoCard({
         {description}
       </p>
       <div className="mt-6 flex-1">{visual}</div>
+      {href && (
+        <span className="mt-4 inline-flex items-center gap-1 text-xs font-medium text-accent">
+          Learn more
+          <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
+        </span>
+      )}
+    </>
+  );
+
+  const sharedClass = cn(
+    "group relative flex flex-col overflow-hidden rounded-2xl border border-border/60 bg-card/60 p-6 backdrop-blur-sm",
+    "transition-all duration-300 hover:border-accent/40 hover:shadow-[0_0_40px_-12px_hsl(var(--ring)/0.4)]",
+    className,
+  );
+
+  if (href) {
+    return (
+      <m.div variants={fadeUp} className={sharedClass + " block"}>
+        <Link href={href} className="absolute inset-0 z-10" aria-label={title} />
+        {inner}
+      </m.div>
+    );
+  }
+
+  return (
+    <m.div variants={fadeUp} className={sharedClass}>
+      {inner}
     </m.div>
   );
 }
@@ -213,26 +254,107 @@ function AiReplyVisual() {
 }
 
 function InboxVisual() {
+  const rows: { src: string; color?: string; whatsapp?: boolean; label: string }[] = [
+    {
+      src: "Play Store",
+      color: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
+      label: "New review · replied",
+    },
+    {
+      src: "WhatsApp",
+      whatsapp: true,
+      label: "New message · AI drafted",
+    },
+    {
+      src: "Google",
+      color: "bg-blue-500/15 text-blue-700 dark:text-blue-400",
+      label: "New review · auto-replied",
+    },
+  ];
   return (
     <div className="space-y-1.5">
-      {[
-        { src: "Play Store", color: "bg-emerald-500/15 text-emerald-600" },
-        { src: "Google Business", color: "bg-blue-500/15 text-blue-600" },
-        { src: "Play Store", color: "bg-emerald-500/15 text-emerald-600" },
-      ].map((r, i) => (
+      {rows.map((r, i) => (
         <div
           key={i}
           className="flex items-center gap-2 rounded-md border border-border/60 bg-background/60 px-2 py-1.5 text-[11px]"
         >
-          <span className={cn("rounded px-1.5 py-0.5 text-[10px] font-medium", r.color)}>
+          <span
+            className={cn(
+              "rounded px-1.5 py-0.5 text-[10px] font-medium",
+              !r.whatsapp && r.color,
+            )}
+            style={
+              r.whatsapp
+                ? {
+                    backgroundColor: `${WHATSAPP_GREEN}22`,
+                    color: WHATSAPP_GREEN,
+                  }
+                : undefined
+            }
+          >
             {r.src}
           </span>
           <span className="flex-1 truncate text-muted-foreground">
-            New review · replied
+            {r.label}
           </span>
-          <Star className="h-2.5 w-2.5 fill-amber-400 text-amber-400" />
+          {!r.whatsapp && (
+            <Star className="h-2.5 w-2.5 fill-amber-400 text-amber-400" />
+          )}
         </div>
       ))}
+    </div>
+  );
+}
+
+function WhatsAppVisual() {
+  return (
+    <div className="space-y-2 rounded-lg border border-border/60 bg-background/60 p-3 text-[11px]">
+      {/* Inbound */}
+      <div className="flex">
+        <div
+          className="rounded-2xl rounded-bl-sm px-3 py-2 leading-relaxed max-w-[80%]"
+          style={{
+            backgroundColor: `${WHATSAPP_GREEN}14`,
+            color: "currentColor",
+          }}
+        >
+          <span className="font-medium">+91 98•••• 12345</span>
+          <p className="mt-0.5 text-foreground/85">
+            Hi, can I cancel the order I placed an hour ago?
+          </p>
+        </div>
+      </div>
+      {/* AI drafting */}
+      <div className="flex items-center gap-1.5 text-accent">
+        <Sparkles className="h-3 w-3" />
+        AI drafting
+        <span className="inline-flex gap-0.5">
+          <span className="h-1 w-1 rounded-full bg-accent animate-pulse" />
+          <span className="h-1 w-1 rounded-full bg-accent animate-pulse [animation-delay:0.15s]" />
+          <span className="h-1 w-1 rounded-full bg-accent animate-pulse [animation-delay:0.3s]" />
+        </span>
+      </div>
+      {/* Outbound draft */}
+      <div className="flex justify-end">
+        <div
+          className="rounded-2xl rounded-br-sm border px-3 py-2 leading-relaxed max-w-[80%]"
+          style={{
+            backgroundColor: `${WHATSAPP_GREEN}10`,
+            borderColor: `${WHATSAPP_GREEN}55`,
+          }}
+        >
+          <p className="text-foreground/85">
+            Hi! Yes — orders can be cancelled within 30 mins. I&apos;ll
+            cancel #4821 and refund instantly.
+          </p>
+          <span
+            className="mt-1 inline-flex items-center gap-1 text-[9px] font-medium"
+            style={{ color: WHATSAPP_GREEN }}
+          >
+            ✓✓ Inside 24-hour window — free
+          </span>
+        </div>
+      </div>
     </div>
   );
 }

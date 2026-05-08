@@ -101,7 +101,7 @@ function usePendingReviewCount() {
 
 const MAIN_NAV = [
  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
- { label: "Review Inbox", href: "/dashboard/inbox", icon: Inbox },
+ { label: "Inbox", href: "/dashboard/inbox", icon: Inbox },
  { label: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
  { label: "Campaigns", href: "/dashboard/campaigns", icon: Megaphone },
  { label: "Help & Docs", href: "/dashboard/docs", icon: BookOpen },

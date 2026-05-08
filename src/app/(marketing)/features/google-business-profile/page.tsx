@@ -10,12 +10,12 @@ import { GridPattern } from "@/components/ui/grid-pattern";
 import { JsonLd, SITE_URL, SITE_OG } from "@/components/marketing/JsonLd";
 
 export const metadata: Metadata = {
-  title: "AI Replies to Google Business Reviews India | ReviewPilot",
+  title: "AI Replies to Google Business Reviews India",
   description:
     "Auto-reply to Google Business Profile reviews with AI. One-click GBP connection, brand-voice replies, SMS review collection. Built for Indian SMBs. $16/mo.",
   alternates: { canonical: "/features/google-business-profile" },
   openGraph: {
-    title: "AI Replies to Google Business Reviews — Built for India | ReviewPilot",
+    title: "AI Replies to Google Business Reviews — Built for India",
     description:
       "Connect Google Business Profile in one click. AI writes brand-voice replies, SMS collection smart-routes happy customers to Google. From $16/mo.",
     url: `${SITE_URL}/features/google-business-profile`,
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "AI Google Business Review Replies India | ReviewPilot",
+    title: "AI Google Business Review Replies India",
     description: "Auto-reply to Google Business reviews with AI. Built for Indian SMBs. $16/mo.",
     images: ["/og-image.svg"],
   },

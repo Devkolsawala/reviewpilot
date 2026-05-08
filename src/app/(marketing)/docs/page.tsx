@@ -12,12 +12,12 @@ import {
 import { SITE_URL } from "@/components/marketing/JsonLd";
 
 export const metadata: Metadata = {
-  title: "Help Center — Review Management Guides & Tutorials | ReviewPilot",
+  title: "Help Center — Review Management Guides & Tutorials",
   description:
     "Guides for connecting Google Business Profile, Play Store, setting up AI reply rules, and reading analytics. Explore ReviewPilot's help center now.",
   alternates: { canonical: "/docs" },
   openGraph: {
-    title: "Help Center | ReviewPilot",
+    title: "Help Center",
     description:
       "Guides and tutorials for review management with ReviewPilot.",
     url: `${SITE_URL}/docs`,
