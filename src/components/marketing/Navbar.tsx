@@ -3,12 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Menu, X, Search, ChevronDown } from "lucide-react";
+import { Menu, X, Search, ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
 import { cn } from "@/lib/utils";
 import { CommandMenu } from "./CommandMenu";
 import { m, MotionProvider } from "@/components/motion/primitives";
+import { createClient } from "@/lib/supabase/client";
 
 type NavLink = {
   label: string;
@@ -111,6 +113,7 @@ export function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [cmdkOpen, setCmdkOpen] = useState(false);
+  const [isAuthed, setIsAuthed] = useState(false);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -118,6 +121,23 @@ export function Navbar() {
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  useEffect(() => {
+    const supabase = createClient();
+    let mounted = true;
+    supabase.auth.getUser().then(({ data }) => {
+      if (mounted) setIsAuthed(!!data.user);
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (mounted) setIsAuthed(!!session?.user);
+    });
+    return () => {
+      mounted = false;
+      sub.subscription.unsubscribe();
+    };
+  }, []);
+
+  const closeMobile = () => setMobileOpen(false);
 
   return (
     <MotionProvider>
@@ -239,55 +259,213 @@ export function Navbar() {
           <div className="lg:hidden flex items-center gap-1">
             <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" aria-label="Open menu">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label={mobileOpen ? "Close menu" : "Open menu"}
+                  aria-expanded={mobileOpen}
+                  aria-controls="mobile-nav-drawer"
+                  className="h-11 w-11"
+                >
                   {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
                 </Button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-[85vw] max-w-sm">
-                <nav className="flex flex-col gap-1 pt-6">
-                  {NAV_LINKS.flatMap((link) =>
-                    link.children
-                      ? [
-                          <div
-                            key={link.label}
-                            className="px-2 pt-4 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground"
-                          >
-                            {link.label}
-                          </div>,
-                          ...link.children.map((child) => (
-                            <Link
-                              key={child.href}
-                              href={child.href}
-                              onClick={() => setMobileOpen(false)}
-                              className="rounded-md px-2 py-2 text-sm font-medium text-foreground hover:bg-accent/10"
-                            >
-                              {child.label}
-                            </Link>
-                          )),
-                        ]
-                      : [
-                          <Link
-                            key={link.href}
-                            href={link.href}
-                            onClick={() => setMobileOpen(false)}
-                            className="rounded-md px-2 py-2 text-sm font-medium text-foreground hover:bg-accent/10"
-                          >
-                            {link.label}
-                          </Link>,
-                        ],
+              <SheetContent
+                side="right"
+                hideCloseButton
+                id="mobile-nav-drawer"
+                aria-modal="true"
+                className="flex flex-col gap-0 p-0 border-l border-border/60 w-[88vw] max-w-[360px] sm:max-w-[360px] overflow-hidden"
+                style={{ height: "100dvh" }}
+              >
+                <VisuallyHidden.Root>
+                  <SheetTitle>Site navigation</SheetTitle>
+                  <SheetDescription>
+                    Primary actions and links for ReviewPilot
+                  </SheetDescription>
+                </VisuallyHidden.Root>
+
+                {/* Sticky header: logo + close */}
+                <div
+                  className="flex items-center justify-between border-b border-border/60 bg-background/95 backdrop-blur-sm px-4"
+                  style={{
+                    paddingTop: "max(0.625rem, env(safe-area-inset-top))",
+                    paddingBottom: "0.625rem",
+                  }}
+                >
+                  <Link
+                    href="/"
+                    onClick={closeMobile}
+                    className="flex items-center gap-2"
+                  >
+                    <img
+                      src="/favicon.svg"
+                      alt=""
+                      className="h-7 w-7 shrink-0"
+                      aria-hidden="true"
+                    />
+                    <span className="font-sans text-[15px] font-semibold tracking-tight text-foreground">
+                      ReviewPilot
+                    </span>
+                  </Link>
+                  <SheetClose asChild>
+                    <button
+                      type="button"
+                      aria-label="Close menu"
+                      className="inline-flex h-11 w-11 -mr-2 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent/10 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      <X className="h-5 w-5" />
+                    </button>
+                  </SheetClose>
+                </div>
+
+                {/* Primary CTA block — above the fold */}
+                <div className="border-b border-border/60 px-4 pt-4 pb-4 space-y-2">
+                  {isAuthed ? (
+                    <Button
+                      variant="gradient"
+                      className="w-full h-12 text-[15px] font-semibold"
+                      asChild
+                    >
+                      <Link href="/dashboard" onClick={closeMobile}>
+                        Go to dashboard
+                      </Link>
+                    </Button>
+                  ) : (
+                    <>
+                      <Button
+                        variant="gradient"
+                        className="w-full h-12 text-[15px] font-semibold"
+                        asChild
+                      >
+                        <Link href="/signup" onClick={closeMobile}>
+                          Start free trial
+                        </Link>
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="w-full h-12 text-[15px] font-medium"
+                        asChild
+                      >
+                        <Link href="/login" onClick={closeMobile}>
+                          Log in
+                        </Link>
+                      </Button>
+                    </>
                   )}
+                </div>
+
+                {/* Scrollable nav sections */}
+                <nav
+                  className="flex-1 overflow-y-auto overscroll-contain px-2 py-3"
+                  aria-label="Mobile site navigation"
+                >
+                  {NAV_LINKS.map((link) => {
+                    if (link.children) {
+                      return (
+                        <div key={link.label} className="mb-3">
+                          <div className="px-3 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                            {link.label}
+                          </div>
+                          {link.children.map((child) => {
+                            const active = pathname === child.href;
+                            return (
+                              <Link
+                                key={child.href}
+                                href={child.href}
+                                onClick={closeMobile}
+                                className={cn(
+                                  "group flex min-h-[44px] items-center justify-between rounded-md px-3 py-3 text-[16px] font-medium transition-colors",
+                                  active
+                                    ? "bg-brand-500/10 text-brand-300"
+                                    : "text-foreground hover:bg-accent/10 hover:text-brand-300 active:bg-accent/15",
+                                )}
+                              >
+                                <span className="truncate pr-2">
+                                  {child.label}
+                                </span>
+                                <ChevronRight
+                                  className={cn(
+                                    "h-4 w-4 shrink-0 transition-opacity",
+                                    active
+                                      ? "opacity-70"
+                                      : "opacity-30 group-hover:opacity-70",
+                                  )}
+                                />
+                              </Link>
+                            );
+                          })}
+                        </div>
+                      );
+                    }
+
+                    const active =
+                      link.href === "/"
+                        ? pathname === "/"
+                        : pathname?.startsWith(link.href.split("#")[0]) ?? false;
+
+                    return (
+                      <Link
+                        key={link.href}
+                        href={link.href}
+                        onClick={closeMobile}
+                        className={cn(
+                          "group flex min-h-[44px] items-center justify-between rounded-md px-3 py-3 text-[16px] font-medium transition-colors",
+                          active
+                            ? "bg-brand-500/10 text-brand-300"
+                            : "text-foreground hover:bg-accent/10 hover:text-brand-300 active:bg-accent/15",
+                        )}
+                      >
+                        <span>{link.label}</span>
+                        <ChevronRight
+                          className={cn(
+                            "h-4 w-4 shrink-0 transition-opacity",
+                            active
+                              ? "opacity-70"
+                              : "opacity-30 group-hover:opacity-70",
+                          )}
+                        />
+                      </Link>
+                    );
+                  })}
                 </nav>
-                <div className="mt-6 flex flex-col gap-2 border-t border-border/60 pt-6">
-                  <Button variant="outline" asChild>
-                    <Link href="/login" onClick={() => setMobileOpen(false)}>
-                      Log in
+
+                {/* Sticky footer */}
+                <div
+                  className="border-t border-border/60 bg-background/95 backdrop-blur-sm px-4 pt-3"
+                  style={{
+                    paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))",
+                  }}
+                >
+                  <div className="flex items-center justify-center gap-3 text-[13px] text-muted-foreground">
+                    <Link
+                      href="/pricing"
+                      onClick={closeMobile}
+                      className="rounded px-2 py-1 transition-colors hover:text-foreground"
+                    >
+                      Pricing
                     </Link>
-                  </Button>
-                  <Button variant="gradient" asChild>
-                    <Link href="/signup" onClick={() => setMobileOpen(false)}>
-                      Start free trial
+                    <span aria-hidden="true" className="opacity-30">
+                      •
+                    </span>
+                    <Link
+                      href="/docs"
+                      onClick={closeMobile}
+                      className="rounded px-2 py-1 transition-colors hover:text-foreground"
+                    >
+                      Docs
                     </Link>
-                  </Button>
+                    <span aria-hidden="true" className="opacity-30">
+                      •
+                    </span>
+                    <Link
+                      href="/demo"
+                      onClick={closeMobile}
+                      className="rounded px-2 py-1 transition-colors hover:text-foreground"
+                    >
+                      Contact
+                    </Link>
+                  </div>
                 </div>
               </SheetContent>
             </Sheet>
