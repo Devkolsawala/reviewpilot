@@ -10,22 +10,12 @@ import { GBP_ENABLED, GBP_COMING_SOON_MESSAGE } from "@/lib/feature-flags";
 const MAX_EDITS_PER_24H = 10;
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-const REVIEW_DELETED_MESSAGE =
-  "This review was deleted from Play Store by the reviewer, so it can no longer be replied to.";
-
-function friendlyPlayStoreError(raw: string | undefined | null): string {
-  const msg = raw || "Unknown error";
-  if (/could not find review|notfound|not.?found/i.test(msg)) {
-    return REVIEW_DELETED_MESSAGE;
-  }
-  if (/quota|rate.?limit/i.test(msg)) {
-    return "Google rate limit reached. Try again in a few minutes.";
-  }
-  if (/permission|forbidden|unauthorized/i.test(msg)) {
-    return "Permission denied. Reconnect your Play Console under Settings → Connections.";
-  }
-  return msg;
-}
+// User-facing copy for the case where our local external_review_id is
+// unrecoverable (corrupt UUID and auto-heal couldn't match a live review).
+// Kept distinct from REVIEW_DELETED — Reserved strictly for the case where
+// Google itself returns 404 NOT_FOUND for the specific reviewId.
+const EXTERNAL_ID_UNRECOVERABLE_MESSAGE =
+  "We lost track of this review's Play Store ID. Refresh your inbox to resync.";
 
 export async function POST(request: Request) {
   const supabase = createClient();
@@ -240,7 +230,9 @@ export async function POST(request: Request) {
     // Auto-heal: if the stored external_review_id is missing or looks like a UUID
     // (a known data-corruption mode where reviews.id was written into the column),
     // try to recover by fetching live reviews from Play Store and matching on
-    // review_text + author_name. Patch the row when we find a match.
+    // a composite key: (author_name, review_text, rating, |created_at delta| ≤ 10min).
+    // Rating + time tighten the prior text-only match so a reviewer's edited
+    // text or empty author_name doesn't silently mis-pair rows.
     if (looksCorrupt && connection?.external_id) {
       console.warn("[reply-publish] external_review_id looks corrupt — attempting auto-heal", {
         internal_id: review.id,
@@ -251,13 +243,25 @@ export async function POST(request: Request) {
           connection.external_id,
           connection.credentials as Record<string, unknown> | null
         );
-        const match = live.find(
-          (r) =>
-            r.review_text === review.review_text &&
-            r.author_name === review.author_name
-        );
-        if (match?.external_review_id && !UUID_REGEX.test(match.external_review_id)) {
-          resolvedExternalId = match.external_review_id;
+        const storedCreatedMs = review.review_created_at
+          ? new Date(review.review_created_at).getTime()
+          : NaN;
+        const TEN_MIN_MS = 10 * 60 * 1000;
+        const matches = live.filter((r) => {
+          if (r.author_name !== review.author_name) return false;
+          if (r.review_text !== review.review_text) return false;
+          if ((r.rating ?? null) !== (review.rating ?? null)) return false;
+          if (Number.isFinite(storedCreatedMs)) {
+            const liveMs = new Date(r.review_created_at).getTime();
+            if (!Number.isFinite(liveMs)) return false;
+            if (Math.abs(liveMs - storedCreatedMs) > TEN_MIN_MS) return false;
+          }
+          return (
+            !!r.external_review_id && !UUID_REGEX.test(r.external_review_id)
+          );
+        });
+        if (matches.length === 1) {
+          resolvedExternalId = matches[0].external_review_id;
           await supabase
             .from("reviews")
             .update({ external_review_id: resolvedExternalId })
@@ -266,8 +270,13 @@ export async function POST(request: Request) {
             internal_id: review.id,
             recovered_external_review_id: resolvedExternalId,
           });
+        } else if (matches.length > 1) {
+          console.warn("[reply-publish] auto-heal ambiguous — multiple composite matches", {
+            internal_id: review.id,
+            match_count: matches.length,
+          });
         } else {
-          console.warn("[reply-publish] auto-heal failed — no live match");
+          console.warn("[reply-publish] auto-heal failed — no composite match");
         }
       } catch (e) {
         console.error("[reply-publish] auto-heal error:", e);
@@ -282,8 +291,9 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           success: false,
-          error: REVIEW_DELETED_MESSAGE,
-          message: REVIEW_DELETED_MESSAGE,
+          code: "EXTERNAL_ID_UNRECOVERABLE",
+          error: "EXTERNAL_ID_UNRECOVERABLE",
+          message: EXTERNAL_ID_UNRECOVERABLE_MESSAGE,
         },
         { status: 400 }
       );
@@ -309,10 +319,24 @@ export async function POST(request: Request) {
         .from("reviews")
         .update({ reply_text: finalReplyText, reply_status: "failed" })
         .eq("id", reviewId);
-      const friendly = friendlyPlayStoreError(result.error);
+      // Map status-derived code to HTTP. 404 → 404 (deleted), 401/403 → 401/403,
+      // 429 → 429, 5xx → 502 so retry copy stays distinct from a generic 500.
+      const httpStatus =
+        result.code === "REVIEW_DELETED" ? 404
+        : result.code === "PERMISSION_DENIED" ? 403
+        : result.code === "AUTH_EXPIRED" ? 401
+        : result.code === "RATE_LIMITED" ? 429
+        : result.code === "TRANSIENT" ? 502
+        : result.code === "BAD_REQUEST" ? 400
+        : 500;
       return NextResponse.json(
-        { success: false, error: friendly, message: friendly },
-        { status: 500 }
+        {
+          success: false,
+          code: result.code,
+          error: result.code,
+          message: result.error,
+        },
+        { status: httpStatus }
       );
     }
   } else if (review.source === "google_business") {

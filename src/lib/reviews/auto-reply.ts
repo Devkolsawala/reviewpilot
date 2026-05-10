@@ -152,8 +152,8 @@ export async function processAutoReplyForReview(
       connection.credentials
     );
     publishedOk = result.success;
-    if (!publishedOk) {
-      console.error("[auto-reply] Play publish failed:", result.error);
+    if (!result.success) {
+      console.error("[auto-reply] Play publish failed:", result.code, result.error);
       await supabase
         .from("reviews")
         .update({

@@ -155,6 +155,11 @@ export async function fetchPlayStoreReviews(
   return transformed;
 }
 
+// Play Store reviewIds always start with "gp:". Anything else is either an
+// imported/historical row or corrupted data — warn (don't error) so we can
+// detect drift if Google ever changes the format.
+const PLAY_STORE_REVIEW_ID_PREFIX = /^gp:/;
+
 // Sanity check: external Play Store review IDs are never UUIDs — they look like
 // "gp:AOqpTOH...". A UUID here means a caller passed reviews.id (Supabase row PK)
 // instead of reviews.external_review_id. Fail loudly with a clear engineering
@@ -162,15 +167,20 @@ export async function fetchPlayStoreReviews(
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+export type PlayStoreReplyResult =
+  | { success: true }
+  | PlayStoreReplyError;
+
 export async function replyToPlayStoreReview(
   packageName: string,
   reviewId: string,
   replyText: string,
   userCredentials?: Record<string, unknown> | null
-): Promise<{ success: boolean; error?: string }> {
+): Promise<PlayStoreReplyResult> {
   if (!reviewId) {
     return {
       success: false,
+      code: "BAD_REQUEST",
       error:
         "This review has no Play Store ID — likely an imported/historical review and cannot be replied to via the API.",
     };
@@ -179,10 +189,14 @@ export async function replyToPlayStoreReview(
     console.error(
       `[playstore] UUID detected in external_review_id (${reviewId}) for package ${packageName}. The review row in Supabase has a corrupted external_review_id and needs to be re-synced.`
     );
+    // Distinct from REVIEW_DELETED — this is local data corruption, not a
+    // Google 404. The reply route catches this and surfaces
+    // EXTERNAL_ID_UNRECOVERABLE to the user.
     return {
       success: false,
+      code: "BAD_REQUEST",
       error:
-        "This review was deleted from Play Store by the reviewer, so it can no longer be replied to.",
+        "This review's Play Store ID is invalid in our database. Please refresh your inbox to resync.",
     };
   }
 
@@ -200,9 +214,111 @@ export async function replyToPlayStoreReview(
     });
     return { success: true };
   } catch (error: unknown) {
-    const err = error as { message?: string };
-    return { success: false, error: err.message || "Unknown error" };
+    // Log the full error object exactly once per failure with a fixed prefix
+    // so we can grep production logs for the real shape and verify the
+    // status-code mapping below holds. Do not parse strings — switch on
+    // err.code / err.response?.status, which googleapis populates with the
+    // numeric HTTP status.
+    console.error(
+      "[playstore][error-shape] reviews.reply failed — full error object follows",
+      JSON.stringify(error, Object.getOwnPropertyNames(error as object), 2)
+    );
+    return classifyPlayStoreReplyError(error);
   }
+}
+
+export interface PlayStoreReplyError {
+  success: false;
+  /** Stable machine-readable code. UI maps this to copy. */
+  code:
+    | "REVIEW_DELETED"
+    | "PERMISSION_DENIED"
+    | "AUTH_EXPIRED"
+    | "RATE_LIMITED"
+    | "TRANSIENT"
+    | "BAD_REQUEST"
+    | "UNKNOWN";
+  /** User-facing message (already friendly). */
+  error: string;
+  /** Numeric HTTP status from googleapis, when present. */
+  status?: number;
+}
+
+function classifyPlayStoreReplyError(error: unknown): PlayStoreReplyError {
+  const err = error as {
+    code?: number | string;
+    status?: number;
+    message?: string;
+    response?: { status?: number };
+    errors?: Array<{ reason?: string; message?: string }>;
+  };
+  // googleapis sets err.code to the HTTP status (number) for HTTP failures,
+  // but can also carry string codes (e.g. "ENOTFOUND") for transport errors.
+  // Prefer the response status when available.
+  const numericCode =
+    typeof err.code === "number"
+      ? err.code
+      : typeof err.status === "number"
+      ? err.status
+      : err.response?.status;
+
+  if (numericCode === 404) {
+    return {
+      success: false,
+      code: "REVIEW_DELETED",
+      status: 404,
+      error:
+        "This review was deleted from Play Store by the reviewer, so it can no longer be replied to.",
+    };
+  }
+  if (numericCode === 403) {
+    return {
+      success: false,
+      code: "PERMISSION_DENIED",
+      status: 403,
+      error:
+        "Permission denied. Reconnect your Play Console under Settings → Connections and confirm 'Reply to reviews' is granted.",
+    };
+  }
+  if (numericCode === 401) {
+    return {
+      success: false,
+      code: "AUTH_EXPIRED",
+      status: 401,
+      error:
+        "Authentication failed. Your service account credentials are invalid or revoked — please reconnect.",
+    };
+  }
+  if (numericCode === 429) {
+    return {
+      success: false,
+      code: "RATE_LIMITED",
+      status: 429,
+      error: "Google rate limit reached. Try again in a few minutes.",
+    };
+  }
+  if (typeof numericCode === "number" && numericCode >= 500) {
+    return {
+      success: false,
+      code: "TRANSIENT",
+      status: numericCode,
+      error: "Google Play Store is temporarily unavailable. Please try again shortly.",
+    };
+  }
+  if (numericCode === 400) {
+    return {
+      success: false,
+      code: "BAD_REQUEST",
+      status: 400,
+      error: err.message || "Play Store rejected the reply as invalid.",
+    };
+  }
+  return {
+    success: false,
+    code: "UNKNOWN",
+    status: typeof numericCode === "number" ? numericCode : undefined,
+    error: err.message || "Unknown error",
+  };
 }
 
 // Backward-compat alias (not used externally, kept for safety)
@@ -247,6 +363,22 @@ export function transformPlayStoreReview(
   review: RawReviewData,
   connectionId?: string
 ): Review | null {
+  // Hard guard: a missing reviewId means we have nothing to dedupe on and
+  // nothing to address Google with later. Refuse to substitute a UUID or
+  // empty string — skip the row loudly so it surfaces in logs.
+  if (!review.reviewId || review.reviewId.trim() === "") {
+    console.error(
+      "[TRANSFORM] Skipping review with missing reviewId — cannot dedupe or reply later",
+      { author: review.authorName }
+    );
+    return null;
+  }
+  if (!PLAY_STORE_REVIEW_ID_PREFIX.test(review.reviewId)) {
+    console.warn(
+      `[TRANSFORM] reviewId "${review.reviewId}" does not match /^gp:/ — Google may have changed the format. Continuing.`
+    );
+  }
+
   const userComment = review.comments?.[0]?.userComment;
   if (!userComment) {
     console.log(`[TRANSFORM] Skipping review ${review.reviewId} — no user comment`);
@@ -278,7 +410,7 @@ export function transformPlayStoreReview(
     id: "",
     connection_id: connectionId,
     source: "play_store" as const,
-    external_review_id: review.reviewId || "",
+    external_review_id: review.reviewId,
     author_name: review.authorName || "Anonymous",
     rating,
     review_text: text,

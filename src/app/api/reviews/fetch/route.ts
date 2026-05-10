@@ -107,82 +107,78 @@ export async function POST(request: Request) {
   const nowIso = new Date().toISOString();
 
   for (const review of fetchedReviews) {
+    // Look up existing row purely to drive bookkeeping (newUnanswered vs
+    // updated counts and auto-reply triggering). The actual write is an
+    // upsert on (connection_id, external_review_id) so a corrected
+    // external_review_id naturally dedupes against the gp: row instead of
+    // creating a duplicate the way the old select-then-insert path did.
     const { data: existing } = await supabase
       .from("reviews")
-      .select("id, review_text, author_name, reply_status, reply_text, reply_published_at, is_auto_replied")
+      .select("id, review_text, author_name, reply_status, reply_text, reply_published_at, is_auto_replied, is_read")
       .eq("connection_id", connectionId)
       .eq("external_review_id", review.external_review_id)
       .maybeSingle();
 
-    if (existing) {
-      // Re-seeing a stored review. Update only Google-sourced fields that can
-      // legitimately change. NEVER overwrite our own derived/drafted fields:
-      // sentiment, keywords, is_read, or a reply_text we drafted ourselves.
-      const update: Record<string, unknown> = { last_seen_in_api_at: nowIso };
-      let changed = false;
-      if (existing.review_text !== review.review_text) {
-        update.review_text = review.review_text;
-        update.rating = review.rating;
-        update.review_created_at = review.review_created_at;
-        changed = true;
-      }
-      if (existing.author_name !== review.author_name && review.author_name) {
-        update.author_name = review.author_name;
-        changed = true;
-      }
-      // Only pull in Google-side reply changes if WE didn't draft/publish it ourselves.
-      const ourDraftOrReply = existing.reply_status === "drafted"
-        || (existing.reply_status === "published" && existing.is_auto_replied);
-      if (!ourDraftOrReply) {
-        if (review.reply_text && review.reply_text !== existing.reply_text) {
-          update.reply_text = review.reply_text;
-          update.reply_status = review.reply_status;
-          update.reply_published_at = review.reply_published_at ?? null;
-          changed = true;
-        }
-      }
-      await supabase
-        .from("reviews")
-        .update(update)
-        .eq("id", existing.id);
-      if (changed) updatedCount++;
-      continue;
+    // Decide which Google-side fields are safe to overwrite. NEVER clobber
+    // our own derived / drafted state: sentiment, keywords, is_read, or a
+    // reply_text we drafted/published ourselves.
+    const ourDraftOrReply = !!existing && (
+      existing.reply_status === "drafted"
+      || (existing.reply_status === "published" && existing.is_auto_replied)
+    );
+    const shouldPullGoogleReply =
+      !!review.reply_text
+      && !ourDraftOrReply
+      && review.reply_text !== existing?.reply_text;
+
+    const upsertRow: Record<string, unknown> = {
+      connection_id: connectionId,
+      source: review.source,
+      external_review_id: review.external_review_id,
+      author_name: review.author_name,
+      rating: review.rating,
+      review_text: review.review_text,
+      review_language: review.review_language,
+      reviewer_country: extractCountryFromLocale(review.review_language),
+      device_info: review.device_info ?? null,
+      review_created_at: review.review_created_at,
+      last_seen_in_api_at: nowIso,
+    };
+    if (!existing) {
+      // First time we've seen this review — set sentiment/keywords/reply state
+      // from the transformed row.
+      upsertRow.sentiment = review.sentiment;
+      upsertRow.keywords = review.keywords;
+      upsertRow.reply_status = review.reply_status;
+      upsertRow.reply_text = review.reply_text ?? null;
+      upsertRow.reply_published_at = review.reply_published_at ?? null;
+      upsertRow.is_read = review.is_read ?? false;
+    } else if (shouldPullGoogleReply) {
+      upsertRow.reply_text = review.reply_text;
+      upsertRow.reply_status = review.reply_status;
+      upsertRow.reply_published_at = review.reply_published_at ?? null;
     }
 
-    // Include reply_status, reply_text, reply_published_at, is_read so that
-    // reviews already answered on Play Store are stored as 'published' (not 'pending').
-    const { data: inserted, error: insertError } = await supabase
+    const { data: upserted, error: upsertError } = await supabase
       .from("reviews")
-      .insert({
-        connection_id: connectionId,
-        source: review.source,
-        external_review_id: review.external_review_id,
-        author_name: review.author_name,
-        rating: review.rating,
-        review_text: review.review_text,
-        review_language: review.review_language,
-        reviewer_country: extractCountryFromLocale(review.review_language),
-        device_info: review.device_info ?? null,
-        sentiment: review.sentiment,
-        keywords: review.keywords,
-        review_created_at: review.review_created_at,
-        reply_status: review.reply_status,
-        reply_text: review.reply_text ?? null,
-        reply_published_at: review.reply_published_at ?? null,
-        is_read: review.is_read ?? false,
-        last_seen_in_api_at: nowIso,
-      })
+      .upsert(upsertRow, { onConflict: "connection_id,external_review_id" })
       .select(
         "id, source, external_review_id, author_name, rating, review_text, review_language, sentiment, keywords, review_created_at, reply_status"
       )
       .single();
 
-    if (insertError || !inserted) {
-      if (insertError) console.error(`[FETCH] Insert error for ${review.external_review_id}:`, insertError.message);
+    if (upsertError || !upserted) {
+      if (upsertError) console.error(`[FETCH] Upsert error for ${review.external_review_id}:`, upsertError.message);
       continue;
     }
 
-    if (inserted.reply_status === "pending") {
+    if (existing) {
+      const reviewTextChanged = existing.review_text !== review.review_text;
+      if (reviewTextChanged || shouldPullGoogleReply) updatedCount++;
+      continue;
+    }
+
+    if (upserted.reply_status === "pending") {
       newUnansweredCount++;
       console.log(`[FETCH] Inserted unanswered review by ${review.author_name} (${review.rating}★, id: ${review.external_review_id})`);
 
@@ -196,7 +192,7 @@ export async function POST(request: Request) {
             credentials: connection.credentials as Record<string, unknown> | null,
             external_id: connection.external_id,
           },
-          inserted,
+          upserted,
           appContextRow as AppContext
         );
         if (outcome === "drafted") autoDrafted++;

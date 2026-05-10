@@ -277,6 +277,10 @@ async function handleCron(request: NextRequest) {
           log(`[CRON] Reviews fetched from API: ${fetchedReviews.length}`);
 
           for (const review of fetchedReviews) {
+            // Pre-check existence purely to gate auto-reply on truly new rows.
+            // The write itself is an upsert keyed on (connection_id,
+            // external_review_id) so a corrected gp: id naturally dedupes
+            // with any prior row instead of duplicating.
             const { data: existing } = await supabase
               .from("reviews")
               .select("id")
@@ -288,20 +292,23 @@ async function handleCron(request: NextRequest) {
 
             const { data: inserted, error: insertErr } = await supabase
               .from("reviews")
-              .insert({
-                connection_id: connection.id,
-                source: review.source,
-                external_review_id: review.external_review_id,
-                author_name: review.author_name,
-                rating: review.rating,
-                review_text: review.review_text,
-                review_language: review.review_language,
-                reviewer_country: extractCountryFromLocale(review.review_language),
-                device_info: review.device_info,
-                sentiment: review.sentiment,
-                keywords: review.keywords,
-                review_created_at: review.review_created_at,
-              })
+              .upsert(
+                {
+                  connection_id: connection.id,
+                  source: review.source,
+                  external_review_id: review.external_review_id,
+                  author_name: review.author_name,
+                  rating: review.rating,
+                  review_text: review.review_text,
+                  review_language: review.review_language,
+                  reviewer_country: extractCountryFromLocale(review.review_language),
+                  device_info: review.device_info,
+                  sentiment: review.sentiment,
+                  keywords: review.keywords,
+                  review_created_at: review.review_created_at,
+                },
+                { onConflict: "connection_id,external_review_id" }
+              )
               .select(
                 "id, source, external_review_id, author_name, rating, review_text, review_language, sentiment, keywords, review_created_at"
               )
@@ -309,7 +316,7 @@ async function handleCron(request: NextRequest) {
 
             if (insertErr || !inserted) {
               if (insertErr)
-                connResult.errors.push(`Insert error: ${insertErr.message}`);
+                connResult.errors.push(`Upsert error: ${insertErr.message}`);
               continue;
             }
 

@@ -35,7 +35,8 @@
       "Bash(npm install *)",
       "Bash(awk 'NR==404,NR==413' src/components/dashboard/AppContextForm.tsx)",
       "Bash(NODE_OPTIONS=\"--max-old-space-size=8192\" npm run build)",
-      "Bash(NODE_OPTIONS=\"--max-old-space-size=8192\" npx tsc --noEmit)"
+      "Bash(NODE_OPTIONS=\"--max-old-space-size=8192\" npx tsc --noEmit)",
+      "Bash(npm test *)"
     ]
   }
 }
