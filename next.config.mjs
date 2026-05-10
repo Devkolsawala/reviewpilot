@@ -12,6 +12,12 @@ const nextConfig = {
   },
   async redirects() {
     return [
+      {
+        source: '/:path*',
+        has: [{ type: 'host', value: 'www.reviewpilot.co.in' }],
+        destination: 'https://reviewpilot.co.in/:path*',
+        permanent: true,
+      },
       // Consolidate "Birdeye alternative" SEO equity onto /vs/birdeye
       {
         source: "/alternatives/birdeye-alternative",

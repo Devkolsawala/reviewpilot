@@ -36,7 +36,10 @@
       "Bash(awk 'NR==404,NR==413' src/components/dashboard/AppContextForm.tsx)",
       "Bash(NODE_OPTIONS=\"--max-old-space-size=8192\" npm run build)",
       "Bash(NODE_OPTIONS=\"--max-old-space-size=8192\" npx tsc --noEmit)",
-      "Bash(npm test *)"
+      "Bash(npm test *)",
+      "Bash(dir .env*)",
+      "Bash(powershell -NoProfile -Command \"\\(Get-Content 'public\\\\sitemap.xml' -Raw\\) -replace 'https://www\\\\.reviewpilot\\\\.co\\\\.in','https://reviewpilot.co.in' | Set-Content -Encoding UTF8 'public\\\\sitemap.xml'\")",
+      "Bash(NODE_OPTIONS=--max-old-space-size=8192 npm run build)"
     ]
   }
 }

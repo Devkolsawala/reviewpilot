@@ -30,7 +30,7 @@ export const metadata: Metadata = {
     title: "Review Management for Local Business India — Google + WhatsApp",
     description:
       "AI replies for Google reviews and WhatsApp Business messages. Built for restaurants, salons, clinics, and retailers in India.",
-    url: "https://www.reviewpilot.co.in/for-local-business",
+    url: "https://reviewpilot.co.in/for-local-business",
     images: [{ url: "/og-image.svg", width: 1200, height: 630, alt: "ReviewPilot for local business" }],
   },
   twitter: {

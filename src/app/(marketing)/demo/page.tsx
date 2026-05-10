@@ -13,7 +13,7 @@ export const metadata: Metadata = {
     title: "Book a Live Demo",
     description:
       "See AI review management in action. Free 20-minute walkthrough with our India team.",
-    url: "https://www.reviewpilot.co.in/demo",
+    url: "https://reviewpilot.co.in/demo",
     images: [{ url: "/og-image.svg", width: 1200, height: 630, alt: "Book a ReviewPilot demo" }],
   },
   twitter: {

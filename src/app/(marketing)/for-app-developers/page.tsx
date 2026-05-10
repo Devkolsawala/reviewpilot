@@ -27,7 +27,7 @@ export const metadata: Metadata = {
     title: "Play Store Review Management for App Developers",
     description:
       "AI replies for Play Store reviews. Enforce 350-char limit, detect known bugs, lift your app rating.",
-    url: "https://www.reviewpilot.co.in/for-app-developers",
+    url: "https://reviewpilot.co.in/for-app-developers",
     images: [{ url: "/og-image.svg", width: 1200, height: 630, alt: "ReviewPilot for app developers" }],
   },
   twitter: {

@@ -45,10 +45,10 @@ export default function DataDeletionPage() {
               <li>
                 Log in to{" "}
                 <a
-                  href="https://www.reviewpilot.co.in"
+                  href="https://reviewpilot.co.in"
                   className="text-accent hover:underline"
                 >
-                  https://www.reviewpilot.co.in
+                  https://reviewpilot.co.in
                 </a>
               </li>
               <li>
@@ -78,10 +78,10 @@ export default function DataDeletionPage() {
               <li>
                 Log in to{" "}
                 <a
-                  href="https://www.reviewpilot.co.in"
+                  href="https://reviewpilot.co.in"
                   className="text-accent hover:underline"
                 >
-                  https://www.reviewpilot.co.in
+                  https://reviewpilot.co.in
                 </a>
               </li>
               <li>

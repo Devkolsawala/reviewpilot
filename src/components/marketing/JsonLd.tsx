@@ -12,7 +12,7 @@ export function JsonLd({ data }: { data: JsonLdObject | JsonLdObject[] }) {
   );
 }
 
-export const SITE_URL = "https://www.reviewpilot.co.in";
+export const SITE_URL = "https://reviewpilot.co.in";
 export const SITE_LOGO = `${SITE_URL}/logo.svg`;
 export const SITE_OG = `${SITE_URL}/og-image.svg`;
 

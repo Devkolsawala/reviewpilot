@@ -9,7 +9,7 @@ Disallow: /signup
 Disallow: /review-page/
 
 # Host
-Host: https://www.reviewpilot.co.in
+Host: https://reviewpilot.co.in
 
 # Sitemaps
-Sitemap: https://www.reviewpilot.co.in/sitemap.xml
+Sitemap: https://reviewpilot.co.in/sitemap.xml

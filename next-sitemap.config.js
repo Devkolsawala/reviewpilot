@@ -1,6 +1,6 @@
 /** @type {import('next-sitemap').IConfig} */
 module.exports = {
-  siteUrl: 'https://www.reviewpilot.co.in',
+  siteUrl: 'https://reviewpilot.co.in',
   generateRobotsTxt: true,
   generateIndexSitemap: false,
   changefreq: 'weekly',

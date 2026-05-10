@@ -42,7 +42,7 @@ const instrumentSerif = Instrument_Serif({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://www.reviewpilot.co.in"),
+  metadataBase: new URL("https://reviewpilot.co.in"),
   title: {
     default:
       "ReviewPilot — AI Review Management for Play Store, Google & WhatsApp",
@@ -80,7 +80,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_IN",
-    url: "https://www.reviewpilot.co.in",
+    url: "https://reviewpilot.co.in",
     siteName: "ReviewPilot",
     title:
       "ReviewPilot — AI Review Management for Play Store, Google & WhatsApp",
