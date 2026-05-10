@@ -8,12 +8,10 @@ import { checkUsageLimit, incrementUsage } from "@/lib/usage";
 import { GBP_ENABLED, GBP_COMING_SOON_MESSAGE } from "@/lib/feature-flags";
 
 const MAX_EDITS_PER_24H = 10;
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-// User-facing copy for the case where our local external_review_id is
-// unrecoverable (corrupt UUID and auto-heal couldn't match a live review).
-// Kept distinct from REVIEW_DELETED — Reserved strictly for the case where
-// Google itself returns 404 NOT_FOUND for the specific reviewId.
+// User-facing copy for the rare case where our local external_review_id is
+// missing (e.g., an imported/historical row). Distinct from REVIEW_DELETED,
+// which is reserved for the case where Google itself returns NOT_FOUND.
 const EXTERNAL_ID_UNRECOVERABLE_MESSAGE =
   "We lost track of this review's Play Store ID. Refresh your inbox to resync.";
 
@@ -225,18 +223,55 @@ export async function POST(request: Request) {
     }
   } else if (review.source === "play_store") {
     let resolvedExternalId = review.external_review_id as string | null | undefined;
-    const looksCorrupt = !resolvedExternalId || UUID_REGEX.test(resolvedExternalId);
 
-    // Auto-heal: if the stored external_review_id is missing or looks like a UUID
-    // (a known data-corruption mode where reviews.id was written into the column),
-    // try to recover by fetching live reviews from Play Store and matching on
-    // a composite key: (author_name, review_text, rating, |created_at delta| ≤ 10min).
-    // Rating + time tighten the prior text-only match so a reviewer's edited
-    // text or empty author_name doesn't silently mis-pair rows.
-    if (looksCorrupt && connection?.external_id) {
-      console.warn("[reply-publish] external_review_id looks corrupt — attempting auto-heal", {
+    if (!resolvedExternalId) {
+      await supabase
+        .from("reviews")
+        .update({ reply_text: finalReplyText, reply_status: "failed" })
+        .eq("id", reviewId);
+      return NextResponse.json(
+        {
+          success: false,
+          code: "EXTERNAL_ID_UNRECOVERABLE",
+          error: "EXTERNAL_ID_UNRECOVERABLE",
+          message: EXTERNAL_ID_UNRECOVERABLE_MESSAGE,
+        },
+        { status: 400 }
+      );
+    }
+
+    console.log("[reply-publish] attempting publish", {
+      internal_id: review.id,
+      external_review_id: resolvedExternalId,
+      package: connection?.external_id,
+      is_edit: isEdit,
+      edit_count: review.reply_edit_count ?? 0,
+    });
+    // connection.credentials is null for Invite Email method → lib falls back to shared env credentials
+    let result = await replyToPlayStoreReview(
+      connection?.external_id || "",
+      resolvedExternalId,
+      finalReplyText,
+      connection?.credentials as Record<string, unknown> | null
+    );
+
+    // Post-404 healing: if and ONLY if Google itself says the specific
+    // reviewId is unknown, refetch live reviews and try to match this row
+    // by composite key (author_name + review_text + rating + |created_at|
+    // within 10 minutes). If exactly one match is found and its id
+    // differs from what we tried, update the row and retry once.
+    //
+    // We do NOT pre-judge id format. Google's reviewId can be any opaque
+    // string ("gp:AOqpTOH...", a bare UUID-shape, etc.) and the list
+    // endpoint is the source of truth.
+    if (
+      !result.success
+      && result.code === "REVIEW_DELETED"
+      && connection?.external_id
+    ) {
+      console.warn("[reply-publish] Google returned NOT_FOUND — attempting composite-key heal", {
         internal_id: review.id,
-        stored_external_review_id: resolvedExternalId,
+        attempted_external_review_id: resolvedExternalId,
       });
       try {
         const live = await fetchPlayStoreReviews(
@@ -256,63 +291,41 @@ export async function POST(request: Request) {
             if (!Number.isFinite(liveMs)) return false;
             if (Math.abs(liveMs - storedCreatedMs) > TEN_MIN_MS) return false;
           }
-          return (
-            !!r.external_review_id && !UUID_REGEX.test(r.external_review_id)
-          );
+          return !!r.external_review_id;
         });
-        if (matches.length === 1) {
-          resolvedExternalId = matches[0].external_review_id;
+        if (matches.length === 1 && matches[0].external_review_id !== resolvedExternalId) {
+          const newId = matches[0].external_review_id;
           await supabase
             .from("reviews")
-            .update({ external_review_id: resolvedExternalId })
+            .update({ external_review_id: newId })
             .eq("id", review.id);
-          console.log("[reply-publish] auto-heal succeeded", {
+          console.log("[reply-publish] heal updated external_review_id, retrying", {
             internal_id: review.id,
-            recovered_external_review_id: resolvedExternalId,
+            old_id: resolvedExternalId,
+            new_id: newId,
           });
+          resolvedExternalId = newId;
+          result = await replyToPlayStoreReview(
+            connection.external_id,
+            newId,
+            finalReplyText,
+            connection.credentials as Record<string, unknown> | null
+          );
         } else if (matches.length > 1) {
-          console.warn("[reply-publish] auto-heal ambiguous — multiple composite matches", {
+          console.warn("[reply-publish] heal ambiguous — multiple composite matches", {
             internal_id: review.id,
             match_count: matches.length,
           });
+        } else if (matches.length === 0) {
+          console.warn("[reply-publish] heal failed — no composite match in live API");
         } else {
-          console.warn("[reply-publish] auto-heal failed — no composite match");
+          console.log("[reply-publish] heal — match equals attempted id; truly NOT_FOUND on Google");
         }
       } catch (e) {
-        console.error("[reply-publish] auto-heal error:", e);
+        console.error("[reply-publish] heal error:", e);
       }
     }
 
-    if (!resolvedExternalId || UUID_REGEX.test(resolvedExternalId)) {
-      await supabase
-        .from("reviews")
-        .update({ reply_text: finalReplyText, reply_status: "failed" })
-        .eq("id", reviewId);
-      return NextResponse.json(
-        {
-          success: false,
-          code: "EXTERNAL_ID_UNRECOVERABLE",
-          error: "EXTERNAL_ID_UNRECOVERABLE",
-          message: EXTERNAL_ID_UNRECOVERABLE_MESSAGE,
-        },
-        { status: 400 }
-      );
-    }
-
-    console.log("[reply-publish]", {
-      internal_id: review.id,
-      external_review_id: resolvedExternalId,
-      package: connection?.external_id,
-      is_edit: isEdit,
-      edit_count: review.reply_edit_count ?? 0,
-    });
-    // connection.credentials is null for Invite Email method → lib falls back to shared env credentials
-    const result = await replyToPlayStoreReview(
-      connection?.external_id || "",
-      resolvedExternalId,
-      finalReplyText,
-      connection?.credentials as Record<string, unknown> | null
-    );
     published = result.success;
     if (!result.success) {
       await supabase

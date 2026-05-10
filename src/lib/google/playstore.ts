@@ -155,18 +155,6 @@ export async function fetchPlayStoreReviews(
   return transformed;
 }
 
-// Play Store reviewIds always start with "gp:". Anything else is either an
-// imported/historical row or corrupted data — warn (don't error) so we can
-// detect drift if Google ever changes the format.
-const PLAY_STORE_REVIEW_ID_PREFIX = /^gp:/;
-
-// Sanity check: external Play Store review IDs are never UUIDs — they look like
-// "gp:AOqpTOH...". A UUID here means a caller passed reviews.id (Supabase row PK)
-// instead of reviews.external_review_id. Fail loudly with a clear engineering
-// message rather than a confusing Google 404.
-const UUID_REGEX =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 export type PlayStoreReplyResult =
   | { success: true }
   | PlayStoreReplyError;
@@ -185,20 +173,10 @@ export async function replyToPlayStoreReview(
         "This review has no Play Store ID — likely an imported/historical review and cannot be replied to via the API.",
     };
   }
-  if (UUID_REGEX.test(reviewId)) {
-    console.error(
-      `[playstore] UUID detected in external_review_id (${reviewId}) for package ${packageName}. The review row in Supabase has a corrupted external_review_id and needs to be re-synced.`
-    );
-    // Distinct from REVIEW_DELETED — this is local data corruption, not a
-    // Google 404. The reply route catches this and surfaces
-    // EXTERNAL_ID_UNRECOVERABLE to the user.
-    return {
-      success: false,
-      code: "BAD_REQUEST",
-      error:
-        "This review's Play Store ID is invalid in our database. Please refresh your inbox to resync.",
-    };
-  }
+  // Google's reviewId format is opaque to us. We pass back whatever
+  // reviews.list returned during sync (sometimes "gp:AOqpTOH...", sometimes
+  // a bare UUID-shaped string for newer reviews). Do NOT pre-judge the
+  // format — let Google authoritatively say whether it knows the id.
 
   try {
     const truncatedReply =
@@ -364,19 +342,14 @@ export function transformPlayStoreReview(
   connectionId?: string
 ): Review | null {
   // Hard guard: a missing reviewId means we have nothing to dedupe on and
-  // nothing to address Google with later. Refuse to substitute a UUID or
-  // empty string — skip the row loudly so it surfaces in logs.
+  // nothing to address Google with later. Skip the row loudly so it
+  // surfaces in logs rather than silently inserting an empty external_review_id.
   if (!review.reviewId || review.reviewId.trim() === "") {
     console.error(
       "[TRANSFORM] Skipping review with missing reviewId — cannot dedupe or reply later",
       { author: review.authorName }
     );
     return null;
-  }
-  if (!PLAY_STORE_REVIEW_ID_PREFIX.test(review.reviewId)) {
-    console.warn(
-      `[TRANSFORM] reviewId "${review.reviewId}" does not match /^gp:/ — Google may have changed the format. Continuing.`
-    );
   }
 
   const userComment = review.comments?.[0]?.userComment;

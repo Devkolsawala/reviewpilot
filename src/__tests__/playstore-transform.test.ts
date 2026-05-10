@@ -1,28 +1,17 @@
 // Run with: npm test
 //
-// What these tests assert (and what they DO NOT assert):
-//   PASS-NEW / FAIL-OLD:
-//     - Missing reviewId now returns null (skip) instead of producing a row
-//       with external_review_id: "". Old code returned the empty-string row.
-//   PASS-NEW only (no historical equivalent):
-//     - Non-`gp:`-prefixed reviewIds emit a console.warn. There was no warn
-//       before. This is observability, not a behavioral regression test.
+// Scope: assert the transform's missing-reviewId guard. Google's reviewId
+// format is opaque (we have observed both "gp:AOqpTOH..." and bare
+// UUID-shaped strings from the live API), so this file does NOT enforce
+// any prefix. The transform passes the value through unchanged.
 //
-// What we explicitly DO NOT claim a fail-old/pass-new test for:
-//   - external_review_id === input.reviewId on a well-formed input. The
-//     current transform line `external_review_id: review.reviewId` was
-//     already correct in the live code; the production bug is historical
-//     data, not a live transform fault. A passing test here proves the
-//     contract holds, not that it was previously broken.
+// fail-old / pass-new: the missing/empty/whitespace tests fail against the
+// pre-fix transform (which returned a Review with external_review_id: "")
+// and pass against the new transform (which skips the row).
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { transformPlayStoreReview } from "../lib/google/playstore";
-
-// Stub the AI sentiment module — it's imported transitively but we don't
-// want network/model calls in unit tests.
-// (sentiment.ts is pure-string today; no stub needed. If it ever changes
-// to call an LLM, mock it here.)
 
 const baseReview = (overrides: Record<string, unknown> = {}) => ({
   reviewId: "gp:AOqpTOH-base",
@@ -40,19 +29,25 @@ const baseReview = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 });
 
-test("transform: well-formed input produces external_review_id === reviewId", () => {
+test("transform: well-formed gp: reviewId passes through unchanged", () => {
   const result = transformPlayStoreReview(baseReview() as Parameters<typeof transformPlayStoreReview>[0]);
   assert.notEqual(result, null);
   assert.equal(result!.external_review_id, "gp:AOqpTOH-base");
 });
 
-test("transform: missing reviewId returns null (regression guard for 'gp: substituted with empty string')", () => {
+test("transform: UUID-shaped reviewId is accepted (Google returns these for some reviews)", () => {
+  const uuid = "2a2b2121-b86a-40c5-81af-3c435e078792";
+  const result = transformPlayStoreReview(
+    baseReview({ reviewId: uuid }) as Parameters<typeof transformPlayStoreReview>[0]
+  );
+  assert.notEqual(result, null);
+  assert.equal(result!.external_review_id, uuid);
+});
+
+test("transform: missing reviewId returns null (regression guard against silent empty-string insert)", () => {
   const result = transformPlayStoreReview(
     baseReview({ reviewId: undefined }) as Parameters<typeof transformPlayStoreReview>[0]
   );
-  // OLD behavior: would return a Review with external_review_id: "".
-  // NEW behavior: returns null (row is skipped) because there is no
-  // recoverable Play Store id for that row.
   assert.equal(result, null);
 });
 
@@ -68,25 +63,6 @@ test("transform: whitespace-only reviewId returns null", () => {
     baseReview({ reviewId: "   " }) as Parameters<typeof transformPlayStoreReview>[0]
   );
   assert.equal(result, null);
-});
-
-test("transform: non-`gp:` reviewId still produces a row but warns", () => {
-  const warnings: string[] = [];
-  const origWarn = console.warn;
-  console.warn = (msg: unknown) => { warnings.push(String(msg)); };
-  try {
-    const result = transformPlayStoreReview(
-      baseReview({ reviewId: "weird:format-123" }) as Parameters<typeof transformPlayStoreReview>[0]
-    );
-    assert.notEqual(result, null);
-    assert.equal(result!.external_review_id, "weird:format-123");
-    assert.ok(
-      warnings.some((w) => w.includes("does not match /^gp:/")),
-      `expected a /^gp:/ warning, got: ${JSON.stringify(warnings)}`
-    );
-  } finally {
-    console.warn = origWarn;
-  }
 });
 
 test("transform: missing userComment returns null", () => {

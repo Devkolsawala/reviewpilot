@@ -9,8 +9,7 @@
     "start": "next start",
     "lint": "next lint",
     "test": "node --import tsx --test \"src/__tests__/*.test.ts\"",
-    "backfill:country": "npx tsx --env-file=.env.local src/scripts/backfill-reviewer-country.ts",
-    "backfill:external-review-ids": "npx tsx --env-file=.env.local src/scripts/backfill-external-review-ids.ts"
+    "backfill:country": "npx tsx --env-file=.env.local src/scripts/backfill-reviewer-country.ts"
   },
   "dependencies": {
     "@number-flow/react": "^0.6.0",
