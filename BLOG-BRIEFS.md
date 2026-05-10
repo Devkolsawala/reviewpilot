@@ -216,3 +216,131 @@
 ---
 
 *Last updated: April 2026. Prioritize posts 6, 7, 9 first — these have the strongest keyword opportunity and internal-link value.*
+
+---
+
+# Appendix — Wave 2: WhatsApp Business & Unified Inbox SEO posts (May 2026)
+
+> Added alongside the WhatsApp Business automation feature surfacing across the marketing site. Each post should internal-link to `/whatsapp-automation`, `/unified-inbox`, `/integrations/whatsapp-business`, and the relevant persona page.
+
+## Post 11 — "How to Automate WhatsApp Business Replies in India (2026 Guide)"
+**Target keyword:** `whatsapp business automation india`
+**Secondary:** ai whatsapp reply, whatsapp auto reply india, whatsapp cloud api setup
+**Word count:** 2,000–2,500
+**H2 outline:**
+1. Why Indian customers expect WhatsApp replies in minutes
+2. WhatsApp Business App vs WhatsApp Cloud API — which one you need
+3. Meta's Embedded Signup explained in plain English
+4. The 24-hour customer service window and how it controls your bill
+5. Setting up AI replies that match your tone (8 Indian languages)
+6. Quality rating: how to keep your WABA in the green
+7. Common mistakes (template misuse, opt-in failures, marketing spam)
+**CTA:** /whatsapp-automation, /signup
+
+## Post 12 — "Birdeye Pricing in India vs Affordable Alternatives (2026)"
+**Target keyword:** `birdeye pricing india`
+**Secondary:** birdeye alternative india, affordable birdeye alternative, indian review management software
+**Word count:** 1,800–2,200
+**H2 outline:**
+1. What Birdeye actually charges in India (per public quotes)
+2. Annual contract vs monthly — the hidden cost
+3. What's missing for Indian SMBs: Play Store, WhatsApp, INR billing
+4. Honest feature comparison with three alternatives
+5. Migration checklist: moving from Birdeye to ReviewPilot
+**CTA:** /vs/birdeye, /pricing
+
+## Post 13 — "How to Reply to Negative Play Store Reviews with AI (Templates Included)"
+**Target keyword:** `negative play store review reply ai`
+**Secondary:** play store review reply tool, 1 star app review response
+**Word count:** 1,500–2,000
+**H2 outline:**
+1. Why a thoughtful 1★ reply is worth more than a 5★ reply
+2. The 350-character constraint and how to maximize it
+3. Five AI-tone variations with examples (apologetic, factual, escalation-first)
+4. When to use the App Context Profile to reference fixes
+5. Recovery rate: how to measure if your replies are working
+**CTA:** /integrations/google-play-store, /for-app-developers
+
+## Post 14 — "WhatsApp Cloud API vs WhatsApp Business App: Which Is Right for Your Business?"
+**Target keyword:** `whatsapp cloud api vs whatsapp business app`
+**Secondary:** whatsapp cloud api for business, whatsapp business api alternative
+**Word count:** 1,800
+**H2 outline:**
+1. The core difference (single device vs server-side)
+2. Pricing model comparison (free vs conversation-based)
+3. Embedded Signup — why Cloud API is easier than it used to be
+4. When the Business App is enough; when you need Cloud API
+5. Migration path: Business App → Cloud API
+**CTA:** /integrations/whatsapp-business, /whatsapp-automation
+
+## Post 15 — "Google Business Profile Review Management: a 2026 Playbook for Indian SMBs"
+**Target keyword:** `google business profile review management india`
+**Secondary:** gmb review reply automation, google reviews ai response india
+**Word count:** 2,000–2,500
+**H2 outline:**
+1. Why GBP reviews are the highest-leverage SEO asset for Indian SMBs
+2. Reply latency and how it affects Map Pack ranking
+3. Smart routing: 4–5★ to GBP, 1–3★ to private feedback
+4. Multi-location playbook for chains and franchises
+5. The Indian-language opportunity nobody's using
+**CTA:** /integrations/google-business-profile, /for-local-business
+
+## Post 16 — "Unified Review Inbox: Why Single-Platform Tools Cost You Time"
+**Target keyword:** `unified review inbox`
+**Secondary:** multi-platform review management, all reviews in one place
+**Word count:** 1,500
+**H2 outline:**
+1. The hidden cost of context-switching between Play Console, GBP, and WhatsApp
+2. Why brand-voice consistency suffers when teams use 3 tools
+3. How a unified inbox compounds response time and team throughput
+4. ReviewPilot's unified inbox under the hood
+**CTA:** /unified-inbox
+
+## Post 17 — "AppFollow Alternative: When AI-First Beats Monitoring-First for App Developers"
+**Target keyword:** `appfollow alternative`
+**Secondary:** app review management with ai, indie app developer tools india
+**Word count:** 1,500
+**H2 outline:**
+1. Monitoring vs replying — the gap AppFollow leaves
+2. AI-drafted replies and the App Context Profile
+3. Why Indian indie devs need WhatsApp + Play Store, not iOS + Play Store
+4. INR billing through Razorpay vs annual USD contracts
+**CTA:** /vs/appfollow
+
+## Post 18 — "AI WhatsApp Reply for Restaurants and Cloud Kitchens (India)"
+**Target keyword:** `ai whatsapp reply restaurant india`
+**Secondary:** restaurant whatsapp automation, cloud kitchen whatsapp ai
+**Word count:** 1,500
+**H2 outline:**
+1. What customers actually ask on a restaurant WhatsApp number
+2. Order confirmation, table booking, menu enquiry templates
+3. Setting up tone (warm vs professional) per shift
+4. How to keep your WABA quality rating green during festival season
+**CTA:** /whatsapp-automation, /for-local-business
+
+## Post 19 — "WhatsApp Business Automation for Salons and Clinics in India"
+**Target keyword:** `whatsapp automation salon clinic india`
+**Secondary:** appointment whatsapp ai, salon whatsapp reply
+**Word count:** 1,500
+**H2 outline:**
+1. The appointment-confirmation, reschedule, and follow-up flow
+2. Privacy-aware AI: what to reveal in a WhatsApp reply
+3. Post-visit review request via WhatsApp → Google
+4. Multi-location and multi-stylist support
+**CTA:** /whatsapp-automation, /for-local-business
+
+## Post 20 — "Embedded Signup vs Manual WhatsApp API Setup: A 60-Second Walkthrough"
+**Target keyword:** `embedded signup whatsapp`
+**Secondary:** whatsapp business api setup, meta tech provider integration
+**Word count:** 1,200
+**H2 outline:**
+1. The old way (Postman, system user, webhook subscription)
+2. The new way (Embedded Signup popup)
+3. What the customer sees vs what the Tech Provider sees
+4. Permissions explained: whatsapp_business_messaging, _management
+5. What "Advanced Access" actually means
+**CTA:** /integrations/whatsapp-business
+
+---
+
+*Wave-2 priority: posts 11, 12, 15, 16 first. They target the highest-volume keywords and internal-link to the new landing pages with the strongest commercial intent.*

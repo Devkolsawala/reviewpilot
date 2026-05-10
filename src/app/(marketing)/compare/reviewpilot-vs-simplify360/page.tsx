@@ -3,7 +3,7 @@ import { CompareLayout } from "@/components/marketing/CompareLayout";
 import { JsonLd, SITE_URL, SITE_OG } from "@/components/marketing/JsonLd";
 
 export const metadata: Metadata = {
-  title: "ReviewPilot vs Simplify360 — India Review Tools | ReviewPilot",
+  title: "ReviewPilot vs Simplify360 — India Review Tools",
   description:
     "ReviewPilot vs Simplify360 compared: pricing, AI replies, Play Store support, India focus. Pick the right review management tool for your SMB.",
   alternates: { canonical: "/compare/reviewpilot-vs-simplify360" },

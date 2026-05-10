@@ -11,17 +11,20 @@ import {
   AlertTriangle,
   Crown,
   Users,
+  MessageCircle,
 } from "lucide-react";
+
+const WHATSAPP_GREEN = "#25D366";
 import { AuroraBackground } from "@/components/ui/aurora-background";
 import { GridPattern } from "@/components/ui/grid-pattern";
 
 export const metadata: Metadata = {
-  title: "Play Store Review Management for App Developers | ReviewPilot",
+  title: "Play Store Review Management for App Developers",
   description:
     "Reply to every Play Store review with AI. Enforce the 350-char limit, detect known bugs, lift your rating. Built for Indian app developers from $16/mo.",
   alternates: { canonical: "/for-app-developers" },
   openGraph: {
-    title: "Play Store Review Management for App Developers | ReviewPilot",
+    title: "Play Store Review Management for App Developers",
     description:
       "AI replies for Play Store reviews. Enforce 350-char limit, detect known bugs, lift your app rating.",
     url: "https://www.reviewpilot.co.in/for-app-developers",
@@ -29,7 +32,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Play Store Review Management | ReviewPilot",
+    title: "Play Store Review Management",
     description: "AI-powered Play Store review replies for Indian app devs.",
     images: ["/og-image.svg"],
   },
@@ -141,6 +144,63 @@ export default function ForAppDevelopersPage() {
                 </p>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* WhatsApp Business — mid-weight section */}
+      <section
+        className="relative py-20 sm:py-24 border-y border-border/60"
+        style={{ backgroundColor: `${WHATSAPP_GREEN}06` }}
+      >
+        <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+          <div className="grid gap-10 lg:grid-cols-[1fr_auto] lg:items-center">
+            <div>
+              <div
+                className="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs"
+                style={{
+                  borderColor: `${WHATSAPP_GREEN}55`,
+                  backgroundColor: `${WHATSAPP_GREEN}14`,
+                  color: WHATSAPP_GREEN,
+                }}
+              >
+                <MessageCircle className="h-3.5 w-3.5" />
+                <span className="uppercase tracking-[0.15em]">
+                  Bonus — WhatsApp Business
+                </span>
+              </div>
+              <h2 className="mt-4 font-sans text-2xl font-semibold tracking-tight sm:text-3xl">
+                Have a support WhatsApp number?{" "}
+                <span className="text-gradient-brand">
+                  Plug it into the same inbox.
+                </span>
+              </h2>
+              <p className="mt-4 max-w-2xl text-muted-foreground leading-relaxed">
+                Indian app users — especially paid-app users — DM you on
+                WhatsApp for support. Connect your WhatsApp Business number
+                via Meta Embedded Signup and inbound messages land alongside
+                your Play Store reviews. Same AI engine, same App Context
+                Profile, same brand voice — for both surfaces.
+              </p>
+              <div className="mt-5">
+                <Link
+                  href="/whatsapp-automation"
+                  className="inline-flex items-center gap-1 text-sm font-medium text-foreground underline-offset-4 hover:underline"
+                >
+                  See WhatsApp Business automation
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              </div>
+            </div>
+            <div
+              className="hidden lg:flex h-32 w-32 items-center justify-center rounded-3xl"
+              style={{
+                backgroundColor: `${WHATSAPP_GREEN}1f`,
+                color: WHATSAPP_GREEN,
+              }}
+            >
+              <MessageCircle className="h-16 w-16" />
+            </div>
           </div>
         </div>
       </section>

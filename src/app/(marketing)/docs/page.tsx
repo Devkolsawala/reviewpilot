@@ -12,12 +12,12 @@ import {
 import { SITE_URL } from "@/components/marketing/JsonLd";
 
 export const metadata: Metadata = {
-  title: "Help Center — Review Management Guides & Tutorials | ReviewPilot",
+  title: "Help Center — Review Management Guides & Tutorials",
   description:
     "Guides for connecting Google Business Profile, Play Store, setting up AI reply rules, and reading analytics. Explore ReviewPilot's help center now.",
   alternates: { canonical: "/docs" },
   openGraph: {
-    title: "Help Center | ReviewPilot",
+    title: "Help Center",
     description:
       "Guides and tutorials for review management with ReviewPilot.",
     url: `${SITE_URL}/docs`,
@@ -158,10 +158,10 @@ export default function DocsPage() {
           <p className="mt-2 text-sm text-muted-foreground">
             Email us at{" "}
             <a
-              href="mailto:dev.kolsawala45@gmail.com"
+              href="mailto:hello@reviewpilot.co.in"
               className="text-accent hover:underline"
             >
-              dev.kolsawala45@gmail.com
+              hello@reviewpilot.co.in
             </a>{" "}
             or book a demo and we&apos;ll walk you through it live.
           </p>

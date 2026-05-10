@@ -11,6 +11,7 @@ import { ComparisonTable } from "@/components/marketing/ComparisonTable";
 import { PricingTable } from "@/components/marketing/PricingTable";
 import { FAQ } from "@/components/marketing/FAQ";
 import { FinalCTA } from "@/components/marketing/FinalCTA";
+import { ThreePlatformBand } from "@/components/marketing/ThreePlatformBand";
 import {
   JsonLd,
   SITE_URL,
@@ -20,14 +21,15 @@ import {
 } from "@/components/marketing/JsonLd";
 
 export const metadata: Metadata = {
-  title: "AI Review Management India — Google & Play Store | ReviewPilot",
+  title: "AI Review Management Software India — Play Store, Google & WhatsApp",
   description:
-    "Automate Google Business Profile and Play Store review replies with AI. Made-in-India review management from $16/mo. Start your free 7-day trial today.",
+    "Review management software for India. AI replies for Play Store, Google Business Profile, and WhatsApp Business in one unified inbox. From $16/mo. 7-day free trial.",
   alternates: { canonical: "/" },
   openGraph: {
-    title: "AI Review Management India — Google & Play Store | ReviewPilot",
+    title:
+      "AI Review Management Software India — Play Store, Google & WhatsApp",
     description:
-      "Automate Google Business Profile and Play Store review replies with AI. From $16/mo — 17× cheaper than Birdeye. Start a free trial.",
+      "AI replies for Play Store reviews, Google reviews, and WhatsApp messages — one unified inbox. Made for India. From $16/mo.",
     type: "website",
     url: SITE_URL,
     images: [
@@ -41,9 +43,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "AI Review Management India | ReviewPilot",
+    title: "AI Review Management India — Play Store, Google & WhatsApp",
     description:
-      "Automate Google & Play Store review replies with AI. From $16/mo. Start your free trial.",
+      "AI replies for Play Store, Google, and WhatsApp in one inbox. From $16/mo.",
     images: ["/og-image.svg"],
   },
 };
@@ -55,9 +57,18 @@ const softwareSchema = {
   operatingSystem: "Web",
   applicationCategory: "BusinessApplication",
   description:
-    "AI-powered review management for Indian SMBs and app developers. Auto-reply to Google Business Profile and Play Store reviews in seconds.",
+    "AI-powered review management for Indian SMBs and app developers. Auto-reply to Play Store reviews, Google Business Profile reviews, and WhatsApp Business messages in one unified inbox.",
   url: SITE_URL,
   image: SITE_OG,
+  featureList: [
+    "AI replies for Google Play Store reviews",
+    "AI replies for Google Business Profile reviews",
+    "WhatsApp Business automation via official Cloud API",
+    "Unified inbox across all three platforms",
+    "Meta-approved Embedded Signup for WhatsApp",
+    "8 Indian languages supported",
+    "Team collaboration with role-based access",
+  ],
   offers: {
     "@type": "Offer",
     price: "16",
@@ -83,6 +94,18 @@ const FAQ_SCHEMA_ITEMS = [
   {
     q: "How much does ReviewPilot cost?",
     a: "Starter is $16/mo (1 location or app, 100 AI replies/week). Growth is $32/mo, Agency is $85/mo. All prices billed in INR equivalent at checkout. All plans include a 7-day free trial.",
+  },
+  {
+    q: "Does ReviewPilot work with WhatsApp Business?",
+    a: "Yes. ReviewPilot is a Meta-approved Tech Provider with the official WhatsApp Cloud API. Connect via Embedded Signup in 60 seconds, and inbound messages land in your unified inbox in real time alongside Play Store and Google reviews.",
+  },
+  {
+    q: "Is the WhatsApp integration official and Meta-approved?",
+    a: "Yes. ReviewPilot has whatsapp_business_messaging and whatsapp_business_management permissions in Meta Advanced Access. This is the official WhatsApp Cloud API — not a grey-market scraper or unofficial bridge.",
+  },
+  {
+    q: "Can I reply to WhatsApp messages and Play Store reviews from the same inbox?",
+    a: "Yes. ReviewPilot's unified inbox combines Play Store reviews, Google Business Profile reviews, and WhatsApp Business messages in one queue, with one AI engine drafting replies in your tone.",
   },
   {
     q: "Does ReviewPilot work with Google Play Store reviews?",
@@ -111,6 +134,7 @@ export default function HomePage() {
         data={[organizationSchema, softwareSchema, websiteSchema, faqSchema]}
       />
       <Hero statsBar={<LiveStatsBar />} />
+      <ThreePlatformBand />
       <InteractiveAIDemo />
       <TrustBar />
       <PersonaSplit />

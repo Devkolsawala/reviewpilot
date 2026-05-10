@@ -39,7 +39,7 @@ export function DemoRequestForm() {
 
       setSubmitted(true);
     } catch {
-      setError("Something went wrong. Please email us directly at dev.kolsawala45@gmail.com");
+      setError("Something went wrong. Please email us directly at hello@reviewpilot.co.in");
     } finally {
       setLoading(false);
     }

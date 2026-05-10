@@ -44,19 +44,25 @@ const instrumentSerif = Instrument_Serif({
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.reviewpilot.co.in"),
   title: {
-    default: "ReviewPilot — AI-Powered Review Management for Apps & Businesses",
+    default:
+      "ReviewPilot — AI Review Management for Play Store, Google & WhatsApp",
     template: "%s | ReviewPilot",
   },
   description:
-    "Manage Google Play Store and Google Business reviews with AI-powered auto-replies. Save hours every week. Plans from $16/mo.",
+    "AI-powered review management for India. Automate Play Store reviews, Google Business Profile reviews, and WhatsApp Business messages in one unified inbox. From $16/mo.",
   keywords: [
-    "review management",
-    "google play reviews",
-    "AI review reply",
-    "google business profile",
-    "app review management",
-    "play store reviews",
-    "auto reply reviews",
+    "review management software india",
+    "ai review reply",
+    "unified review inbox",
+    "whatsapp business automation",
+    "ai whatsapp reply",
+    "play store review management",
+    "google business profile review management",
+    "gmb review reply automation",
+    "whatsapp cloud api",
+    "embedded signup whatsapp",
+    "birdeye alternative india",
+    "appfollow alternative",
   ],
   authors: [{ name: "ReviewPilot" }],
   creator: "ReviewPilot",
@@ -76,9 +82,10 @@ export const metadata: Metadata = {
     locale: "en_IN",
     url: "https://www.reviewpilot.co.in",
     siteName: "ReviewPilot",
-    title: "ReviewPilot — AI-Powered Review Management",
+    title:
+      "ReviewPilot — AI Review Management for Play Store, Google & WhatsApp",
     description:
-      "Manage Google Play Store and Google Business reviews with AI-powered auto-replies. Save hours every week.",
+      "Automate Play Store reviews, Google Business Profile reviews, and WhatsApp Business messages with AI. One unified inbox. Built for India.",
     images: [
       {
         url: "/og-image.svg",
@@ -90,9 +97,10 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "ReviewPilot — AI-Powered Review Management",
+    title:
+      "ReviewPilot — AI Review Management for Play Store, Google & WhatsApp",
     description:
-      "Manage Google Play Store and Google Business reviews with AI-powered auto-replies.",
+      "AI replies for Play Store, Google, and WhatsApp Business — one unified inbox. From $16/mo.",
     images: ["/og-image.svg"],
   },
   robots: {

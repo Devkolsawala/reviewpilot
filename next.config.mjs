@@ -10,6 +10,21 @@ const nextConfig = {
     }
     return config;
   },
+  async redirects() {
+    return [
+      // Consolidate "Birdeye alternative" SEO equity onto /vs/birdeye
+      {
+        source: "/alternatives/birdeye-alternative",
+        destination: "/vs/birdeye",
+        permanent: true,
+      },
+      {
+        source: "/compare/reviewpilot-vs-birdeye",
+        destination: "/vs/birdeye",
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

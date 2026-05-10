@@ -7,7 +7,7 @@ import { GridPattern } from "@/components/ui/grid-pattern";
 import { JsonLd, SITE_URL, organizationSchema } from "@/components/marketing/JsonLd";
 
 export const metadata: Metadata = {
-  title: "About ReviewPilot — Founders & Made-in-India Story | ReviewPilot",
+  title: "About — Founders & Made-in-India Story",
   description:
     "Meet Dev Kolsawala & Aditya Raj Singh, founders of ReviewPilot. An Indian review management startup built for SMBs at 1/17th the cost of global tools.",
   alternates: { canonical: "/about" },

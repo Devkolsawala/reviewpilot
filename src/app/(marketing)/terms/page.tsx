@@ -3,12 +3,12 @@ import Link from "next/link";
 import { SITE_URL } from "@/components/marketing/JsonLd";
 
 export const metadata: Metadata = {
-  title: "Terms of Service | ReviewPilot",
+  title: "Terms of Service",
   description:
     "ReviewPilot's terms of service — rules for using our AI review management platform, subscription terms, refund policy, and limitations of liability.",
   alternates: { canonical: "/terms" },
   openGraph: {
-    title: "Terms of Service | ReviewPilot",
+    title: "Terms of Service",
     description: "Terms governing use of the ReviewPilot platform.",
     url: `${SITE_URL}/terms`,
   },
@@ -274,8 +274,8 @@ export default function TermsPage() {
             </p>
             <p className="mt-3">
               We encourage you to contact us first at{" "}
-              <a href="mailto:dev.kolsawala45@gmail.com" className="text-accent hover:underline">
-                dev.kolsawala45@gmail.com
+              <a href="mailto:hello@reviewpilot.co.in" className="text-accent hover:underline">
+                hello@reviewpilot.co.in
               </a>{" "}
               to resolve any dispute informally before initiating legal proceedings.
             </p>
@@ -295,8 +295,8 @@ export default function TermsPage() {
               <p>Attn: Dev Kolsawala</p>
               <p>
                 Email:{" "}
-                <a href="mailto:dev.kolsawala45@gmail.com" className="text-accent hover:underline">
-                  dev.kolsawala45@gmail.com
+                <a href="mailto:hello@reviewpilot.co.in" className="text-accent hover:underline">
+                  hello@reviewpilot.co.in
                 </a>
               </p>
               <p>Website: <Link href="/" className="text-accent hover:underline">reviewpilot.co.in</Link></p>

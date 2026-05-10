@@ -19,6 +19,7 @@ const PLANS = [
     features: [
       "1 location OR 1 app",
       "100 AI replies/week",
+      "WhatsApp Business automation",
       "50 SMS/week (Coming soon)",
       `${PLAN_CONFIG.starter.limits.team_members} team seats`,
       "Basic analytics",
@@ -35,6 +36,7 @@ const PLANS = [
     features: [
       "3 locations OR 3 apps",
       "500 AI replies/week",
+      "WhatsApp Business automation",
       "200 SMS/week (Coming soon)",
       `${PLAN_CONFIG.growth.limits.team_members} team seats`,
       "Full analytics + sentiment",
@@ -51,6 +53,7 @@ const PLANS = [
     features: [
       "10 locations or apps",
       "Unlimited AI replies",
+      "WhatsApp Business automation",
       "1,000 SMS/week (Coming soon)",
       `${PLAN_CONFIG.agency.limits.team_members} team seats`,
       "Priority support",
@@ -64,6 +67,7 @@ const PLANS = [
     description: "For 10+ locations or agency networks",
     features: [
       "Unlimited locations & apps",
+      "WhatsApp Business automation",
       "SLA and dedicated CSM",
       "Custom integrations",
       "SSO / audit logs",

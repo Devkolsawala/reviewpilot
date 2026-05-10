@@ -243,6 +243,11 @@ export function getDigestCcLimit(planId: string): number {
  * Max number of WhatsApp connections allowed on each plan.
  * Returns 0 when the plan doesn't include WhatsApp (upsell required).
  * Returns -1 for unlimited.
+ *
+ * Note: total connections per plan are still capped by `limits.connections`
+ * (free 1, starter 1, growth 3, agency 10). The values below are the
+ * WhatsApp-specific sub-cap; the smaller of this and `limits.connections`
+ * is what the user actually gets.
  */
 export function getWhatsAppConnectionLimit(planId: string): number {
   switch (planId) {
@@ -251,7 +256,9 @@ export function getWhatsAppConnectionLimit(planId: string): number {
     case "growth":
       return 1;
     case "starter":
+      return 1;
     case "free":
+      return 1;
     default:
       return 0;
   }

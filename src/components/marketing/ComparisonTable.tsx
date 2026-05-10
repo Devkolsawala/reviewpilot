@@ -8,6 +8,7 @@ type FeatureKey =
   | "ai_replies"
   | "google_business"
   | "play_store"
+  | "whatsapp"
   | "sms_campaigns"
   | "analytics"
   | "indian_languages";
@@ -23,6 +24,7 @@ const FEATURE_LABELS: Record<FeatureKey, string> = {
   ai_replies: "AI auto-replies",
   google_business: "Google Business Profile",
   play_store: "Play Store reviews",
+  whatsapp: "WhatsApp Business automation",
   sms_campaigns: "SMS collection",
   analytics: "Sentiment analytics",
   indian_languages: "8 Indian languages",
@@ -39,6 +41,7 @@ const COMPETITORS: Competitor[] = [
       ai_replies: true,
       google_business: true,
       play_store: true,
+      whatsapp: true,
       sms_campaigns: true,
       analytics: true,
       indian_languages: true,
@@ -51,6 +54,7 @@ const COMPETITORS: Competitor[] = [
       ai_replies: true,
       google_business: true,
       play_store: false,
+      whatsapp: true,
       sms_campaigns: true,
       analytics: true,
       indian_languages: false,
@@ -63,6 +67,7 @@ const COMPETITORS: Competitor[] = [
       ai_replies: false,
       google_business: true,
       play_store: false,
+      whatsapp: false,
       sms_campaigns: true,
       analytics: true,
       indian_languages: false,
@@ -75,6 +80,7 @@ const COMPETITORS: Competitor[] = [
       ai_replies: true,
       google_business: false,
       play_store: true,
+      whatsapp: false,
       sms_campaigns: false,
       analytics: true,
       indian_languages: false,

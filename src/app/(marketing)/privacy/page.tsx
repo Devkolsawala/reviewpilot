@@ -3,12 +3,12 @@ import Link from "next/link";
 import { SITE_URL } from "@/components/marketing/JsonLd";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy | ReviewPilot",
+  title: "Privacy Policy",
   description:
     "ReviewPilot's privacy policy — how we collect, use, and protect your data. Made-in-India review management software.",
   alternates: { canonical: "/privacy" },
   openGraph: {
-    title: "Privacy Policy | ReviewPilot",
+    title: "Privacy Policy",
     description: "How ReviewPilot collects, uses, and protects your data.",
     url: `${SITE_URL}/privacy`,
   },
@@ -154,8 +154,8 @@ export default function PrivacyPage() {
             <p className="mt-3">
               No system is completely secure. If you become aware of a security vulnerability, please
               contact us at{" "}
-              <a href="mailto:dev.kolsawala45@gmail.com" className="text-accent hover:underline">
-                dev.kolsawala45@gmail.com
+              <a href="mailto:hello@reviewpilot.co.in" className="text-accent hover:underline">
+                hello@reviewpilot.co.in
               </a>{" "}
               immediately.
             </p>
@@ -172,8 +172,8 @@ export default function PrivacyPage() {
             </ul>
             <p className="mt-3">
               To exercise any of these rights, email{" "}
-              <a href="mailto:dev.kolsawala45@gmail.com" className="text-accent hover:underline">
-                dev.kolsawala45@gmail.com
+              <a href="mailto:hello@reviewpilot.co.in" className="text-accent hover:underline">
+                hello@reviewpilot.co.in
               </a>
               . We will respond within 30 days.
             </p>
@@ -213,12 +213,6 @@ export default function PrivacyPage() {
               <p>Attn: Dev Kolsawala</p>
               <p>
                 Email:{" "}
-                <a href="mailto:dev.kolsawala45@gmail.com" className="text-accent hover:underline">
-                  dev.kolsawala45@gmail.com
-                </a>
-              </p>
-              <p>
-                Email (data &amp; platform requests):{" "}
                 <a href="mailto:hello@reviewpilot.co.in" className="text-accent hover:underline">
                   hello@reviewpilot.co.in
                 </a>

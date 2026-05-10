@@ -247,7 +247,7 @@ export default function InboxPage() {
  connId = conns?.[0]?.id ?? null;
  }
  if (!connId) {
- toast({ title: "No connection found", description: "Connect a review source first in Settings → Connections.", variant: "destructive" });
+ toast({ title: "No connection found", description: "Connect Play Store, Google Business Profile, or WhatsApp first in Settings → Connections.", variant: "destructive" });
  setAiReplyingAll(false);
  return;
  }
@@ -701,7 +701,7 @@ const GUIDE_STEPS = [
  { title: "Try generating an AI reply", body: "Click any review on the left, then hit \"Generate AI Reply\". Our AI will write a professional reply tailored to that review in seconds." },
  { title: "Edit and post the reply", body: "Once the reply is generated, you can edit it freely. Click \"Post Reply\" to publish it, or \"Save Draft\" to review it later." },
  { title: "Use \"Let AI Reply All\" for bulk replies", body: "The teal button at the top replies to all pending reviews at once using your AI settings. Perfect for catching up on a backlog." },
- { title: "Connect your real accounts to go live", body: "Head to Settings → Connections to link your Google Business Profile or Play Store. Your real customer reviews will appear here and replies will post directly to Google." },
+ { title: "Connect your real accounts to go live", body: "Head to Settings → Connections to link Google Play Store, Google Business Profile, or WhatsApp Business. Your real customer reviews and messages will appear here and replies will be sent directly through each platform." },
 ];
 
 function GettingStartedGuide() {

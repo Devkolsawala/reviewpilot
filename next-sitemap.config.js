@@ -14,6 +14,9 @@ module.exports = {
     '/signup',
     '/review-page/*',
     '/_not-found',
+    // Redirected to /vs/birdeye — keep out of sitemap so Google focuses on the canonical
+    '/alternatives/birdeye-alternative',
+    '/compare/reviewpilot-vs-birdeye',
   ],
   robotsTxtOptions: {
     policies: [
@@ -38,15 +41,27 @@ module.exports = {
       '/pricing': 0.9,
       '/features': 0.95,
       '/how-it-works': 0.9,
+      // High-value new landing pages
+      '/whatsapp-automation': 0.9,
+      '/unified-inbox': 0.9,
+      // Integration pages
+      '/integrations': 0.85,
+      '/integrations/whatsapp-business': 0.8,
+      '/integrations/google-play-store': 0.8,
+      '/integrations/google-business-profile': 0.8,
+      // Existing feature deep-dives
       '/features/google-play-reviews': 0.9,
       '/features/google-business-profile': 0.9,
+      // Persona pages
       '/for-local-business': 0.8,
       '/for-app-developers': 0.8,
-      '/alternatives/birdeye-alternative': 0.8,
-      '/compare/reviewpilot-vs-birdeye': 0.8,
+      // Comparison pages
+      '/vs/birdeye': 0.7,
+      '/vs/appfollow': 0.7,
       '/compare/reviewpilot-vs-famepilot': 0.7,
       '/compare/reviewpilot-vs-podium': 0.7,
       '/compare/reviewpilot-vs-simplify360': 0.7,
+      // Other
       '/about': 0.7,
       '/demo': 0.8,
       '/blog': 0.8,

@@ -3,7 +3,7 @@ import { CompareLayout } from "@/components/marketing/CompareLayout";
 import { JsonLd, SITE_URL, SITE_OG } from "@/components/marketing/JsonLd";
 
 export const metadata: Metadata = {
-  title: "ReviewPilot vs Podium — Pricing, Features Compared | ReviewPilot",
+  title: "ReviewPilot vs Podium — Pricing, Features Compared",
   description:
     "ReviewPilot vs Podium compared: price, Play Store, India focus, AI auto-replies. Honest side-by-side to help Indian SMBs choose the right tool.",
   alternates: { canonical: "/compare/reviewpilot-vs-podium" },

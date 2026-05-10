@@ -22,6 +22,16 @@ const NAV_LINKS: NavLink[] = [
     href: "/#features",
     children: [
       {
+        label: "Unified inbox",
+        href: "/unified-inbox",
+        description: "Play Store, Google & WhatsApp in one queue",
+      },
+      {
+        label: "WhatsApp Business automation",
+        href: "/whatsapp-automation",
+        description: "Meta-approved Embedded Signup + AI replies",
+      },
+      {
         label: "Play Store automation",
         href: "/features/google-play-reviews",
         description: "AI replies within the 350-char limit",
@@ -34,7 +44,33 @@ const NAV_LINKS: NavLink[] = [
       {
         label: "How it works",
         href: "/how-it-works",
-        description: "Connect, draft, approve — in 3 steps",
+        description: "Connect, draft, approve — in 4 steps",
+      },
+    ],
+  },
+  {
+    label: "Integrations",
+    href: "/integrations",
+    children: [
+      {
+        label: "All integrations",
+        href: "/integrations",
+        description: "Three platforms, one inbox",
+      },
+      {
+        label: "WhatsApp Business",
+        href: "/integrations/whatsapp-business",
+        description: "Meta Cloud API + Embedded Signup",
+      },
+      {
+        label: "Google Play Store",
+        href: "/integrations/google-play-store",
+        description: "Service-account or invite-email",
+      },
+      {
+        label: "Google Business Profile",
+        href: "/integrations/google-business-profile",
+        description: "OAuth, multi-location",
       },
     ],
   },
@@ -50,7 +86,17 @@ const NAV_LINKS: NavLink[] = [
       {
         label: "For local businesses",
         href: "/for-local-business",
-        description: "Every Google review, handled overnight",
+        description: "Google reviews + WhatsApp, on autopilot",
+      },
+      {
+        label: "vs Birdeye",
+        href: "/vs/birdeye",
+        description: "Affordable Birdeye alternative for India",
+      },
+      {
+        label: "vs AppFollow",
+        href: "/vs/appfollow",
+        description: "AI-first AppFollow alternative",
       },
     ],
   },

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -35,10 +36,13 @@ const SESSION_KEY = "ess_session_info";
 export function EmbeddedSignupButton() {
   const [sdkLoaded, setSdkLoaded] = useState(false);
   const [isLaunching, setIsLaunching] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [pinModalOpen, setPinModalOpen] = useState(false);
   const [pin, setPin] = useState("");
   const [pinConfirm, setPinConfirm] = useState("");
   const [pinError, setPinError] = useState<string | null>(null);
+  const [showPin, setShowPin] = useState(false);
+  const [showConfirmPin, setShowConfirmPin] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -93,8 +97,15 @@ export function EmbeddedSignupButton() {
     setPin("");
     setPinConfirm("");
     setPinError(null);
+    setShowPin(false);
+    setShowConfirmPin(false);
     setPinModalOpen(true);
   }
+
+  const pinsValid =
+    /^\d{6}$/.test(pin) && /^\d{6}$/.test(pinConfirm) && pin === pinConfirm;
+  const showMismatch =
+    pin.length > 0 && pinConfirm.length > 0 && pin !== pinConfirm;
 
   function submitPin() {
     if (!/^\d{6}$/.test(pin)) {
@@ -122,6 +133,7 @@ export function EmbeddedSignupButton() {
     window.FB.login(
       function (response) {
         if (response.authResponse?.code) {
+          setIsProcessing(true);
           const sessionInfo = sessionStorage.getItem(SESSION_KEY);
           const storedPin = sessionStorage.getItem(PIN_KEY);
           fetch("/api/whatsapp/oauth/callback", {
@@ -141,9 +153,14 @@ export function EmbeddedSignupButton() {
               sessionStorage.removeItem(PIN_KEY);
               sessionStorage.removeItem(SESSION_KEY);
               if (data.success) {
-                window.location.href =
-                  "/dashboard/settings/connections?connected=whatsapp";
+                // Use location.assign for a full page load — the connections
+                // list is a client component with hook-cached state, so a
+                // soft router push would not show the new row.
+                window.location.assign(
+                  "/dashboard/settings/connections?connected=whatsapp"
+                );
               } else {
+                setIsProcessing(false);
                 toast({
                   title: "Connection failed",
                   description: data.error || "Unknown error",
@@ -153,6 +170,7 @@ export function EmbeddedSignupButton() {
             })
             .catch((err) => {
               setIsLaunching(false);
+              setIsProcessing(false);
               sessionStorage.removeItem(PIN_KEY);
               sessionStorage.removeItem(SESSION_KEY);
               toast({
@@ -182,6 +200,18 @@ export function EmbeddedSignupButton() {
 
   return (
     <>
+      {isProcessing && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+          <div className="bg-card p-8 rounded-lg flex flex-col items-center gap-4 max-w-sm text-center">
+            <Loader2 className="animate-spin" size={32} />
+            <p className="font-medium">Setting up your WhatsApp connection...</p>
+            <p className="text-sm text-muted-foreground">
+              This usually takes a few seconds
+            </p>
+          </div>
+        </div>
+      )}
+
       <Button
         onClick={openPinModal}
         disabled={!sdkLoaded || isLaunching}
@@ -208,35 +238,64 @@ export function EmbeddedSignupButton() {
           <div className="space-y-3">
             <div className="space-y-1.5">
               <Label htmlFor="ess-pin">PIN (6 digits)</Label>
-              <Input
-                id="ess-pin"
-                type="password"
-                inputMode="numeric"
-                pattern="\d{6}"
-                maxLength={6}
-                autoComplete="off"
-                value={pin}
-                onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                placeholder="••••••"
-              />
+              <div className="relative">
+                <Input
+                  id="ess-pin"
+                  type={showPin ? "text" : "password"}
+                  inputMode="numeric"
+                  pattern="\d{6}"
+                  maxLength={6}
+                  autoComplete="off"
+                  autoFocus
+                  value={pin}
+                  onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  placeholder="••••••"
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPin((v) => !v)}
+                  aria-label={showPin ? "Hide PIN" : "Show PIN"}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 bg-transparent text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded-sm"
+                >
+                  {showPin ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Choose any 6 digits you&apos;ll remember
+              </p>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="ess-pin-confirm">Confirm PIN</Label>
-              <Input
-                id="ess-pin-confirm"
-                type="password"
-                inputMode="numeric"
-                pattern="\d{6}"
-                maxLength={6}
-                autoComplete="off"
-                value={pinConfirm}
-                onChange={(e) => setPinConfirm(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                placeholder="••••••"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") submitPin();
-                }}
-              />
+              <div className="relative">
+                <Input
+                  id="ess-pin-confirm"
+                  type={showConfirmPin ? "text" : "password"}
+                  inputMode="numeric"
+                  pattern="\d{6}"
+                  maxLength={6}
+                  autoComplete="off"
+                  value={pinConfirm}
+                  onChange={(e) => setPinConfirm(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  placeholder="••••••"
+                  className="pr-10"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && pinsValid) submitPin();
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPin((v) => !v)}
+                  aria-label={showConfirmPin ? "Hide PIN" : "Show PIN"}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 bg-transparent text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded-sm"
+                >
+                  {showConfirmPin ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
             </div>
+            {showMismatch && !pinError && (
+              <p className="text-xs text-destructive">PINs do not match.</p>
+            )}
             {pinError && (
               <p className="text-xs text-destructive">{pinError}</p>
             )}
@@ -245,7 +304,9 @@ export function EmbeddedSignupButton() {
             <Button variant="outline" onClick={() => setPinModalOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={submitPin}>Continue</Button>
+            <Button onClick={submitPin} disabled={!pinsValid}>
+              Continue
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
