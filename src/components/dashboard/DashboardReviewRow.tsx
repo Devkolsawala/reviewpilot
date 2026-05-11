@@ -209,8 +209,9 @@ export function DashboardReviewRow({ review }: { review: Review }) {
             <button
               onClick={(e) => e.stopPropagation()}
               className={cn(
-                "flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground/60 transition-all",
-                "opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:bg-muted/60 hover:text-foreground",
+                // Visible by default on touch viewports; hidden until hover on pointer-equipped screens.
+                "flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground/60 transition-all",
+                "opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus-visible:opacity-100 hover:bg-muted/60 hover:text-foreground",
                 menuOpen && "opacity-100 bg-muted/60 text-foreground"
               )}
               aria-label="Review actions"

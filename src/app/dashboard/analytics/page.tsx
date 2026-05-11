@@ -132,7 +132,7 @@ function AnalyticsPageInner() {
     : "0.0";
 
   return (
-    <PageTransition>
+    <PageTransition stagger>
       <div className="space-y-6">
         <DigestBanner />
 
