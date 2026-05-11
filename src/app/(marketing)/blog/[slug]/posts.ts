@@ -1283,7 +1283,7 @@ Automating SMS asks, smart routing for unhappy customers, AI replies in your bra
 [Start your free 7-day ReviewPilot trial](/signup) — no credit card required. Plans start at $16/month after the trial. See exact pricing on the [pricing page](/pricing).
 
 Related reading: [Why your Google rating dropped and how to fix it](/blog/why-google-rating-dropped-fix), [Google Business Profile review management for Indian SMBs](/blog/google-business-profile-review-management-india-2026), [Google review response templates](/blog/google-review-response-templates).
-\`,
+`,
   },
 
   "appfollow-alternative": {
@@ -1429,7 +1429,7 @@ If you need any of these, AppFollow earns its price. If you don't, you're subsid
 ReviewPilot's 7-day free trial requires no credit card. Connect your Play Console in 5 minutes, import your historical reviews, and watch our AI draft your first 50 replies. If we're not a better fit than what you're paying for today, walk away — no charge.
 
 [Start your free trial](/signup) or see [full pricing](/pricing). For deeper comparisons, read [ReviewPilot vs Birdeye vs Podium](/blog/best-review-management-software-india-2026) or our [Play Store review management overview](/blog/play-store-review-management-2026).
-\`,
+`,
   },
 
   "google-review-management-guide-india": {
@@ -1560,7 +1560,7 @@ The mistakes we see repeatedly:
 [Start a free 7-day ReviewPilot trial](/signup) — INR pricing from ₹1,500/month, 8 Indian languages out of the box, GST invoicing, and an Indian support team that answers WhatsApp in under 30 minutes during business hours.
 
 Related reading: [Google Business Profile review management 2026 playbook](/blog/google-business-profile-review-management-india-2026), [WhatsApp Business automation in India](/blog/whatsapp-business-automation-india-2026), [Best review management software in India 2026](/blog/best-review-management-software-india-2026).
-\`,
+`,
   },
 
   "how-ai-review-replies-improve-google-maps-ranking": {
@@ -1707,7 +1707,7 @@ That's typically ₹1.5–5 lakh per month in additional revenue, at a tooling c
 If you want to capture the reply-driven ranking lift without becoming a part-time review responder, [start a free 7-day ReviewPilot trial](/signup) — AI replies in your brand voice, multi-language support, Review Recovery workflow, all on a single dashboard. From ₹1,500/month after the trial.
 
 Related reading: [How to reply to negative Google reviews — 15 templates](/blog/how-to-reply-to-negative-google-reviews), [Google review response templates](/blog/google-review-response-templates), [Why your Google rating dropped and how to fix it](/blog/why-google-rating-dropped-fix).
-\`,
+`,
   },
 
   "play-store-rating-below-4-stars-recovery-plan": {
@@ -1860,6 +1860,6 @@ Five mistakes that make recovery slower or impossible:
 If you're below 4.0★ right now, the cost of waiting another week is real and measurable. [Start a free 7-day ReviewPilot trial](/signup) — we'll auto-import the last 90 days of your Play Store reviews, categorise them by complaint type, draft recovery replies, and surface the bugs that are driving your 1★s. Most teams see the first measurable rating lift within 14 days. Plans start at $16/month after trial.
 
 Related reading: [Play Store Developer Reply API guide](/blog/play-store-developer-reply-api-guide), [Service Account JSON Play Console setup](/blog/service-account-json-play-console-setup), [Play Store review management 2026](/blog/play-store-review-management-2026).
-\`,
+`,
   },
 };
