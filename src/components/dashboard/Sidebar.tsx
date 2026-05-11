@@ -29,7 +29,12 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useState, useEffect } from "react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { useState, useEffect, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useUsage } from "@/hooks/useUsage";
 import { useTeamRole } from "@/hooks/useTeamRole";
@@ -311,33 +316,11 @@ export function Sidebar({
 
         <SectionLabel>Settings</SectionLabel>
         {isCollapsed ? (
-          <Tooltip delayDuration={200}>
-            <TooltipTrigger asChild>
-              <Link
-                href="/dashboard/settings"
-                className={cn(
-                  "group relative flex items-center justify-center rounded-lg px-2 py-2 transition-colors",
-                  pathname.startsWith("/dashboard/settings")
-                    ? "bg-accent/40 text-foreground"
-                    : "text-muted-foreground hover:bg-accent/20 hover:text-foreground"
-                )}
-              >
-                {pathname.startsWith("/dashboard/settings") && (
-                  <span
-                    aria-hidden
-                    className="absolute left-0 top-1.5 bottom-1.5 w-[2px] rounded-full bg-[linear-gradient(180deg,#6366f1,#8b5cf6,#d946ef)]"
-                  />
-                )}
-                <Settings className={cn(
-                  "h-[18px] w-[18px]",
-                  pathname.startsWith("/dashboard/settings") && "text-accent"
-                )} />
-              </Link>
-            </TooltipTrigger>
-            <TooltipContent side="right" className="text-xs font-medium">
-              Settings
-            </TooltipContent>
-          </Tooltip>
+          <CollapsedSettingsFlyout
+            items={visibleSettingsNav}
+            pathname={pathname}
+            isActive={isActive}
+          />
         ) : (
           <>
             <button
@@ -548,6 +531,108 @@ export function Sidebar({
         </div>
       </div>
     </motion.aside>
+  );
+}
+
+/**
+ * Hover-activated flyout for the Settings group when the sidebar is collapsed.
+ * Shows all settings sub-items in a portaled popover, so users still get to
+ * Billing/Team/AI Config without expanding the rail.
+ *
+ * Uses a small grace timer on close so the cursor can move from the trigger
+ * into the popover without losing focus.
+ */
+function CollapsedSettingsFlyout({
+  items,
+  pathname,
+  isActive,
+}: {
+  items: NavItem[];
+  pathname: string;
+  isActive: (href: string) => boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const settingsActive = pathname.startsWith("/dashboard/settings");
+
+  function cancelClose() {
+    if (closeTimer.current) {
+      clearTimeout(closeTimer.current);
+      closeTimer.current = null;
+    }
+  }
+  function scheduleClose() {
+    cancelClose();
+    closeTimer.current = setTimeout(() => setOpen(false), 120);
+  }
+  function openNow() {
+    cancelClose();
+    setOpen(true);
+  }
+
+  useEffect(() => () => cancelClose(), []);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Link
+          href="/dashboard/settings"
+          onMouseEnter={openNow}
+          onMouseLeave={scheduleClose}
+          onFocus={openNow}
+          onBlur={scheduleClose}
+          aria-label="Settings"
+          className={cn(
+            "group relative flex items-center justify-center rounded-lg px-2 py-2 transition-colors",
+            settingsActive
+              ? "bg-accent/40 text-foreground"
+              : "text-muted-foreground hover:bg-accent/20 hover:text-foreground"
+          )}
+        >
+          {settingsActive && (
+            <span
+              aria-hidden
+              className="absolute left-0 top-1.5 bottom-1.5 w-[2px] rounded-full bg-[linear-gradient(180deg,#6366f1,#8b5cf6,#d946ef)]"
+            />
+          )}
+          <Settings className={cn("h-[18px] w-[18px]", settingsActive && "text-accent")} />
+        </Link>
+      </PopoverTrigger>
+      <PopoverContent
+        side="right"
+        align="start"
+        sideOffset={8}
+        onMouseEnter={openNow}
+        onMouseLeave={scheduleClose}
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        className="w-56 p-1.5 rounded-xl border-border/60 shadow-lg"
+      >
+        <p className="px-2 pt-1 pb-1.5 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground/60">
+          Settings
+        </p>
+        <div className="space-y-0.5">
+          {items.map((item) => {
+            const active = isActive(item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setOpen(false)}
+                className={cn(
+                  "flex items-center gap-2.5 rounded-md px-2 py-1.5 text-[13px] transition-colors",
+                  active
+                    ? "bg-accent/15 text-accent font-medium"
+                    : "text-foreground/80 hover:bg-muted/60 hover:text-foreground"
+                )}
+              >
+                <item.icon className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                <span className="truncate">{item.label}</span>
+              </Link>
+            );
+          })}
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }
 

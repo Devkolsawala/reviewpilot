@@ -13,28 +13,12 @@ import { Search, CheckCheck, Inbox, Zap, Info, BookOpen, ChevronDown, Bot, Loade
 import { UpgradeGate } from "@/components/dashboard/UpgradeGate";
 import { AppSwitcher } from "@/components/dashboard/AppSwitcher";
 import { toast } from "@/components/ui/use-toast";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectSeparator,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { useReviews } from "@/hooks/useReviews";
 import { useConnections } from "@/hooks/useConnection";
 import { useTeamRole } from "@/hooks/useTeamRole";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { GBP_ENABLED } from "@/lib/feature-flags";
-import { getCountryFlag, getCountryName } from "@/lib/constants/countries";
-import { extractCountryFromLocale } from "@/lib/utils/locale-to-country";
 import type { Review } from "@/types/review";
 
 const MOCK_OVERRIDES_PREFIX = "reviewpilot_mock_overrides";
@@ -57,12 +41,6 @@ function InboxPageInner() {
  const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
  const [ratingFilter, setRatingFilter] = useState<RatingFilter>("all");
  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
- // Country filter: only meaningful when source ∈ {"all","play_store"}.
- // countryFilter is an ISO alpha-2 (or null = no country filter).
- // countryUnknownFilter true = filter to reviewer_country IS NULL only.
- // Mutually exclusive: when countryUnknownFilter is true, countryFilter is ignored.
- const [countryFilter, setCountryFilter] = useState<string | null>(null);
- const [countryUnknownFilter, setCountryUnknownFilter] = useState(false);
  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
  const [aiReplyingAll, setAiReplyingAll] = useState(false);
  const [aiReplyProgress, setAiReplyProgress] = useState<{ current: number; total: number } | null>(null);
@@ -107,64 +85,11 @@ function InboxPageInner() {
  return reviews.filter((r) => r.connection_id === activeAppId);
  }, [reviews, activeAppId, showAppSwitcher]);
 
- // The country filter row only applies for Play Store / All Sources.
- const countryFilterApplicable = sourceFilter === "all" || sourceFilter === "play_store";
-
- // Reset country state when source switches to a non-applicable value
- // so it doesn't silently re-apply if the user later switches back.
- useEffect(() => {
- if (!countryFilterApplicable && (countryFilter !== null || countryUnknownFilter)) {
- setCountryFilter(null);
- setCountryUnknownFilter(false);
- }
- }, [countryFilterApplicable, countryFilter, countryUnknownFilter]);
-
- // Country dropdown options derived from the currently scoped reviews.
- // Only Play Store rows can have a country; sorted by count DESC so the
- // user's most-active markets appear first. The null bucket drives "Unknown".
- const countryOptions = useMemo(() => {
- const counts = new Map<string | null, number>();
- for (const r of appScopedReviews) {
- if (r.source !== "play_store") continue;
- const code =
- (r.reviewer_country ?? null) ||
- // Fallback: derive on the fly so mock fixtures (which carry the
- // raw locale but may pre-date the backfill) still drive the dropdown.
- extractCountryFromLocale(r.review_language);
- const key = code || null;
- counts.set(key, (counts.get(key) ?? 0) + 1);
- }
- const entries = Array.from(counts.entries());
- // null bucket sorts to the end; everything else by count DESC, then code A→Z.
- entries.sort((a, b) => {
- if (a[0] === null) return 1;
- if (b[0] === null) return -1;
- if (b[1] !== a[1]) return b[1] - a[1];
- return a[0]!.localeCompare(b[0]!);
- });
- return entries;
- }, [appScopedReviews]);
-
- const unknownCount = countryOptions.find(([code]) => code === null)?.[1] ?? 0;
-
  const filteredReviews = useMemo(() => {
  return appScopedReviews.filter((r) => {
  if (sourceFilter !== "all" && r.source !== sourceFilter) return false;
  if (ratingFilter !== "all" && r.rating !== ratingFilter) return false;
  if (statusFilter !== "all" && r.reply_status !== statusFilter) return false;
- if (countryFilterApplicable) {
- const code =
- (r.reviewer_country ?? null) ||
- extractCountryFromLocale(r.review_language);
- if (countryUnknownFilter) {
- // Only keep rows that ARE play_store and have no country.
- // Non-play_store rows pass through only when source filter is "all"
- // and we're not filtering on country at all — handled above.
- if (r.source !== "play_store" || code) return false;
- } else if (countryFilter) {
- if (r.source !== "play_store" || code !== countryFilter) return false;
- }
- }
  if (search) {
  const q = search.toLowerCase();
  return (
@@ -174,7 +99,7 @@ function InboxPageInner() {
  }
  return true;
  });
- }, [appScopedReviews, sourceFilter, ratingFilter, statusFilter, search, countryFilter, countryUnknownFilter, countryFilterApplicable]);
+ }, [appScopedReviews, sourceFilter, ratingFilter, statusFilter, search]);
 
  const selectedReview = filteredReviews.find((r) => r.id === selectedId);
  const pendingCount = appScopedReviews.filter((r) => r.reply_status === "pending").length;
@@ -471,19 +396,8 @@ function InboxPageInner() {
  />
  </div>
 
- {/* Filter row — single horizontal track with group dividers.
- Horizontally scrolls when overflowing (mobile / narrow pane).
- The right-edge mask hints at additional content offscreen. */}
- <div
- className="relative -mx-1 px-1"
- style={{
- maskImage:
- "linear-gradient(to right, black calc(100% - 16px), transparent 100%)",
- WebkitMaskImage:
- "linear-gradient(to right, black calc(100% - 16px), transparent 100%)",
- }}
- >
- <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pr-3">
+ {/* Filter groups — wrap to additional lines so every chip stays visible. */}
+ <div className="space-y-2">
  <FilterGroup label="Source">
  <FilterChip label="All" active={sourceFilter === "all"} onClick={() => setSourceFilter("all")} />
  {GBP_ENABLED && (
@@ -494,108 +408,23 @@ function InboxPageInner() {
  <FilterChip label="WhatsApp" active={sourceFilter === "whatsapp"} onClick={() => setSourceFilter("whatsapp")} />
  )}
  </FilterGroup>
- <FilterDivider />
+
  <FilterGroup label="Status">
  <FilterChip label="All" active={statusFilter === "all"} onClick={() => setStatusFilter("all")} />
  <FilterChip label="Pending" active={statusFilter === "pending"} onClick={() => setStatusFilter("pending")} />
  <FilterChip label="Drafted" active={statusFilter === "drafted"} onClick={() => setStatusFilter("drafted")} />
  <FilterChip label="Published" active={statusFilter === "published"} onClick={() => setStatusFilter("published")} />
  </FilterGroup>
+
  {sourceFilter !== "whatsapp" && (
- <>
- <FilterDivider />
  <FilterGroup label="Rating">
  <FilterChip label="All" active={ratingFilter === "all"} onClick={() => setRatingFilter("all")} />
  {[1, 2, 3, 4, 5].map((r) => (
  <FilterChip key={r} label={`${r}★`} active={ratingFilter === r} onClick={() => setRatingFilter(r as RatingFilter)} />
  ))}
  </FilterGroup>
- </>
  )}
  </div>
- </div>
-
- {countryFilterApplicable && (
- <div className="flex flex-wrap items-center gap-2 min-w-0">
- <span className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground/60 whitespace-nowrap">
- Country
- </span>
- <Select
- value={countryUnknownFilter ? "__unknown__" : countryFilter ?? "__all__"}
- onValueChange={(v) => {
- if (v === "__all__") {
- setCountryFilter(null);
- setCountryUnknownFilter(false);
- } else if (v === "__unknown__") {
- setCountryFilter(null);
- setCountryUnknownFilter(true);
- } else {
- setCountryFilter(v);
- setCountryUnknownFilter(false);
- }
- }}
- >
- <SelectTrigger
- aria-label="Filter by country"
- className="h-8 w-auto max-w-[180px] min-w-0 px-3 gap-2 text-xs font-medium rounded-full bg-muted hover:bg-muted/80 border-0 [&>span]:truncate"
- >
- <SelectValue placeholder="🌐 All Countries" />
- </SelectTrigger>
- <SelectContent
- align="start"
- sideOffset={4}
- className="max-h-[280px] overflow-y-auto w-[min(calc(100vw-32px),320px)]"
- >
- <SelectItem value="__all__" className="text-xs">
- <span className="truncate">🌐 All Countries</span>
- </SelectItem>
- {countryOptions.some(([code]) => code !== null) && <SelectSeparator />}
- {countryOptions
- .filter(([code]) => code !== null)
- .map(([code, count]) => (
- <SelectItem key={code as string} value={code as string} className="text-xs">
- <span className="flex items-center gap-2 min-w-0">
- <span className="truncate">
- {getCountryFlag(code as string)} {getCountryName(code as string)}
- </span>
- <span className="text-[10px] text-muted-foreground shrink-0">({count})</span>
- </span>
- </SelectItem>
- ))}
- {unknownCount > 0 && (
- <>
- <SelectSeparator />
- <SelectItem value="__unknown__" className="text-xs">
- <span className="flex items-center gap-2 min-w-0">
- <span className="truncate">❓ Unknown</span>
- <span className="text-[10px] text-muted-foreground shrink-0">({unknownCount})</span>
- </span>
- </SelectItem>
- </>
- )}
- </SelectContent>
- </Select>
- <TooltipProvider delayDuration={200}>
- <Tooltip>
- <TooltipTrigger asChild>
- <button
- type="button"
- tabIndex={0}
- aria-label="About the country filter"
- className="text-muted-foreground hover:text-foreground transition-colors"
- >
- <Info className="h-3.5 w-3.5" />
- </button>
- </TooltipTrigger>
- <TooltipContent side="bottom" className="max-w-[260px] text-xs">
- Filtered by reviewer&apos;s Play Store locale region (e.g., en_US → United States).
- This reflects device language settings, which usually but not always matches
- physical location. Reviews without a region in their locale appear under &quot;Unknown.&quot;
- </TooltipContent>
- </Tooltip>
- </TooltipProvider>
- </div>
- )}
 
  {/* Batch actions */}
  <UpgradeGate feature="inbox_bulk_reply" fallback={
@@ -767,17 +596,13 @@ function FilterChip({ label, active, onClick }: { label: string; active: boolean
 
 function FilterGroup({ label, children }: { label: string; children: React.ReactNode }) {
  return (
- <div className="flex items-center gap-1.5 shrink-0">
- <span className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground/60 whitespace-nowrap">
+ <div className="flex items-center gap-1.5 flex-wrap">
+ <span className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground/60 whitespace-nowrap w-14 shrink-0">
  {label}
  </span>
- {children}
+ <div className="flex flex-wrap items-center gap-1">{children}</div>
  </div>
  );
-}
-
-function FilterDivider() {
- return <span aria-hidden className="mx-0.5 h-4 w-px shrink-0 bg-border/70" />;
 }
 
 const GUIDE_STEPS = [
