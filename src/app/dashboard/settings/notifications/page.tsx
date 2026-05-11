@@ -18,6 +18,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/components/ui/use-toast";
 import { usePlan } from "@/hooks/usePlan";
+import { useTeamRole } from "@/hooks/useTeamRole";
+import { useRouter } from "next/navigation";
 import { getDigestCcLimit } from "@/lib/plans";
 import { X } from "lucide-react";
 
@@ -95,6 +97,17 @@ function statusLabel(s: string): { text: string; variant: "default" | "secondary
 }
 
 export default function NotificationsPage() {
+  const router = useRouter();
+  const { canEditAIConfig, isLoading: roleLoading } = useTeamRole();
+
+  // Notifications is owner + admin only. Members who land here via direct
+  // URL, stale banner link, or bookmark get redirected back to the dashboard.
+  useEffect(() => {
+    if (!roleLoading && !canEditAIConfig) {
+      router.replace("/dashboard");
+    }
+  }, [roleLoading, canEditAIConfig, router]);
+
   const { planId } = usePlan();
   const ccLimit = getDigestCcLimit(planId);
 
@@ -227,6 +240,12 @@ export default function NotificationsPage() {
         <Skeleton className="h-56 w-full rounded-xl" />
       </div>
     );
+  }
+
+  // Don't render the notifications UI for non-permitted roles while the
+  // redirect is in flight.
+  if (!roleLoading && !canEditAIConfig) {
+    return null;
   }
 
   return (

@@ -11,6 +11,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAnalytics, type AnalyticsRange, RANGE_DAYS } from "@/hooks/useAnalytics";
 import { usePlan } from "@/hooks/usePlan";
+import { useTeamRole } from "@/hooks/useTeamRole";
 import { cn } from "@/lib/utils";
 import { Zap, CheckCircle2, Clock, Info, Timer, TrendingUp, Bot, IndianRupee, Mail, X } from "lucide-react";
 import { UpgradeGate } from "@/components/dashboard/UpgradeGate";
@@ -19,8 +20,13 @@ const DIGEST_BANNER_DISMISS_KEY = "reviewpilot_digest_banner_dismissed";
 
 function DigestBanner() {
   const [show, setShow] = useState(false);
+  // Notification settings are restricted to owner + admin. Hide the
+  // "Set up daily digest" banner for operator and read-only members so
+  // they don't see a link that leads to a page they can't use.
+  const { canEditAIConfig } = useTeamRole();
 
   useEffect(() => {
+    if (!canEditAIConfig) return;
     let cancelled = false;
     async function check() {
       try {
@@ -40,7 +46,7 @@ function DigestBanner() {
     }
     check();
     return () => { cancelled = true; };
-  }, []);
+  }, [canEditAIConfig]);
 
   if (!show) return null;
 
