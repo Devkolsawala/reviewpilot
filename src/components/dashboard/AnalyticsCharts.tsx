@@ -44,10 +44,18 @@ const tooltipStyle = {
  border: "1px solid hsl(var(--border))",
  background: "hsl(var(--card))",
  fontSize: 12,
- boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
-};
+ boxShadow: "none",
+} as const;
 
-const STAR_COLORS = ["#ef4444", "#f97316", "#f59e0b", "#84cc16", "#14b8a6"];
+// Sentiment scale used in rating distribution: 1★ rose → 5★ emerald
+// Matches the row-level palette in DashboardReviewRow / ReviewCard.
+const STAR_SENTIMENT: Record<number, { fill: string; track: string; label: string }> = {
+ 1: { fill: "#f43f5e", track: "bg-rose-100 dark:bg-rose-950/30", label: "text-rose-600 dark:text-rose-400" },
+ 2: { fill: "#f97316", track: "bg-orange-100 dark:bg-orange-950/30", label: "text-orange-600 dark:text-orange-400" },
+ 3: { fill: "#f59e0b", track: "bg-amber-100 dark:bg-amber-950/30", label: "text-amber-600 dark:text-amber-400" },
+ 4: { fill: "#84cc16", track: "bg-lime-100 dark:bg-lime-950/30", label: "text-lime-600 dark:text-lime-400" },
+ 5: { fill: "#10b981", track: "bg-emerald-100 dark:bg-emerald-950/30", label: "text-emerald-600 dark:text-emerald-400" },
+};
 
 export function AnalyticsCharts({
  ratingTrend,
@@ -67,27 +75,54 @@ export function AnalyticsCharts({
 
  const sourceData = sourceBreakdown;
 
+ const ratedTrend = ratingTrend.filter((d) => d.avg_rating > 0);
+ const currentAvg =
+ ratedTrend.length > 0
+ ? Math.round((ratedTrend.reduce((s, d) => s + d.avg_rating, 0) / ratedTrend.length) * 10) / 10
+ : 0;
+
  return (
  <div className="grid gap-6 lg:grid-cols-2">
- {/* Rating trend — area chart */}
+ {/* Rating trend — gradient area chart, animated draw on mount */}
  <Card>
- <CardHeader className="pb-2">
- <CardTitle className="text-base font-semibold">Rating Trend</CardTitle>
+ <CardHeader className="pb-2 flex flex-row items-start justify-between">
+ <div>
+ <CardTitle className="text-sm font-semibold">Rating Trend</CardTitle>
+ <p className="text-[11px] text-muted-foreground/70 mt-0.5">
+ Goal: <span className="font-mono">4.5★</span>
+ </p>
+ </div>
+ {currentAvg > 0 && (
+ <div className="text-right">
+ <p className="font-sans text-2xl font-bold tracking-tight tabular-nums">
+ {currentAvg.toFixed(1)}
+ <span className="text-amber-500">★</span>
+ </p>
+ <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground/70">
+ avg this period
+ </p>
+ </div>
+ )}
  </CardHeader>
  <CardContent>
- <div className="h-64">
+ <div className="h-56">
  <ResponsiveContainer width="100%" height="100%">
- <AreaChart data={ratingTrend}>
+ <AreaChart data={ratingTrend} margin={{ top: 8, right: 6, left: 0, bottom: 0 }}>
  <defs>
  <linearGradient id="ratingGradient" x1="0" y1="0" x2="0" y2="1">
- <stop offset="5%" stopColor="#14b8a6" stopOpacity={0.3} />
- <stop offset="95%" stopColor="#14b8a6" stopOpacity={0} />
+ <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.32} />
+ <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0} />
+ </linearGradient>
+ <linearGradient id="ratingStroke" x1="0" y1="0" x2="1" y2="0">
+ <stop offset="0%" stopColor="#6366f1" />
+ <stop offset="50%" stopColor="#8b5cf6" />
+ <stop offset="100%" stopColor="#d946ef" />
  </linearGradient>
  </defs>
- <CartesianGrid strokeDasharray="3 3" className="stroke-border" vertical={false} />
+ <CartesianGrid strokeDasharray="2 4" className="stroke-border/60" vertical={false} />
  <XAxis
  dataKey="date"
- tick={{ fontSize: 11 }}
+ tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
  tickFormatter={(v) => {
  const d = new Date(v);
  return isNaN(d.getTime())
@@ -96,23 +131,33 @@ export function AnalyticsCharts({
  }}
  axisLine={false}
  tickLine={false}
+ minTickGap={28}
  />
- <YAxis domain={[1, 5]} tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
- <Tooltip contentStyle={tooltipStyle} />
- <ReferenceLine
- y={4.5}
- stroke="#94a3b8"
- strokeDasharray="6 3"
- label={{ value: "Goal 4.5★", position: "right", fontSize: 10, fill: "#94a3b8" }}
+ {/* Y-axis hidden — current-avg label in the header replaces it. */}
+ <YAxis domain={[1, 5]} hide />
+ <Tooltip
+ cursor={{ stroke: "hsl(var(--ring))", strokeOpacity: 0.3, strokeWidth: 1 }}
+ contentStyle={tooltipStyle}
+ labelFormatter={(v) => {
+ const d = new Date(v);
+ return isNaN(d.getTime())
+ ? String(v)
+ : d.toLocaleDateString("en", { weekday: "short", month: "short", day: "numeric" });
+ }}
+ formatter={(val) => [`${val}★`, "Avg rating"]}
  />
+ <ReferenceLine y={4.5} stroke="hsl(var(--muted-foreground))" strokeOpacity={0.4} strokeDasharray="4 4" />
  <Area
  type="monotone"
  dataKey="avg_rating"
- stroke="#14b8a6"
- strokeWidth={2.5}
+ stroke="url(#ratingStroke)"
+ strokeWidth={2}
  fill="url(#ratingGradient)"
- dot={{ r: 5, fill: "#14b8a6", stroke: "#fff", strokeWidth: 2 }}
- activeDot={{ r: 7, stroke: "#14b8a6", strokeWidth: 2, fill: "#fff" }}
+ isAnimationActive
+ animationDuration={650}
+ animationEasing="ease-out"
+ dot={false}
+ activeDot={{ r: 4, stroke: "#8b5cf6", strokeWidth: 2, fill: "hsl(var(--card))" }}
  name="Avg Rating"
  />
  </AreaChart>
@@ -121,43 +166,54 @@ export function AnalyticsCharts({
  </CardContent>
  </Card>
 
- {/* Rating distribution — 5 star buckets */}
+ {/* Rating distribution — horizontal bars, sentiment-colored, mono counts */}
  {ratingDistribution && ratingDistribution.length > 0 ? (
+ (() => {
+ const distTotal = ratingDistribution.reduce((s, d) => s + d.count, 0);
+ const maxCount = Math.max(...ratingDistribution.map((d) => d.count), 1);
+ // Render 5 → 1 (top-down feels more natural for "ratings best→worst")
+ const ordered = [...ratingDistribution].sort((a, b) => b.star - a.star);
+ return (
  <Card>
- <CardHeader className="pb-2">
- <CardTitle className="text-base font-semibold">Rating Distribution</CardTitle>
+ <CardHeader className="pb-2 flex flex-row items-start justify-between">
+ <div>
+ <CardTitle className="text-sm font-semibold">Rating Distribution</CardTitle>
+ <p className="text-[11px] text-muted-foreground/70 mt-0.5">By star count</p>
+ </div>
+ <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground/70 mt-1">
+ {distTotal} total
+ </p>
  </CardHeader>
  <CardContent>
- <div className="h-64">
- <ResponsiveContainer width="100%" height="100%">
- <BarChart data={ratingDistribution} layout="horizontal">
- <CartesianGrid strokeDasharray="3 3" className="stroke-border" vertical={false} />
- <XAxis
- dataKey="star"
- tick={{ fontSize: 11 }}
- tickFormatter={(v) => `${v}★`}
- axisLine={false}
- tickLine={false}
+ <div className="space-y-2.5 py-1">
+ {ordered.map((entry) => {
+ const meta = STAR_SENTIMENT[entry.star] ?? STAR_SENTIMENT[3];
+ const pct = distTotal === 0 ? 0 : Math.round((entry.count / distTotal) * 100);
+ const barPct = (entry.count / maxCount) * 100;
+ return (
+ <div key={entry.star} className="flex items-center gap-3">
+ <span className={cn("flex w-8 shrink-0 items-center gap-0.5 text-xs font-medium tabular-nums", meta.label)}>
+ {entry.star}
+ <span aria-hidden>★</span>
+ </span>
+ <div className={cn("relative h-5 flex-1 overflow-hidden rounded-md", meta.track)}>
+ <div
+ className="absolute inset-y-0 left-0 rounded-md transition-[width] duration-500 ease-out"
+ style={{ width: `${barPct}%`, backgroundColor: meta.fill, opacity: 0.85 }}
  />
- <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
- <Tooltip
- contentStyle={tooltipStyle}
- formatter={(val, _name, props) => [val, `${props.payload.star}★ reviews`]}
- />
- <Bar dataKey="count" radius={[6, 6, 0, 0]} name="Reviews">
- {ratingDistribution.map((entry) => (
- <Cell
- key={entry.star}
- fill={STAR_COLORS[entry.star - 1] || "#94a3b8"}
- opacity={0.85}
- />
- ))}
- </Bar>
- </BarChart>
- </ResponsiveContainer>
+ </div>
+ <span className="w-16 shrink-0 text-right font-mono text-xs tabular-nums">
+ <span className="text-foreground">{entry.count}</span>
+ <span className="text-muted-foreground/60 ml-1">{pct}%</span>
+ </span>
+ </div>
+ );
+ })}
  </div>
  </CardContent>
  </Card>
+ );
+ })()
  ) : (
  /* Fallback: review volume when no distribution available */
  <Card>

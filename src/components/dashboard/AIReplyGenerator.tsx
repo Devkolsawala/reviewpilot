@@ -379,25 +379,44 @@ export function AIReplyGenerator({
 
  {state === "done" && (
  <div className="flex-1 flex flex-col items-center justify-center p-6 text-center overflow-y-auto min-h-0">
- <div className="rounded-full bg-green-100 dark:bg-green-950/30 p-4 mb-4">
- <CheckCircle2 className="h-8 w-8 text-green-600 dark:text-green-400" />
+ <div className="relative mb-4">
+ <div
+ aria-hidden
+ className="absolute inset-0 -m-2 rounded-full bg-[linear-gradient(135deg,rgba(99,102,241,0.25),rgba(217,70,239,0.25))] blur-xl"
+ />
+ <div className="relative h-14 w-14 rounded-full bg-[linear-gradient(135deg,#10b981_0%,#6366f1_55%,#d946ef_100%)] ring-4 ring-card flex items-center justify-center shadow-[0_0_24px_-6px_rgba(99,102,241,0.55)]">
+ <CheckCircle2 className="h-7 w-7 text-white" />
  </div>
- <h3 className="font-semibold text-lg mb-1">Replied ✓</h3>
- <p className="text-sm text-muted-foreground mb-4">
- Your reply to {review.author_name} is now live.
+ </div>
+ <h3 className="font-sans text-lg font-semibold tracking-tight">Replied</h3>
+ <p className="text-sm text-muted-foreground mt-1">
+ Your reply to <span className="text-foreground font-medium">{review.author_name}</span> is now live.
+ </p>
+ <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground/70">
+ {review.reply_published_at
+ ? `Sent ${timeAgo(review.reply_published_at)}`
+ : "Sent just now"}
  </p>
  {reply && (
- <div className="rounded-lg bg-secondary/50 p-4 max-w-md text-left">
- <p className="text-sm text-muted-foreground italic">&ldquo;{reply}&rdquo;</p>
- </div>
- )}
+ <div className="mt-5 max-w-md w-full rounded-xl border border-border/60 bg-card/60 backdrop-blur-sm p-4 text-left">
+ <div className="flex items-center justify-between mb-1.5">
+ <span className="inline-flex items-center gap-1 font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground/70">
+ <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+ Your reply
+ </span>
  <button
  type="button"
  onClick={() => { setState("review"); }}
- className="mt-4 text-xs text-muted-foreground hover:text-foreground underline underline-offset-2"
+ className="text-[11px] font-medium text-accent hover:underline underline-offset-2"
  >
  Edit reply
  </button>
+ </div>
+ <p className="border-l-2 border-accent/40 pl-3 text-sm text-foreground/90 leading-relaxed italic">
+ &ldquo;{reply}&rdquo;
+ </p>
+ </div>
+ )}
  </div>
  )}
 

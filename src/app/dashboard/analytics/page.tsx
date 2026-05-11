@@ -149,28 +149,47 @@ function AnalyticsPageInner() {
           </div>
         )}
 
-        <div className="flex items-center justify-between">
-          <h1 className="font-sans text-2xl font-semibold tracking-tight">Analytics</h1>
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+          <div>
+            <h1 className="font-sans text-2xl sm:text-3xl font-semibold tracking-tight">
+              Analytics
+              <span className="text-accent">.</span>
+            </h1>
+            <p className="text-xs text-muted-foreground mt-1 font-mono">
+              Reviews, sentiment, and AI activity over time.
+            </p>
+          </div>
+          {/* Segmented period selector with gradient underline on the active tab. */}
           <div
-            role="group"
+            role="tablist"
             aria-label="Select time range"
-            className="flex items-center gap-1 rounded-full bg-secondary p-1"
+            className="relative flex items-center gap-1 self-start sm:self-auto"
           >
-            {PERIODS.map((p) => (
-              <button
-                key={p.value}
-                onClick={() => setRange(p.value)}
-                aria-pressed={range === p.value}
-                className={cn(
-                  "rounded-full px-4 py-1.5 text-xs font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                  range === p.value
-                    ? "bg-background shadow-sm text-foreground"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                {p.label}
-              </button>
-            ))}
+            {PERIODS.map((p) => {
+              const active = range === p.value;
+              return (
+                <button
+                  key={p.value}
+                  role="tab"
+                  aria-selected={active}
+                  onClick={() => setRange(p.value)}
+                  className={cn(
+                    "relative px-3 py-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm",
+                    active ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {p.label}
+                  <span
+                    aria-hidden
+                    className={cn(
+                      "absolute left-2 right-2 -bottom-px h-[2px] rounded-full transition-opacity duration-200",
+                      "bg-[linear-gradient(90deg,#6366f1,#8b5cf6,#d946ef)]",
+                      active ? "opacity-100" : "opacity-0"
+                    )}
+                  />
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -189,6 +208,8 @@ function AnalyticsPageInner() {
             rangeLabel={range}
             previousTotals={analytics.previousPeriodTotals.total_reviews}
             previousAvgRating={analytics.previousPeriodTotals.avg_rating}
+            previousResponseRate={analytics.previousPeriodTotals.response_rate}
+            trend={analytics.trend}
           />
         )}
 

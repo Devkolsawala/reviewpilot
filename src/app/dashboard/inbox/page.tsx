@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { ReviewCard } from "@/components/dashboard/ReviewCard";
 import { AIReplyGenerator } from "@/components/dashboard/AIReplyGenerator";
 import { EmptyState } from "@/components/dashboard/EmptyState";
@@ -43,12 +44,14 @@ type SourceFilter = "all" | "google_business" | "play_store" | "whatsapp";
 type RatingFilter = "all" | 1 | 2 | 3 | 4 | 5;
 type StatusFilter = "all" | "pending" | "drafted" | "published";
 
-export default function InboxPage() {
+function InboxPageInner() {
+ const searchParams = useSearchParams();
  const { reviews: rawReviews, isMock, updateReview, refetch } = useReviews();
  const { connections } = useConnections();
  const { isReadOnly } = useTeamRole();
  const [localReviews, setLocalReviews] = useState<Review[]>([]);
  const [selectedId, setSelectedId] = useState<string | null>(null);
+ const [deepLinkApplied, setDeepLinkApplied] = useState(false);
  const [activeAppId, setActiveAppId] = useState<string | null>(null); // null = "All Apps"
  const [search, setSearch] = useState("");
  const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
@@ -73,6 +76,18 @@ export default function InboxPage() {
  useEffect(() => {
  setLocalReviews(rawReviews);
  }, [rawReviews]);
+
+ // Deep link: /dashboard/inbox?review=<id> from the dashboard recent-reviews row.
+ // Applies once after reviews load — never overrides a manual selection later.
+ useEffect(() => {
+ if (deepLinkApplied) return;
+ if (localReviews.length === 0) return;
+ const id = searchParams?.get("review");
+ if (id && localReviews.some((r) => r.id === id)) {
+ setSelectedId(id);
+ }
+ setDeepLinkApplied(true);
+ }, [searchParams, localReviews, deepLinkApplied]);
 
  // Auto-reload when auto-reply finishes generating replies
  useEffect(() => {
@@ -445,7 +460,7 @@ export default function InboxPage() {
  )}
 
  {/* Search and filters */}
- <div className="p-3 border-b space-y-2">
+ <div className="p-3 border-b space-y-2.5">
  <div className="relative">
  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
  <Input
@@ -455,8 +470,22 @@ export default function InboxPage() {
  onChange={(e) => setSearch(e.target.value)}
  />
  </div>
- <div className="flex gap-1 flex-wrap">
- <FilterChip label="All Sources" active={sourceFilter === "all"} onClick={() => setSourceFilter("all")} />
+
+ {/* Filter row — single horizontal track with group dividers.
+ Horizontally scrolls when overflowing (mobile / narrow pane).
+ The right-edge mask hints at additional content offscreen. */}
+ <div
+ className="relative -mx-1 px-1"
+ style={{
+ maskImage:
+ "linear-gradient(to right, black calc(100% - 16px), transparent 100%)",
+ WebkitMaskImage:
+ "linear-gradient(to right, black calc(100% - 16px), transparent 100%)",
+ }}
+ >
+ <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pr-3">
+ <FilterGroup label="Source">
+ <FilterChip label="All" active={sourceFilter === "all"} onClick={() => setSourceFilter("all")} />
  {GBP_ENABLED && (
  <FilterChip label="Google" active={sourceFilter === "google_business"} onClick={() => setSourceFilter("google_business")} />
  )}
@@ -464,23 +493,33 @@ export default function InboxPage() {
  {hasWhatsAppConnection && (
  <FilterChip label="WhatsApp" active={sourceFilter === "whatsapp"} onClick={() => setSourceFilter("whatsapp")} />
  )}
- </div>
- <div className="flex gap-1 flex-wrap">
+ </FilterGroup>
+ <FilterDivider />
+ <FilterGroup label="Status">
  <FilterChip label="All" active={statusFilter === "all"} onClick={() => setStatusFilter("all")} />
  <FilterChip label="Pending" active={statusFilter === "pending"} onClick={() => setStatusFilter("pending")} />
  <FilterChip label="Drafted" active={statusFilter === "drafted"} onClick={() => setStatusFilter("drafted")} />
  <FilterChip label="Published" active={statusFilter === "published"} onClick={() => setStatusFilter("published")} />
- </div>
+ </FilterGroup>
  {sourceFilter !== "whatsapp" && (
- <div className="flex gap-1 flex-wrap">
- <FilterChip label="All Stars" active={ratingFilter === "all"} onClick={() => setRatingFilter("all")} />
+ <>
+ <FilterDivider />
+ <FilterGroup label="Rating">
+ <FilterChip label="All" active={ratingFilter === "all"} onClick={() => setRatingFilter("all")} />
  {[1, 2, 3, 4, 5].map((r) => (
  <FilterChip key={r} label={`${r}★`} active={ratingFilter === r} onClick={() => setRatingFilter(r as RatingFilter)} />
  ))}
- </div>
+ </FilterGroup>
+ </>
  )}
+ </div>
+ </div>
+
  {countryFilterApplicable && (
  <div className="flex flex-wrap items-center gap-2 min-w-0">
+ <span className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground/60 whitespace-nowrap">
+ Country
+ </span>
  <Select
  value={countryUnknownFilter ? "__unknown__" : countryFilter ?? "__all__"}
  onValueChange={(v) => {
@@ -579,7 +618,7 @@ export default function InboxPage() {
  </div>
 
  {/* Review list */}
- <div className="flex-1 overflow-y-auto">
+ <div className="flex-1 overflow-y-auto min-h-0">
  {filteredReviews.length === 0 ? (
  sourceFilter === "whatsapp" ? (
  <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-6 text-center">
@@ -606,6 +645,27 @@ export default function InboxPage() {
  />
  ))
  )}
+ </div>
+
+ {/* Keyboard hints — anchored at the bottom of the list pane. Hidden on small
+ viewports (no physical keyboard expected). */}
+ <div className="hidden md:flex shrink-0 items-center justify-center gap-3 border-t bg-muted/20 px-3 py-1.5 text-[10px] text-muted-foreground/80">
+ <span className="inline-flex items-center gap-1">
+ <kbd className="rounded bg-card border border-border/60 px-1 py-0.5 font-mono text-[9px]">J</kbd>
+ <kbd className="rounded bg-card border border-border/60 px-1 py-0.5 font-mono text-[9px]">K</kbd>
+ navigate
+ </span>
+ <span className="text-muted-foreground/30">·</span>
+ <span className="inline-flex items-center gap-1">
+ <kbd className="rounded bg-card border border-border/60 px-1 py-0.5 font-mono text-[9px]">R</kbd>
+ reply
+ </span>
+ <span className="text-muted-foreground/30">·</span>
+ <span className="inline-flex items-center gap-1">
+ <kbd className="rounded bg-card border border-border/60 px-1 py-0.5 font-mono text-[9px]">⌘</kbd>
+ <kbd className="rounded bg-card border border-border/60 px-1 py-0.5 font-mono text-[9px]">↵</kbd>
+ publish
+ </span>
  </div>
  </div>
 
@@ -681,19 +741,43 @@ export default function InboxPage() {
  );
 }
 
+export default function InboxPage() {
+ return (
+ <Suspense fallback={<div className="h-32" />}>
+ <InboxPageInner />
+ </Suspense>
+ );
+}
+
 function FilterChip({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
  return (
  <button
  onClick={onClick}
- className={`rounded-full px-2.5 py-1 text-[11px] font-medium transition-all duration-150 ${
+ className={cn(
+ "rounded-full px-2.5 py-1 text-[11px] font-medium whitespace-nowrap transition-colors duration-150 ring-1 ring-inset",
  active
- ? "bg-accent text-white shadow-sm"
- : "bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80"
- }`}
+ ? "bg-accent/15 text-accent ring-accent/40"
+ : "bg-transparent text-muted-foreground ring-border/60 hover:text-foreground hover:bg-muted/40 hover:ring-border"
+ )}
  >
  {label}
  </button>
  );
+}
+
+function FilterGroup({ label, children }: { label: string; children: React.ReactNode }) {
+ return (
+ <div className="flex items-center gap-1.5 shrink-0">
+ <span className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground/60 whitespace-nowrap">
+ {label}
+ </span>
+ {children}
+ </div>
+ );
+}
+
+function FilterDivider() {
+ return <span aria-hidden className="mx-0.5 h-4 w-px shrink-0 bg-border/70" />;
 }
 
 const GUIDE_STEPS = [
