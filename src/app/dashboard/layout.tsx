@@ -6,12 +6,14 @@ import { usePathname, useRouter } from "next/navigation";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { TopBar } from "@/components/dashboard/TopBar";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { ProductTour } from "@/components/dashboard/ProductTour";
 import { KeyboardShortcutsModal } from "@/components/dashboard/KeyboardShortcutsModal";
 import { OnboardingModal } from "@/components/dashboard/OnboardingModal";
 import { TestModeBadge } from "@/components/dashboard/TestModeBadge";
 import { TrialBanner } from "@/components/dashboard/TrialBanner";
 import { usePlan } from "@/hooks/usePlan";
+import { useSidebarCollapsed } from "@/hooks/useSidebarCollapsed";
 import { Clock, ArrowRight } from "lucide-react";
 
 function TrialExpiredLockout() {
@@ -50,6 +52,7 @@ export default function DashboardLayout({
 }) {
  const [mobileOpen, setMobileOpen] = useState(false);
  const { trialExpired, isLoading } = usePlan();
+ const { collapsed, toggle: toggleCollapsed } = useSidebarCollapsed();
  const pathname = usePathname();
  const router = useRouter();
 
@@ -79,11 +82,33 @@ export default function DashboardLayout({
  setMobileOpen(false);
  }, [pathname]);
 
+ // Keyboard shortcut: `[` toggles the sidebar collapsed state.
+ // Ignored while focused inside an input/textarea/contenteditable.
+ useEffect(() => {
+ function handler(e: KeyboardEvent) {
+ if (e.key !== "[") return;
+ const t = e.target as HTMLElement | null;
+ if (!t) return;
+ const tag = t.tagName;
+ if (
+ tag === "INPUT" ||
+ tag === "TEXTAREA" ||
+ tag === "SELECT" ||
+ t.isContentEditable
+ ) return;
+ e.preventDefault();
+ toggleCollapsed();
+ }
+ document.addEventListener("keydown", handler);
+ return () => document.removeEventListener("keydown", handler);
+ }, [toggleCollapsed]);
+
  if (!isLoading && trialExpired && !isBillingPage) {
  return <TrialExpiredLockout />;
  }
 
  return (
+ <TooltipProvider delayDuration={150} skipDelayDuration={300}>
  <div className="flex h-screen overflow-hidden bg-background">
  <a
  href="#main-content"
@@ -91,7 +116,7 @@ export default function DashboardLayout({
  >
  Skip to main content
  </a>
- <Sidebar />
+ <Sidebar collapsed={collapsed} onToggleCollapsed={toggleCollapsed} />
 
  {/* Mobile sidebar */}
  <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
@@ -112,5 +137,6 @@ export default function DashboardLayout({
  <KeyboardShortcutsModal />
  <TestModeBadge />
  </div>
+ </TooltipProvider>
  );
 }

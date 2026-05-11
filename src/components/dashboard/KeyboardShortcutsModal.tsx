@@ -12,6 +12,7 @@ interface Shortcut {
 const SHORTCUTS: Shortcut[] = [
  // Navigation
  { group: "Navigation", keys: ["⌘", "K"], label: "Open global search" },
+ { group: "Navigation", keys: ["["], label: "Collapse / expand sidebar" },
  { group: "Navigation", keys: ["J"], label: "Next review in list" },
  { group: "Navigation", keys: ["K"], label: "Previous review in list" },
  { group: "Navigation", keys: ["Esc"], label: "Close modal / deselect" },
