@@ -18,6 +18,8 @@ import {
 import { cn } from "@/lib/utils";
 import { useUsage } from "@/hooks/useUsage";
 import { usePlan } from "@/hooks/usePlan";
+import { useTeamRole } from "@/hooks/useTeamRole";
+import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/use-toast";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -100,6 +102,17 @@ function FeatureItem({ text }: { text: string }) {
 }
 
 export default function BillingPage() {
+ const router = useRouter();
+ const { isOwner, isLoading: roleLoading } = useTeamRole();
+
+ // Billing is owner-only. Members who land here via direct URL or stale
+ // bookmark get redirected back to the dashboard.
+ useEffect(() => {
+ if (!roleLoading && !isOwner) {
+ router.replace("/dashboard");
+ }
+ }, [roleLoading, isOwner, router]);
+
  const [loading, setLoading] = useState<string | null>(null);
  const [userEmail, setUserEmail] = useState("");
  const [userName, setUserName] = useState("");
@@ -276,6 +289,11 @@ export default function BillingPage() {
  }
 
  const upgradeTargetCard = PLAN_CARDS.find((p) => p.key === upgradeTarget);
+
+ // Don't render the billing UI for non-owners while the redirect is in flight.
+ if (!roleLoading && !isOwner) {
+ return null;
+ }
 
  return (
  <div className="space-y-6">

@@ -30,12 +30,20 @@ export function useUsage() {
       // get the owner's plan and period anchor (bypasses RLS on the server).
       const planRes = await fetch('/api/plan');
       let resolvedPeriodStart = new Date().toISOString();
+      // Quota is pooled at the workspace owner — the usage row lives under
+      // owner.id, so team members must read it filtered by that id (RLS on
+      // public.usage allows team members to select rows where user_id =
+      // get_effective_owner_id(auth.uid())).
+      let effectiveUserId = user.id;
       if (planRes.ok) {
         const planData = await planRes.json();
         setPlanId(planData.plan ?? 'free');
         if (planData.usage_period_start) {
           resolvedPeriodStart = planData.usage_period_start;
           setPeriodStart(resolvedPeriodStart);
+        }
+        if (planData.workspace_owner_id) {
+          effectiveUserId = planData.workspace_owner_id;
         }
       }
 
@@ -44,7 +52,7 @@ export function useUsage() {
       const { data: usageRow } = await supabase
         .from('usage')
         .select('ai_replies_used, auto_replies_used, sms_sent, reviews_fetched, period_key')
-        .eq('user_id', user.id)
+        .eq('user_id', effectiveUserId)
         .eq('period_key', userPeriodKey)
         .single();
 

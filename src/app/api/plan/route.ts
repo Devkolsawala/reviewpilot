@@ -20,7 +20,7 @@ export async function GET() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ plan: "free", trial_ends_at: null, usage_period_start: null, role: "owner" as TeamRole });
+    return NextResponse.json({ plan: "free", trial_ends_at: null, usage_period_start: null, role: "owner" as TeamRole, workspace_owner_id: null });
   }
 
   const adminClient = createAdminClient();
@@ -51,6 +51,7 @@ export async function GET() {
       usage_period_start: periodStart,
       subscription_cancel_at: null,
       role: "owner" as TeamRole,
+      workspace_owner_id: user.id,
     });
   }
 
@@ -136,6 +137,7 @@ export async function GET() {
       usage_period_start: ownerProfile?.usage_period_start ?? null,
       subscription_cancel_at: ownerCancelAt,
       role,
+      workspace_owner_id: profile.owner_id,
     });
   }
 
@@ -180,6 +182,7 @@ export async function GET() {
         usage_period_start: ownerProfile?.usage_period_start ?? null,
         subscription_cancel_at: ownerProfile?.subscription_cancel_at ?? null,
         role,
+        workspace_owner_id: pendingInvite.owner_id,
       });
     }
   }
@@ -191,5 +194,6 @@ export async function GET() {
     usage_period_start: profile.usage_period_start ?? null,
     subscription_cancel_at: profile.subscription_cancel_at ?? null,
     role: "owner" as TeamRole,
+    workspace_owner_id: user.id,
   });
 }

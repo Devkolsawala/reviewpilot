@@ -302,6 +302,7 @@ export function Sidebar({ collapsed, mobile }: { collapsed?: boolean; mobile?: b
  {/* Plan badge footer */}
  <div className="border-t border-border/60 p-3">
  {collapsed ? (
+ isOwner ? (
  <Link
  href="/dashboard/settings/billing"
  className="flex items-center justify-center rounded-lg p-2 bg-[linear-gradient(135deg,rgba(99,102,241,0.15),rgba(217,70,239,0.15))] ring-1 ring-accent/30"
@@ -309,6 +310,14 @@ export function Sidebar({ collapsed, mobile }: { collapsed?: boolean; mobile?: b
  >
  <Sparkles className="h-4 w-4 text-accent" />
  </Link>
+ ) : (
+ <div
+ className="flex items-center justify-center rounded-lg p-2 bg-[linear-gradient(135deg,rgba(99,102,241,0.15),rgba(217,70,239,0.15))] ring-1 ring-accent/30"
+ title={`${plan.name} Plan`}
+ >
+ <Sparkles className="h-4 w-4 text-accent" />
+ </div>
+ )
  ) : (
  <div className="relative overflow-hidden rounded-xl border border-border/60 bg-[linear-gradient(135deg,rgba(99,102,241,0.08)_0%,rgba(139,92,246,0.05)_50%,rgba(217,70,239,0.08)_100%)] p-3.5 backdrop-blur-sm">
  <div className="flex items-center gap-2 mb-1.5">
@@ -355,12 +364,18 @@ export function Sidebar({ collapsed, mobile }: { collapsed?: boolean; mobile?: b
  )}
  </>
  )}
+ {isOwner ? (
  <Link
  href="/dashboard/settings/billing"
  className="block text-center text-xs font-semibold text-white bg-[linear-gradient(135deg,#6366f1_0%,#8b5cf6_50%,#d946ef_100%)] hover:brightness-110 rounded-lg py-1.5 transition-all shadow-[0_0_16px_-4px_hsl(var(--ring)/0.6)]"
  >
  {plan.name === "Free" ? "Upgrade Plan" : "Manage Plan"}
  </Link>
+ ) : (
+ <p className="text-center text-[10px] text-muted-foreground/70 mt-1">
+ Only the workspace owner can manage billing.
+ </p>
+ )}
  </div>
  )}
  </div>
