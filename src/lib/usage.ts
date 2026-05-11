@@ -4,6 +4,20 @@ import { getPlan, USAGE_PERIOD } from './plans';
 
 type SupabaseClient = ReturnType<typeof createClient>;
 
+/**
+ * Server-only admin client used for profile lookups. Profile RLS does not
+ * permit a team member to read the workspace owner's row, so usage helpers
+ * use the service-role key to resolve `owner_id`, `usage_period_start`, and
+ * `plan` regardless of the caller. The caller is always pre-authenticated
+ * by the route — this client is only used for reads keyed on a known userId.
+ */
+function getProfileAdminClient() {
+  return createAdminClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
+
 export interface UsageCheck {
   allowed: boolean;
   current: number;
@@ -27,7 +41,13 @@ async function fetchProfile(
   supabase: SupabaseClient | ReturnType<typeof createAdminClient>,
   userId: string
 ): Promise<{ plan: string; usage_period_start: string | null; created_at: string | null }> {
-  const { data } = await (supabase as SupabaseClient)
+  // Always use the admin client: a team member calling this for the workspace
+  // owner's id would otherwise be blocked by RLS on profiles, fall back to
+  // defaults, and compute the wrong period_key (anchoring usage to "today"
+  // instead of the owner's signup date — which silently lost increments).
+  void supabase;
+  const admin = getProfileAdminClient();
+  const { data } = await admin
     .from('profiles')
     .select('plan, usage_period_start, created_at')
     .eq('id', userId)
@@ -46,7 +66,11 @@ async function resolveOwnerId(
   supabase: SupabaseClient | ReturnType<typeof createAdminClient>,
   userId: string
 ): Promise<string> {
-  const { data } = await (supabase as SupabaseClient)
+  // Use admin client for consistency with fetchProfile — though the member's
+  // own profile is readable via RLS, this avoids any future policy drift.
+  void supabase;
+  const admin = getProfileAdminClient();
+  const { data } = await admin
     .from('profiles')
     .select('owner_id')
     .eq('id', userId)
