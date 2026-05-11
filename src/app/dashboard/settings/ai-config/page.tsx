@@ -9,7 +9,8 @@ import { Loader2, Lock } from "lucide-react";
 
 export default function AIConfigPage() {
  const { connections, loading } = useConnections();
- const { isReadOnly } = useTeamRole();
+ const { isReadOnly, canEditAIConfig } = useTeamRole();
+ const isViewOnly = !canEditAIConfig; // true for operator AND read_only
  const [selectedConnId, setSelectedConnId] = useState<string | null>(null);
 
  const activeConnections = connections.filter((c) => c.is_active);
@@ -24,10 +25,12 @@ export default function AIConfigPage() {
  </p>
  </div>
 
- {isReadOnly && (
+ {isViewOnly && (
  <div className="flex items-center gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-400">
  <Lock className="h-4 w-4 shrink-0" />
- Your role is read-only. You can view AI settings but cannot make changes.
+ {isReadOnly
+ ? "Your role is read-only. You can view AI settings but cannot make changes."
+ : "Your role does not allow editing AI configuration. Ask your workspace owner or an admin to make changes."}
  </div>
  )}
 
@@ -56,10 +59,10 @@ export default function AIConfigPage() {
 
  {/* Mount a fresh form when the selected connection changes */}
  {resolvedConnId && (
- <AppContextForm key={resolvedConnId} connectionId={resolvedConnId} disabled={isReadOnly} />
+ <AppContextForm key={resolvedConnId} connectionId={resolvedConnId} disabled={isViewOnly} />
  )}
  {!loading && !resolvedConnId && (
- <AppContextForm disabled={isReadOnly} />
+ <AppContextForm disabled={isViewOnly} />
  )}
  </div>
  );

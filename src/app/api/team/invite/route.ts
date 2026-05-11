@@ -24,8 +24,11 @@ export async function POST(request: Request) {
   if (!email || !role) {
     return NextResponse.json({ error: "email and role are required" }, { status: 400 });
   }
-  if (!["admin", "read_only"].includes(role)) {
-    return NextResponse.json({ error: "role must be admin or read_only" }, { status: 400 });
+  if (!["admin", "operator", "read_only"].includes(role)) {
+    return NextResponse.json(
+      { error: "role must be admin, operator, or read_only" },
+      { status: 400 }
+    );
   }
 
   // ── Fetch owner's profile (plan + name for email) ────────
@@ -117,7 +120,8 @@ export async function POST(request: Request) {
   const redirectTo = `${appUrl}/auth/callback?next=${next}`;
 
   const inviterName = ownerProfile.full_name || userEmail || "Your teammate";
-  const roleLabel = role === "admin" ? "Admin" : "Read-only";
+  const roleLabel =
+    role === "admin" ? "Admin" : role === "operator" ? "Operator" : "Read-only";
 
   // Shared branded email builder
   function buildInviteEmail(acceptLink: string): string {

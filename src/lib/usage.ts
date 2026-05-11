@@ -35,6 +35,25 @@ async function fetchProfile(
   return data ?? { plan: 'free', usage_period_start: null, created_at: null };
 }
 
+/**
+ * Resolves the workspace-owner user id for any caller.
+ * If the caller is a team member, returns the owner's id so that quota,
+ * limit checks, and seat-scoped resources (connections) all bill against
+ * the single workspace row instead of the member's empty row.
+ * If the caller is themselves the workspace owner, returns their own id.
+ */
+async function resolveOwnerId(
+  supabase: SupabaseClient | ReturnType<typeof createAdminClient>,
+  userId: string
+): Promise<string> {
+  const { data } = await (supabase as SupabaseClient)
+    .from('profiles')
+    .select('owner_id')
+    .eq('id', userId)
+    .single();
+  return (data?.owner_id as string | null) ?? userId;
+}
+
 /** Returns the user's period start date, falling back to created_at then now(). */
 function getPeriodStartDate(profile: { usage_period_start: string | null; created_at: string | null }): string {
   return profile.usage_period_start || profile.created_at || new Date().toISOString();
@@ -107,12 +126,15 @@ export async function checkUsageLimit(
   supabase?: SupabaseClient
 ): Promise<UsageCheck> {
   const client = supabase ?? createClient();
-  const profile = await fetchProfile(client, userId);
+  // Resolve to the workspace owner so quota is pooled across all team
+  // members (admin/operator generations all count against the same row).
+  const effectiveId = await resolveOwnerId(client, userId);
+  const profile = await fetchProfile(client, effectiveId);
   const planId = profile.plan ?? 'free';
   const plan = getPlan(planId);
   const startDate = getPeriodStartDate(profile);
   const periodKey = USAGE_PERIOD.getUserPeriodKey(startDate);
-  const usage = await fetchUsage(client, userId, periodKey);
+  const usage = await fetchUsage(client, effectiveId, periodKey);
 
   let current = 0;
   let limit = 0;
@@ -124,11 +146,12 @@ export async function checkUsageLimit(
     current = (usage.sms_sent as number) ?? 0;
     limit = plan.limits.sms_per_period;
   } else {
-    // connections — not period-based
+    // connections — not period-based; scoped to the workspace owner so
+    // an operator adding a connection still counts against the seat limit.
     const { count } = await client
       .from('connections')
       .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId)
+      .eq('user_id', effectiveId)
       .eq('is_active', true);
     current = count ?? 0;
     limit = plan.limits.connections;
@@ -156,10 +179,13 @@ export async function incrementUsage(
   supabase?: SupabaseClient
 ) {
   const client = supabase ?? createClient();
-  const profile = await fetchProfile(client, userId);
+  // Pool usage against the workspace owner so admin/operator generations
+  // all decrement the same quota the owner sees.
+  const effectiveId = await resolveOwnerId(client, userId);
+  const profile = await fetchProfile(client, effectiveId);
   const startDate = getPeriodStartDate(profile);
   const periodKey = USAGE_PERIOD.getUserPeriodKey(startDate);
-  await upsertUsage(client, userId, field, amount, periodKey);
+  await upsertUsage(client, effectiveId, field, amount, periodKey);
 }
 
 // ── Admin (service role) for cron jobs ─────────────────────────────────────────

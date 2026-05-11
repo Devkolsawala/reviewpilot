@@ -120,14 +120,20 @@ export function Sidebar({ collapsed, mobile }: { collapsed?: boolean; mobile?: b
  const pathname = usePathname();
  const pendingCount = usePendingReviewCount();
  const { plan, totalAiUsed, aiLimit, isAiUnlimited, aiPercent, resetDate, periodLabel, isLoading: usageLoading } = useUsage();
- const { isOwner } = useTeamRole();
+ const { isOwner, canManageConnections, canEditAIConfig } = useTeamRole();
  const [settingsOpen, setSettingsOpen] = useState(
  pathname.startsWith("/dashboard/settings")
  );
 
  const visibleSettingsNav = SETTINGS_NAV.filter((item) => {
- if (!isOwner && item.href === "/dashboard/settings/connections") return false;
- if (!isOwner && item.href === "/dashboard/settings/billing") return false;
+ // Connections: owner, admin, operator (everyone except read_only)
+ if (item.href === "/dashboard/settings/connections" && !canManageConnections) return false;
+ // AI Configuration: owner + admin only (operator and read_only cannot edit)
+ if (item.href === "/dashboard/settings/ai-config" && !canEditAIConfig) return false;
+ // Notifications: owner + admin only
+ if (item.href === "/dashboard/settings/notifications" && !canEditAIConfig) return false;
+ // Billing: owner only
+ if (item.href === "/dashboard/settings/billing" && !isOwner) return false;
  return true;
  });
 

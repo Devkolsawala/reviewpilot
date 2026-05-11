@@ -58,7 +58,7 @@ function isSyncOverdue(iso: string | null | undefined): boolean {
 export default function ConnectionsPage() {
  const { connections, loading, refetch } = useConnections();
  const { planId } = usePlan();
- const { isOwner } = useTeamRole();
+ const { canManageConnections } = useTeamRole();
  const searchParams = useSearchParams();
  const [showWizard, setShowWizard] = useState(false);
  const [syncingId, setSyncingId] = useState<string | null>(null);
@@ -181,7 +181,7 @@ export default function ConnectionsPage() {
  Connect your Google Business Profile or Play Store to start managing reviews.
  </p>
  </div>
- {isOwner && !showWizard && (
+ {canManageConnections && !showWizard && (
  <Button className="w-full sm:w-auto h-11 sm:h-10" onClick={() => setShowWizard(true)}>
  <Plus className="mr-2 h-4 w-4" />
  Add Connection
@@ -229,7 +229,7 @@ export default function ConnectionsPage() {
  <p className="text-sm text-muted-foreground mb-5">
  Connect your first review source to start managing reviews with AI.
  </p>
- {isOwner && (
+ {canManageConnections && (
  <Button onClick={() => setShowWizard(true)}>
  <Plus className="mr-2 h-4 w-4" />
  Add Your First Connection

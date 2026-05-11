@@ -30,7 +30,7 @@ import { Plus, Trash2, Crown, Loader2, Clock, Users } from "lucide-react";
 interface Member {
  id: string;
  email: string;
- role: "admin" | "read_only";
+ role: "admin" | "operator" | "read_only";
  status: "pending" | "active";
  invited_at: string;
  accepted_at: string | null;
@@ -48,7 +48,7 @@ export default function TeamPage() {
  const [loading, setLoading] = useState(true);
 
  const [inviteEmail, setInviteEmail] = useState("");
- const [inviteRole, setInviteRole] = useState<"admin" | "read_only">("admin");
+ const [inviteRole, setInviteRole] = useState<"admin" | "operator" | "read_only">("admin");
  const [inviting, setInviting] = useState(false);
  const [inviteError, setInviteError] = useState("");
  const [inviteSuccess, setInviteSuccess] = useState("");
@@ -124,7 +124,7 @@ export default function TeamPage() {
  await fetchMembers();
  }
 
- async function handleRoleChange(memberId: string, role: "admin" | "read_only") {
+ async function handleRoleChange(memberId: string, role: "admin" | "operator" | "read_only") {
  setUpdatingRoleId(memberId);
  await fetch(`/api/team/members/${memberId}/role`, {
  method: "PATCH",
@@ -196,7 +196,7 @@ export default function TeamPage() {
  <Label>Role</Label>
  <Select
  value={inviteRole}
- onValueChange={(v) => setInviteRole(v as "admin" | "read_only")}
+ onValueChange={(v) => setInviteRole(v as "admin" | "operator" | "read_only")}
  disabled={seatsFull || inviting}
  >
  <SelectTrigger className="w-32">
@@ -204,6 +204,7 @@ export default function TeamPage() {
  </SelectTrigger>
  <SelectContent>
  <SelectItem value="admin">Admin</SelectItem>
+ <SelectItem value="operator">Operator</SelectItem>
  <SelectItem value="read_only">Read-only</SelectItem>
  </SelectContent>
  </Select>
@@ -312,7 +313,7 @@ export default function TeamPage() {
  {/* Role selector — owner only */}
  <Select
  value={member.role}
- onValueChange={(v) => handleRoleChange(member.id, v as "admin" | "read_only")}
+ onValueChange={(v) => handleRoleChange(member.id, v as "admin" | "operator" | "read_only")}
  disabled={updatingRoleId === member.id}
  >
  <SelectTrigger className="h-8 w-28 text-xs">
@@ -324,6 +325,7 @@ export default function TeamPage() {
  </SelectTrigger>
  <SelectContent>
  <SelectItem value="admin">Admin</SelectItem>
+ <SelectItem value="operator">Operator</SelectItem>
  <SelectItem value="read_only">Read-only</SelectItem>
  </SelectContent>
  </Select>
@@ -344,8 +346,19 @@ export default function TeamPage() {
  </Button>
  </>
  ) : (
- <Badge variant="secondary" className="text-xs capitalize">
- {member.role === "read_only" ? "Read-only" : "Admin"}
+ <Badge
+ variant="secondary"
+ className={
+ member.role === "operator"
+ ? "text-xs bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30"
+ : "text-xs capitalize"
+ }
+ >
+ {member.role === "read_only"
+ ? "Read-only"
+ : member.role === "operator"
+ ? "Operator"
+ : "Admin"}
  </Badge>
  )}
  </div>
@@ -359,8 +372,9 @@ export default function TeamPage() {
  <Card>
  <CardContent className="pt-4 pb-4">
  <p className="text-xs font-medium text-muted-foreground mb-2">Role permissions</p>
- <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-xs text-muted-foreground">
- <div><span className="font-medium text-foreground">Admin</span> — view + reply + AI config</div>
+ <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-1 text-xs text-muted-foreground">
+ <div><span className="font-medium text-foreground">Admin</span> — view + reply + AI config + connections</div>
+ <div><span className="font-medium text-foreground">Operator</span> — view + reply + connections</div>
  <div><span className="font-medium text-foreground">Read-only</span> — view only, no actions</div>
  </div>
  </CardContent>

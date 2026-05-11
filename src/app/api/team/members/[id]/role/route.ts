@@ -17,8 +17,11 @@ export async function PATCH(
   const body = await request.json();
   const { role } = body as { role?: string };
 
-  if (!role || !["admin", "read_only"].includes(role)) {
-    return NextResponse.json({ error: "role must be admin or read_only" }, { status: 400 });
+  if (!role || !["admin", "operator", "read_only"].includes(role)) {
+    return NextResponse.json(
+      { error: "role must be admin, operator, or read_only" },
+      { status: 400 }
+    );
   }
 
   const { error } = await supabase

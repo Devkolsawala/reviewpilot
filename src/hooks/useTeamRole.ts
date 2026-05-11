@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 
-export type TeamRole = 'owner' | 'admin' | 'read_only';
+export type TeamRole = 'owner' | 'admin' | 'operator' | 'read_only';
 
 /**
  * Returns the current user's role in the workspace.
@@ -33,7 +33,16 @@ export function useTeamRole() {
     role,
     isOwner: role === 'owner',
     isAdmin: role === 'admin',
+    isOperator: role === 'operator',
     isReadOnly: role === 'read_only',
+    // True when the user can edit AI configuration (tone, app context,
+    // auto-reply rules). Operator and read_only cannot.
+    canEditAIConfig: role === 'owner' || role === 'admin',
+    // True when the user can post replies (manual + AI generate).
+    // Only read_only is blocked.
+    canReply: role !== 'read_only',
+    // True when the user can add / remove connections (Play Store, GBP, WhatsApp).
+    canManageConnections: role === 'owner' || role === 'admin' || role === 'operator',
     isLoading,
   };
 }
