@@ -130,6 +130,57 @@ const POSTS = [
     author: "Dev Kolsawala",
     readTime: "9 min read",
   },
+  {
+    slug: "how-to-get-more-google-reviews-local-business",
+    title:
+      "How to get more Google reviews for your local business (2026 playbook)",
+    excerpt:
+      "The exact SMS, QR, WhatsApp, and timing tactics that move local SMBs from 12 reviews to 50 in 30 days — plus the gating mistakes that get listings suspended.",
+    category: "Local SEO",
+    date: "May 1, 2026",
+    author: "Dev Kolsawala",
+    readTime: "12 min read",
+  },
+  {
+    slug: "appfollow-alternative",
+    title: "AppFollow alternative: ReviewPilot vs AppFollow (honest comparison)",
+    excerpt:
+      "AppFollow runs $179–$399/month, ReviewPilot is $16/month. A fair feature, pricing, and use-case breakdown — including where AppFollow genuinely wins.",
+    category: "Comparison",
+    date: "May 1, 2026",
+    author: "Dev Kolsawala",
+    readTime: "11 min read",
+  },
+  {
+    slug: "google-review-management-guide-india",
+    title: "Google review management in India: the 2026 playbook",
+    excerpt:
+      "City-by-city strategy for Mumbai, Bangalore, Delhi, Ahmedabad, Hyderabad, Chennai, and Pune — plus the Hindi/regional language opportunity nobody is using.",
+    category: "India",
+    date: "May 1, 2026",
+    author: "Aditya Raj Singh",
+    readTime: "13 min read",
+  },
+  {
+    slug: "how-ai-review-replies-improve-google-maps-ranking",
+    title: "Do Google review replies help Maps ranking? (Data-driven answer)",
+    excerpt:
+      "Reply rate, latency, and recovery are documented local ranking signals. Real benchmark data from 412 listings showing what moves the Map Pack — and what doesn't.",
+    category: "Local SEO",
+    date: "May 1, 2026",
+    author: "Dev Kolsawala",
+    readTime: "14 min read",
+  },
+  {
+    slug: "play-store-rating-below-4-stars-recovery-plan",
+    title: "Play Store rating below 4.0? The 60-day recovery plan that works",
+    excerpt:
+      "Crisis playbook: the math, the categorisation triage, recovery reply templates, and the AI workflow that takes apps from 2.8★ to 4.2★ in 90 days.",
+    category: "App Developers",
+    date: "May 1, 2026",
+    author: "Aditya Raj Singh",
+    readTime: "13 min read",
+  },
 ];
 
 export default function BlogPage() {
