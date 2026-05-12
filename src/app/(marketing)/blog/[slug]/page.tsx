@@ -4,13 +4,15 @@ import Link from "next/link";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { JsonLd, SITE_URL, SITE_OG } from "@/components/marketing/JsonLd";
+import { CATEGORY_STYLES, getBlogCategory } from "@/components/blog/category";
+import { ReadingProgress } from "@/components/blog/ReadingProgress";
 import { BLOG_POSTS, type BlogPost } from "./posts";
 
 export function generateStaticParams() {
   return Object.keys(BLOG_POSTS).map((slug) => ({ slug }));
 }
 
-export function generateMetadata({ params }: { params: { slug: string } }): Metadata {
+export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   const post = BLOG_POSTS[params.slug];
   if (!post) return {};
   const url = `${SITE_URL}/blog/${params.slug}`;
@@ -146,6 +148,8 @@ function renderMarkdown(md: string): React.ReactNode {
 export default function BlogPostPage({ params }: { params: { slug: string } }) {
   const post: BlogPost | undefined = BLOG_POSTS[params.slug];
   if (!post) notFound();
+  const category = getBlogCategory(post.tags);
+  const categoryStyle = CATEGORY_STYLES[category];
 
   const blogSchema = {
     "@context": "https://schema.org",
@@ -165,36 +169,32 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
   };
 
   return (
-    <div className="py-24 sm:py-28">
+    <div className="bg-zinc-950 py-24 sm:py-28">
+      <ReadingProgress />
       <JsonLd data={blogSchema} />
       <article className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
-        <Button variant="ghost" size="sm" className="mb-8" asChild>
-          <Link href="/blog">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to blog
-          </Link>
-        </Button>
+        <Link
+          href="/blog"
+          className="mb-8 inline-flex items-center gap-2 text-sm text-zinc-500 transition-colors hover:text-white"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Blog
+        </Link>
 
-        <div className="flex flex-wrap gap-2 mb-4">
-          {post.tags.map((t) => (
-            <span
-              key={t}
-              className="rounded-full border border-border/60 bg-background/60 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-foreground/80 backdrop-blur-sm"
-            >
-              {t}
-            </span>
-          ))}
-        </div>
-
-        <h1 className="font-sans text-3xl font-semibold tracking-tight sm:text-4xl lg:text-5xl mb-5">
+        <h1 className="mb-5 font-sans text-3xl font-semibold tracking-tight text-white sm:text-4xl lg:text-5xl">
           {post.title}
         </h1>
 
-        <div className="flex items-center gap-3 text-[13px] text-muted-foreground mb-12">
-          <span>By {post.author}</span>
-          <span aria-hidden="true">·</span>
+        <div className="mb-12 flex flex-wrap items-center gap-3 font-mono text-xs text-zinc-500">
+          <span
+            className={`rounded-full border px-2.5 py-1 uppercase tracking-wider ${categoryStyle.badge}`}
+          >
+            {category}
+          </span>
+          <span>{post.author}</span>
+          <span aria-hidden="true">/</span>
           <time dateTime={post.datePublished}>{post.dateDisplay}</time>
-          <span aria-hidden="true">·</span>
+          <span aria-hidden="true">/</span>
           <span>{post.readTime}</span>
         </div>
 

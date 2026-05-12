@@ -1,0 +1,254 @@
+---
+title: "WhatsApp Business API for Review Collection: India Setup Guide"
+metaTitle: "WhatsApp Business API for Review Collection: India Setup Guide"
+metaDescription: "Technical guide to using the official WhatsApp Business API to collect Google reviews in India with BSP selection, templates, compliance, and tracking."
+author: "Dev Kolsawala"
+datePublished: "2026-05-12"
+dateDisplay: "May 12, 2026"
+readTime: "13 min read"
+tags: ["WhatsApp", "Local Business", "Review Automation"]
+---
+
+WhatsApp business api review collection India setup is the grown-up version of asking customers manually from the WhatsApp Business App. The app is fine for a small owner sending a few messages. It breaks when you need templates, multiple staff members, location-specific review links, opt-outs, reporting, and a reliable follow-up sequence.
+
+For Indian SMBs, the official API can turn review collection into a measurable workflow: completed service triggers a message, the customer clicks the correct Google review link, and the business tracks which locations and teams generate reviews.
+
+## WhatsApp Business App vs official API
+
+The WhatsApp Business App is simple. One phone, labels, quick replies, catalog, and manual messaging. It is useful for a single-location business with low volume.
+
+The official API is built for systems:
+
+- Multiple agents or automated workflows.
+- Approved message templates.
+- CRM, POS, booking, or billing triggers.
+- Delivery, read, click, and opt-out tracking.
+- Message quality monitoring.
+- Scalable location-specific review requests.
+
+The app does not scale cleanly past manual effort. Even if you can send more than 50 messages, the operational ceiling arrives quickly: staff forget, links go to the wrong branch, follow-ups are inconsistent, and reporting is guesswork.
+
+## Choose the right BSP in India
+
+Most Indian SMBs use a Business Solution Provider instead of integrating directly with Meta on day one. Common options include Interakt, Wati, AiSensy, Gupshup, and direct Meta Cloud API through a developer team. Pricing changes often, so compare current INR pricing before committing.
+
+Evaluate BSPs on:
+
+- Template approval support.
+- Indian support hours.
+- Transparent conversation and platform fees.
+- Webhooks and API documentation.
+- CRM or Shopify/POS integrations.
+- Opt-out handling.
+- Multi-agent inbox quality.
+- Data export and reporting.
+
+Do not choose only by lowest monthly fee. A cheap BSP with weak template support can delay review collection for weeks. A slightly higher plan with reliable support may be cheaper in operational terms.
+
+For tool selection beyond WhatsApp, compare the [best review management software in India](/blog/best-review-management-software-india-2026).
+
+## Template approval for review requests
+
+If you message outside the 24-hour customer service window, you need an approved template. A review request template should be clear, non-promotional, and non-incentivized.
+
+Good template:
+
+> Hi {{1}}, thank you for choosing {{2}}. If your experience was good, please share a quick Google review here: {{3}}. Your feedback helps other local customers find us.
+
+Risky template:
+
+> Give us 5 stars today and get 10 percent off your next visit.
+
+The second one is a bad idea. It mixes incentive, rating pressure, and promotion. Keep review asks honest. Ask for feedback, not guaranteed praise.
+
+Build templates for categories:
+
+- First review ask after service.
+- Reminder after three days.
+- Private feedback follow-up for unresolved cases.
+- Thank-you message after review, if appropriate.
+
+Keep placeholders minimal. Too many variables create approval and QA problems.
+
+## Session messages vs template messages
+
+WhatsApp has a customer service window. When a user messages your business, you can usually respond within the session window without a pre-approved template. If you initiate a review request after the window, you need a template.
+
+For review collection, most automated sends are template messages because the business initiates after a transaction. But if the customer is already chatting with support and says they are happy, a staff member can send the review link naturally within the conversation.
+
+Design rule: use templates for automation, session messages for active human conversations.
+
+## TRAI, consent, and opt-outs
+
+Review collection must respect consent. Customers should know WhatsApp may be used for service updates and feedback. Do not import purchased lists. Do not send review requests to people who have opted out. Keep promotional content out of transactional review templates.
+
+Practical compliance checklist:
+
+- Capture WhatsApp consent during booking, checkout, or registration.
+- Store consent timestamp and source.
+- Include opt-out handling in your workflow.
+- Sync opt-outs back to CRM.
+- Avoid repeated reminders.
+- Coordinate with your BSP on template category and policy.
+
+For a non-technical collection playbook, see [how to get more Google reviews](/blog/how-to-get-more-google-reviews-2026) and [Google Business Profile reviews](/blog/google-business-profile-review-management-india-2026).
+
+## Generate a trackable Google review link
+
+Each location needs its own Google review link. Use the Google Business Profile review form link or Place ID based link, then wrap it with tracking if it does not break the user experience.
+
+Tracking options:
+
+- Short link with location and campaign ID.
+- Redirect endpoint that logs click then sends to Google.
+- UTM parameters only where they do not interfere.
+- Review count comparison by location after sends.
+
+Avoid making the user pass through a landing page. Every extra tap reduces conversion. The link should open the review flow quickly.
+
+For multi-location businesses, store review links in a location table:
+
+- Location ID.
+- Branch name.
+- City/locality.
+- Google review link.
+- WhatsApp template language.
+- Frequency cap settings.
+
+This prevents the common mistake of sending all customers to the head-office listing.
+
+## Connect the API to real business events
+
+The API is useful only when it listens to the right event. Do not trigger review requests from invoice creation if invoices are sometimes created before service delivery. Do not trigger from appointment booking if the customer has not visited yet. The trigger should mean "the customer experienced the service and there is no known unresolved issue."
+
+Good trigger events:
+
+- POS bill closed and paid.
+- Appointment marked completed.
+- Delivery marked delivered with no complaint.
+- Repair job closed by technician.
+- Clinic visit completed and non-sensitive feedback allowed.
+- Course milestone completed.
+
+Bad trigger events:
+
+- Lead created.
+- Booking confirmed.
+- Payment attempted but not settled.
+- Order cancelled.
+- Complaint opened.
+- Refund pending.
+
+This distinction protects rating quality. A technically successful automation that sends at the wrong moment will create bad reviews faster than manual asking.
+
+## Design failure handling
+
+WhatsApp messages fail. Numbers are invalid, users block businesses, templates are rejected, and webhooks can arrive late. Build failure handling before launch.
+
+Track these states:
+
+- Eligible but not sent.
+- Sent.
+- Delivered.
+- Read.
+- Clicked.
+- Failed.
+- Opted out.
+- Review detected.
+
+If a message fails, do not automatically fall back to SMS unless the customer consented to SMS. If a template is rejected, pause the campaign and fix the template instead of switching to a risky free-form workaround. If a customer opts out, suppress them across all review campaigns.
+
+## Language and personalization strategy
+
+India rewards language fit. If a customer booked in Hindi, received service in Marathi, or selected Tamil in your app, the review request should not always be English. Start with two or three language templates where your customer base justifies it.
+
+Personalization should be useful, not creepy. Use first name, business name, branch, and service type. Avoid overloading the message with staff names, bill amounts, or medical/service details that may feel sensitive.
+
+Good:
+
+> Hi {{1}}, thank you for visiting {{2}} {{3}} today. If everything went well, please share a quick Google review: {{4}}
+
+Too much:
+
+> Hi {{1}}, after your Rs {{2}} dermatology procedure with {{3}}, please review us here.
+
+The second version may be technically possible but contextually wrong. Privacy and taste matter.
+
+## Follow-up sequence that does not annoy customers
+
+Use a conservative sequence:
+
+Day 0: Send review request 2 to 4 hours after completed service.
+
+Day 3: Send one reminder if no click or no review signal exists.
+
+Day 30 or later: Do not ask again unless there is a new completed transaction.
+
+Frequency cap by customer and phone number. For salons and clinics, one request every 60 to 90 days is often enough. For restaurants, cap by visit frequency and avoid asking weekly regulars every time.
+
+The reminder should be softer than the first ask:
+
+> Hi {{1}}, just a quick reminder. If you have a minute, your Google review for {{2}} would help other customers choose us: {{3}}
+
+No guilt, no pressure, no discount.
+
+## Measure conversion without GA4 noise
+
+GA4 often adds noise because the final review happens inside Google surfaces you do not fully control. Use operational attribution instead.
+
+Track:
+
+- Eligible transactions.
+- Messages sent.
+- Delivered messages.
+- Failed messages.
+- Link clicks.
+- New reviews within attribution window.
+- Rating distribution.
+- Location-level review growth.
+- Opt-outs.
+
+Use a 1-day, 3-day, and 7-day attribution view. If WhatsApp sends rise on Monday and reviews rise by Wednesday, the signal is visible even without perfect user-level attribution.
+
+Also measure reply coverage. Collecting more reviews without replying creates a new backlog. Pair WhatsApp collection with [AI review replies](/blog/ai-vs-human-review-replies-2026) so public engagement scales with volume.
+
+Review quality matters as much as count. If automation increases reviews but most comments are one-word ratings, train staff to ask customers for a specific honest note: food, haircut, doctor experience, delivery speed, or support quality. Specific reviews convert future customers better than anonymous stars because they mirror the doubts searchers already have before calling, booking, or asking for directions.
+
+Finally, compare review text by source. If WhatsApp reviews mention staff and service details while QR-code reviews are mostly blank, prioritize WhatsApp for high-value customers and keep QR as a passive backup at the counter for walk-ins and repeat visitors.
+
+## Implementation checklist
+
+1. Choose BSP or direct Cloud API path.
+2. Verify Meta Business and WhatsApp number.
+3. Capture consent in booking or billing flow.
+4. Create review request templates.
+5. Map each transaction to the correct GBP location link.
+6. Add frequency caps and opt-out sync.
+7. Trigger sends after successful service completion.
+8. Track delivery, clicks, reviews, and opt-outs.
+9. Reply to new reviews within 24 hours.
+10. Review conversion by location every week.
+
+ReviewPilot at https://www.reviewpilot.co.in can sit on top of this workflow for Indian businesses that want WhatsApp review collection, Google review tracking, and reply automation without building the full system internally.
+
+## FAQ
+
+## Do I need the official WhatsApp Business API for review collection?
+
+Not always. A very small business can start with the WhatsApp Business App manually. You need the API when you want automated triggers, approved templates, multiple agents, delivery tracking, opt-out handling, location-specific links, and reliable reporting.
+
+## Which WhatsApp BSP is best for Indian SMBs?
+
+There is no universal best. Compare Interakt, Wati, AiSensy, Gupshup, and direct Meta Cloud API on INR pricing, support quality, template approval help, integrations, reporting, and opt-out handling. Pick the provider that reduces operational work, not just monthly fee.
+
+## Can I send Google review links on WhatsApp?
+
+Yes, if the customer has a relationship with your business and the message follows WhatsApp and local compliance requirements. Use an honest review ask, not an incentive. Send the correct Google review link for the branch the customer visited.
+
+## How many reminders should I send?
+
+One reminder after about three days is usually enough. More reminders can annoy customers and increase opt-outs. Use frequency caps so repeat customers are not asked after every small interaction.
+
+## How do I track WhatsApp review conversion?
+
+Track eligible transactions, delivered messages, link clicks, new reviews within 1 to 7 days, rating distribution, and opt-outs. Perfect attribution is difficult because reviews happen inside Google, but location-level lift and timing usually reveal performance clearly.

@@ -1,3 +1,6 @@
+import fs from "node:fs";
+import path from "node:path";
+
 export type BlogPost = {
   title: string;
   metaTitle?: string;
@@ -10,7 +13,74 @@ export type BlogPost = {
   content: string; // simple markdown
 };
 
-export const BLOG_POSTS: Record<string, BlogPost> = {
+const CONTENT_BLOG_DIR = path.join(process.cwd(), "content", "blog");
+
+const MDX_POST_SLUGS = [
+  "google-play-console-review-management-guide",
+  "google-play-console-aso-keywords-india",
+  "whatsapp-review-request-automation-india",
+  "how-to-respond-to-play-store-reviews-fast",
+  "app-rating-improvement-strategy-2026",
+  "whatsapp-business-api-review-collection",
+] as const;
+
+function parseFrontmatter(raw: string, slug: string): BlogPost {
+  const match = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/);
+  if (!match) {
+    throw new Error(`Missing frontmatter for blog post: ${slug}`);
+  }
+
+  const data: Partial<Omit<BlogPost, "content">> = {};
+
+  for (const line of match[1].split(/\r?\n/)) {
+    const separator = line.indexOf(":");
+    if (separator === -1) continue;
+
+    const key = line.slice(0, separator).trim() as keyof Omit<BlogPost, "content">;
+    const value = line.slice(separator + 1).trim();
+
+    if (key === "tags") {
+      data.tags = JSON.parse(value) as string[];
+      continue;
+    }
+
+    data[key] = value.replace(/^"|"$/g, "") as never;
+  }
+
+  const required = [
+    "title",
+    "metaTitle",
+    "metaDescription",
+    "author",
+    "datePublished",
+    "dateDisplay",
+    "readTime",
+    "tags",
+  ] as const;
+
+  for (const key of required) {
+    if (!data[key]) throw new Error(`Missing ${key} in blog post: ${slug}`);
+  }
+
+  return {
+    title: data.title!,
+    metaTitle: data.metaTitle,
+    metaDescription: data.metaDescription!,
+    author: data.author!,
+    datePublished: data.datePublished!,
+    dateDisplay: data.dateDisplay!,
+    readTime: data.readTime!,
+    tags: data.tags!,
+    content: match[2].trim(),
+  };
+}
+
+function loadMdxPost(slug: string): BlogPost {
+  const filePath = path.join(CONTENT_BLOG_DIR, `${slug}.mdx`);
+  return parseFrontmatter(fs.readFileSync(filePath, "utf8"), slug);
+}
+
+const INLINE_BLOG_POSTS: Record<string, BlogPost> = {
   "how-to-get-more-google-reviews-2026": {
     title:
       "How to Get More Google Reviews in 2026: A Complete Guide for Indian Businesses",
@@ -1862,4 +1932,9 @@ If you're below 4.0★ right now, the cost of waiting another week is real and m
 Related reading: [Play Store Developer Reply API guide](/blog/play-store-developer-reply-api-guide), [Service Account JSON Play Console setup](/blog/service-account-json-play-console-setup), [Play Store review management 2026](/blog/play-store-review-management-2026).
 `,
   },
+};
+
+export const BLOG_POSTS: Record<string, BlogPost> = {
+  ...INLINE_BLOG_POSTS,
+  ...Object.fromEntries(MDX_POST_SLUGS.map((slug) => [slug, loadMdxPost(slug)])),
 };
