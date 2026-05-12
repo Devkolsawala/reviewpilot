@@ -44,7 +44,7 @@ export async function generateReply(params: GenerateReplyParams): Promise<string
       toneOverride: params.tone,
     });
 
-    const model = process.env.XAI_MODEL || "grok-4-1-fast-reasoning";
+    const model = process.env.XAI_MODEL || "grok-4.3";
 
     // Respect local RPM cap before calling the API
     await waitForRateLimit();
@@ -63,11 +63,8 @@ export async function generateReply(params: GenerateReplyParams): Promise<string
             { role: "system", content: prompt.system },
             { role: "user", content: prompt.user },
           ],
-          temperature: 0.7,
-          max_tokens: 300,
-          top_p: 0.9,
-          // Note: grok-4-1-fast-reasoning does NOT support
-          // frequency_penalty or presence_penalty — do not add them here.
+          reasoning_effort: "low",
+          max_completion_tokens: 300,
         }),
       `generateReply(${params.review.id})`
     );
