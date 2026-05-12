@@ -43,8 +43,8 @@ export function BlogGrid({ posts }: { posts: BlogGridPost[] }) {
 
   return (
     <>
-      <div className="sticky top-16 z-40 border-y border-border/60 bg-background shadow-sm">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-2 px-4 py-4 sm:px-6 lg:px-8">
+      <div className="sticky top-14 z-40 border-y border-border/60 bg-background shadow-sm before:absolute before:inset-0 before:-z-10 before:bg-background">
+        <div className="relative mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-2 bg-background px-4 py-4 sm:px-6 lg:px-8">
           {BLOG_CATEGORIES.map((category) => {
             const isActive = active === category;
             return (
