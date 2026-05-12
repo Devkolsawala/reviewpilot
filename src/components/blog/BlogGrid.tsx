@@ -43,8 +43,8 @@ export function BlogGrid({ posts }: { posts: BlogGridPost[] }) {
 
   return (
     <>
-      <div className="sticky top-16 z-10 border-y border-border/60 bg-background/85 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-6xl gap-2 overflow-x-auto px-4 py-4 sm:px-6 lg:px-8">
+      <div className="sticky top-16 z-40 border-y border-border/60 bg-background shadow-sm">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-2 px-4 py-4 sm:px-6 lg:px-8">
           {BLOG_CATEGORIES.map((category) => {
             const isActive = active === category;
             return (
@@ -52,7 +52,7 @@ export function BlogGrid({ posts }: { posts: BlogGridPost[] }) {
                 key={category}
                 type="button"
                 onClick={() => selectCategory(category)}
-                className={`whitespace-nowrap rounded-full border px-4 py-2 text-sm transition-colors ${
+                className={`inline-flex min-h-10 items-center justify-center whitespace-nowrap rounded-full border px-4 py-2 text-center text-sm transition-colors ${
                   isActive
                     ? "border-accent bg-accent text-accent-foreground"
                     : "border-border/60 text-muted-foreground hover:border-accent/40 hover:text-foreground"
@@ -117,11 +117,11 @@ function BlogCard({ post, index }: { post: BlogGridPost; index: number }) {
       />
       <div className="relative flex items-start justify-between gap-4">
         <span
-          className={`rounded-full border px-2.5 py-1 font-mono text-xs uppercase tracking-wider ${styles.badge}`}
+          className={`inline-flex min-h-6 items-center justify-center rounded-full border px-2.5 py-1 text-center font-mono text-xs uppercase tracking-wider ${styles.badge}`}
         >
           {post.category}
         </span>
-        <span className="rounded-full border border-border/60 bg-background/50 px-2.5 py-1 font-mono text-xs text-muted-foreground">
+        <span className="inline-flex min-h-6 items-center justify-center rounded-full border border-border/60 bg-background/50 px-2.5 py-1 text-center font-mono text-xs text-muted-foreground">
           {post.readTime}
         </span>
       </div>
@@ -147,7 +147,7 @@ function BlogCard({ post, index }: { post: BlogGridPost; index: number }) {
 
       <div className="relative mt-8 flex items-center justify-between gap-4 font-mono text-xs text-muted-foreground">
         {isTall ? (
-          <span className="rounded-full border border-border/60 bg-background/50 px-3 py-1.5">
+          <span className="inline-flex items-center justify-center rounded-full border border-border/60 bg-background/50 px-3 py-1.5 text-center">
             {post.author}
           </span>
         ) : (
