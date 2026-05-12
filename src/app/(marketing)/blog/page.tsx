@@ -75,7 +75,7 @@ export default function BlogPage() {
     );
 
   return (
-    <div className="bg-zinc-950">
+    <div>
       <JsonLd data={blogListSchema} />
       <BlogHero />
       <BlogGrid posts={posts} />

@@ -169,23 +169,23 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
   };
 
   return (
-    <div className="bg-zinc-950 py-24 sm:py-28">
+    <div className="py-24 sm:py-28">
       <ReadingProgress />
       <JsonLd data={blogSchema} />
       <article className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
         <Link
           href="/blog"
-          className="mb-8 inline-flex items-center gap-2 text-sm text-zinc-500 transition-colors hover:text-white"
+          className="mb-8 inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
           Blog
         </Link>
 
-        <h1 className="mb-5 font-sans text-3xl font-semibold tracking-tight text-white sm:text-4xl lg:text-5xl">
+        <h1 className="mb-5 font-sans text-3xl font-semibold tracking-tight text-foreground sm:text-4xl lg:text-5xl">
           {post.title}
         </h1>
 
-        <div className="mb-12 flex flex-wrap items-center gap-3 font-mono text-xs text-zinc-500">
+        <div className="mb-12 flex flex-wrap items-center gap-3 font-mono text-xs text-muted-foreground">
           <span
             className={`rounded-full border px-2.5 py-1 uppercase tracking-wider ${categoryStyle.badge}`}
           >

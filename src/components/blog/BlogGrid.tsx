@@ -43,7 +43,7 @@ export function BlogGrid({ posts }: { posts: BlogGridPost[] }) {
 
   return (
     <>
-      <div className="sticky top-16 z-10 border-y border-zinc-800/80 bg-zinc-950/85 backdrop-blur-xl">
+      <div className="sticky top-16 z-10 border-y border-border/60 bg-background/85 backdrop-blur-xl">
         <div className="mx-auto flex max-w-6xl gap-2 overflow-x-auto px-4 py-4 sm:px-6 lg:px-8">
           {BLOG_CATEGORIES.map((category) => {
             const isActive = active === category;
@@ -54,8 +54,8 @@ export function BlogGrid({ posts }: { posts: BlogGridPost[] }) {
                 onClick={() => selectCategory(category)}
                 className={`whitespace-nowrap rounded-full border px-4 py-2 text-sm transition-colors ${
                   isActive
-                    ? "border-indigo-500 bg-indigo-600 text-white"
-                    : "border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-white"
+                    ? "border-accent bg-accent text-accent-foreground"
+                    : "border-border/60 text-muted-foreground hover:border-accent/40 hover:text-foreground"
                 }`}
               >
                 {category}
@@ -65,7 +65,7 @@ export function BlogGrid({ posts }: { posts: BlogGridPost[] }) {
         </div>
       </div>
 
-      <section className="bg-zinc-950 px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
+      <section className="px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
         <div className="mx-auto max-w-6xl">
           <motion.div layout className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
             <AnimatePresence mode="popLayout">
@@ -80,7 +80,7 @@ export function BlogGrid({ posts }: { posts: BlogGridPost[] }) {
               <button
                 type="button"
                 onClick={() => setVisibleCount((count) => count + LOAD_MORE_COUNT)}
-                className="rounded-full border border-zinc-700 px-6 py-3 text-sm font-medium text-zinc-400 transition-colors hover:border-indigo-500 hover:text-white"
+                className="rounded-full border border-border/70 px-6 py-3 text-sm font-medium text-muted-foreground transition-colors hover:border-accent/50 hover:text-foreground"
               >
                 Load more
               </button>
@@ -106,7 +106,7 @@ function BlogCard({ post, index }: { post: BlogGridPost; index: number }) {
       exit={{ opacity: 0, y: 12, transition: { duration: 0.16 } }}
       transition={{ duration: 0.28, delay: index * 0.06 }}
       whileHover={{ y: -4, borderColor: styles.border }}
-      className={`group relative overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900/50 p-6 ${
+      className={`group relative overflow-hidden rounded-xl border border-border/60 bg-card/40 p-6 backdrop-blur-sm ${
         isFeatured ? "lg:col-span-2" : ""
       } ${isTall ? "lg:min-h-[360px]" : ""}`}
     >
@@ -121,14 +121,14 @@ function BlogCard({ post, index }: { post: BlogGridPost; index: number }) {
         >
           {post.category}
         </span>
-        <span className="rounded-full border border-zinc-800 px-2.5 py-1 font-mono text-xs text-zinc-500">
+        <span className="rounded-full border border-border/60 bg-background/50 px-2.5 py-1 font-mono text-xs text-muted-foreground">
           {post.readTime}
         </span>
       </div>
 
       <div className={`relative ${isFeatured ? "mt-16" : isTall ? "mt-24" : "mt-10"}`}>
         <h2
-          className={`font-sans font-semibold tracking-tight text-white underline decoration-transparent decoration-2 underline-offset-4 transition-[text-decoration-color] duration-200 group-hover:decoration-indigo-400 ${
+          className={`font-sans font-semibold tracking-tight text-foreground underline decoration-transparent decoration-2 underline-offset-4 transition-[text-decoration-color] duration-200 group-hover:decoration-accent ${
             isFeatured ? "max-w-3xl text-2xl sm:text-3xl" : isTall ? "text-2xl" : "text-lg"
           }`}
         >
@@ -136,7 +136,7 @@ function BlogCard({ post, index }: { post: BlogGridPost; index: number }) {
         </h2>
         {showExcerpt ? (
           <p
-            className={`mt-3 text-sm leading-6 text-zinc-400 ${
+            className={`mt-3 text-sm leading-6 text-muted-foreground ${
               isFeatured ? "max-w-2xl" : "line-clamp-2"
             }`}
           >
@@ -145,9 +145,9 @@ function BlogCard({ post, index }: { post: BlogGridPost; index: number }) {
         ) : null}
       </div>
 
-      <div className="relative mt-8 flex items-center justify-between gap-4 font-mono text-xs text-zinc-500">
+      <div className="relative mt-8 flex items-center justify-between gap-4 font-mono text-xs text-muted-foreground">
         {isTall ? (
-          <span className="rounded-full border border-zinc-800 bg-zinc-950/40 px-3 py-1.5">
+          <span className="rounded-full border border-border/60 bg-background/50 px-3 py-1.5">
             {post.author}
           </span>
         ) : (
@@ -155,7 +155,7 @@ function BlogCard({ post, index }: { post: BlogGridPost; index: number }) {
             {post.author} <span aria-hidden="true">/</span> {post.date}
           </span>
         )}
-        <ArrowRight className="h-4 w-4 text-zinc-500 transition-transform group-hover:translate-x-0.5 group-hover:text-white" />
+        <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-accent" />
       </div>
     </motion.article>
   );

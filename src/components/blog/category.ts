@@ -16,32 +16,32 @@ export const CATEGORY_STYLES: Record<
   { badge: string; border: string; glow: string }
 > = {
   "App Developers": {
-    badge: "border-rose-400/30 bg-rose-500/10 text-rose-300",
+    badge: "border-rose-500/25 bg-rose-500/10 text-rose-700 dark:text-rose-300",
     border: "#fb7185",
     glow: "from-rose-500/15",
   },
   "Local Business": {
-    badge: "border-sky-400/30 bg-sky-500/10 text-sky-300",
+    badge: "border-sky-500/25 bg-sky-500/10 text-sky-700 dark:text-sky-300",
     border: "#38bdf8",
     glow: "from-sky-500/15",
   },
   AI: {
-    badge: "border-indigo-400/30 bg-indigo-500/10 text-indigo-300",
+    badge: "border-indigo-500/25 bg-indigo-500/10 text-indigo-700 dark:text-indigo-300",
     border: "#6366f1",
     glow: "from-indigo-500/15",
   },
   Templates: {
-    badge: "border-emerald-400/30 bg-emerald-500/10 text-emerald-300",
+    badge: "border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
     border: "#34d399",
     glow: "from-emerald-500/15",
   },
   Comparison: {
-    badge: "border-amber-400/30 bg-amber-500/10 text-amber-300",
+    badge: "border-amber-500/25 bg-amber-500/10 text-amber-700 dark:text-amber-300",
     border: "#f59e0b",
     glow: "from-amber-500/15",
   },
   WhatsApp: {
-    badge: "border-sky-400/30 bg-sky-500/10 text-sky-300",
+    badge: "border-sky-500/25 bg-sky-500/10 text-sky-700 dark:text-sky-300",
     border: "#38bdf8",
     glow: "from-sky-500/15",
   },
