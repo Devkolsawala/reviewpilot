@@ -22,6 +22,11 @@ const MDX_POST_SLUGS = [
   "how-to-respond-to-play-store-reviews-fast",
   "app-rating-improvement-strategy-2026",
   "whatsapp-business-api-review-collection",
+  "ai-reply-generation-google-reviews-india",
+  "ai-sentiment-analysis-app-reviews",
+  "ai-review-management-local-business-india",
+  "how-ai-detects-fake-google-reviews",
+  "ai-review-replies-google-maps-ranking-2026",
 ] as const;
 
 function parseFrontmatter(raw: string, slug: string): BlogPost {
