@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 
+export type BlogFaq = { q: string; a: string };
+
 export type BlogPost = {
   title: string;
   metaTitle?: string;
@@ -10,6 +12,7 @@ export type BlogPost = {
   dateDisplay: string;
   readTime: string;
   tags: string[];
+  faqs?: BlogFaq[];
   content: string; // simple markdown
 };
 
@@ -33,7 +36,24 @@ const MDX_POST_SLUGS = [
   "ai-review-management-local-business-india",
   "how-ai-detects-fake-google-reviews",
   "ai-review-replies-google-maps-ranking-2026",
+  "play-store-review-response-examples-2026",
+  "how-to-get-more-5-star-reviews-google-play-store",
+  "appfollow-alternatives-for-indie-developers-2026",
+  "best-chatgpt-prompts-for-play-store-review-replies",
+  "how-google-play-rating-algorithm-works",
+  "app-store-vs-play-store-review-management-differences",
 ] as const;
+
+function unquote(value: string): string {
+  const trimmed = value.trim();
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+  ) {
+    return trimmed.slice(1, -1);
+  }
+  return trimmed;
+}
 
 function parseFrontmatter(raw: string, slug: string): BlogPost {
   const match = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/);
@@ -42,20 +62,64 @@ function parseFrontmatter(raw: string, slug: string): BlogPost {
   }
 
   const data: Partial<Omit<BlogPost, "content">> = {};
+  const lines = match[1].split(/\r?\n/);
+  let i = 0;
 
-  for (const line of match[1].split(/\r?\n/)) {
+  while (i < lines.length) {
+    const line = lines[i];
     const separator = line.indexOf(":");
-    if (separator === -1) continue;
+    if (separator === -1 || /^\s/.test(line)) {
+      i++;
+      continue;
+    }
 
-    const key = line.slice(0, separator).trim() as keyof Omit<BlogPost, "content">;
+    const key = line.slice(0, separator).trim();
     const value = line.slice(separator + 1).trim();
 
     if (key === "tags") {
       data.tags = JSON.parse(value) as string[];
+      i++;
       continue;
     }
 
-    data[key] = value.replace(/^"|"$/g, "") as never;
+    if (key === "faqs") {
+      // YAML-style block:
+      //   faqs:
+      //     - q: "Question?"
+      //       a: "Answer."
+      const faqs: BlogFaq[] = [];
+      let pending: Partial<BlogFaq> = {};
+      i++;
+      while (i < lines.length) {
+        const next = lines[i];
+        if (!next.trim()) {
+          i++;
+          continue;
+        }
+        if (!/^\s/.test(next)) break; // next top-level key
+        const trimmed = next.trim();
+        const m = trimmed.match(/^-?\s*([qa]):\s*(.*)$/);
+        if (!m) {
+          i++;
+          continue;
+        }
+        const k = m[1] as "q" | "a";
+        const v = unquote(m[2]);
+        if (k === "q") {
+          if (pending.q && pending.a) faqs.push({ q: pending.q, a: pending.a });
+          pending = { q: v };
+        } else {
+          pending.a = v;
+        }
+        i++;
+      }
+      if (pending.q && pending.a) faqs.push({ q: pending.q, a: pending.a });
+      data.faqs = faqs;
+      continue;
+    }
+
+    (data as Record<string, unknown>)[key] = unquote(value);
+    i++;
   }
 
   const required = [
@@ -82,6 +146,7 @@ function parseFrontmatter(raw: string, slug: string): BlogPost {
     dateDisplay: data.dateDisplay!,
     readTime: data.readTime!,
     tags: data.tags!,
+    faqs: data.faqs,
     content: match[2].trim(),
   };
 }

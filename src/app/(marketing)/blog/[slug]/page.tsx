@@ -3,9 +3,21 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { JsonLd, SITE_URL, SITE_OG } from "@/components/marketing/JsonLd";
+import {
+  JsonLd,
+  SITE_URL,
+  articleSchema,
+  faqSchema,
+  breadcrumbSchema,
+} from "@/components/marketing/JsonLd";
 import { CATEGORY_STYLES, getBlogCategory } from "@/components/blog/category";
 import { ReadingProgress } from "@/components/blog/ReadingProgress";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { BLOG_POSTS, type BlogPost } from "./posts";
 
 export function generateStaticParams() {
@@ -42,6 +54,7 @@ function renderMarkdown(md: string): React.ReactNode {
   const lines = md.split("\n");
   const nodes: React.ReactNode[] = [];
   let buffer: string[] = [];
+  let codeBuffer: string[] | null = null;
 
   const flushParagraph = () => {
     if (!buffer.length) return;
@@ -52,6 +65,19 @@ function renderMarkdown(md: string): React.ReactNode {
       </p>
     );
     buffer = [];
+  };
+
+  const flushCode = () => {
+    if (codeBuffer === null) return;
+    nodes.push(
+      <pre
+        key={nodes.length}
+        className="my-5 overflow-x-auto rounded-lg border border-border/60 bg-muted/40 p-4 font-mono text-xs leading-relaxed text-foreground"
+      >
+        <code>{codeBuffer.join("\n")}</code>
+      </pre>
+    );
+    codeBuffer = null;
   };
 
   const renderInline = (text: string): React.ReactNode => {
@@ -87,6 +113,19 @@ function renderMarkdown(md: string): React.ReactNode {
 
   for (const raw of lines) {
     const line = raw.trimEnd();
+    if (codeBuffer !== null) {
+      if (line.startsWith("```")) {
+        flushCode();
+      } else {
+        codeBuffer.push(raw);
+      }
+      continue;
+    }
+    if (line.startsWith("```")) {
+      flushParagraph();
+      codeBuffer = [];
+      continue;
+    }
     if (!line.trim()) {
       flushParagraph();
       continue;
@@ -141,6 +180,7 @@ function renderMarkdown(md: string): React.ReactNode {
     }
     buffer.push(line);
   }
+  flushCode();
   flushParagraph();
   return nodes;
 }
@@ -151,27 +191,32 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
   const category = getBlogCategory(post.tags);
   const categoryStyle = CATEGORY_STYLES[category];
 
-  const blogSchema = {
-    "@context": "https://schema.org",
-    "@type": "BlogPosting",
-    headline: post.title,
+  const article = articleSchema({
+    title: post.title,
     description: post.metaDescription,
-    image: SITE_OG,
+    slug: params.slug,
     datePublished: post.datePublished,
-    author: { "@type": "Person", name: post.author },
-    publisher: {
-      "@type": "Organization",
-      name: "ReviewPilot",
-      logo: { "@type": "ImageObject", url: `${SITE_URL}/logo.svg` },
-    },
-    mainEntityOfPage: `${SITE_URL}/blog/${params.slug}`,
-    keywords: post.tags.join(", "),
-  };
+    author: post.author,
+  });
+
+  const breadcrumb = breadcrumbSchema([
+    { name: "Home", url: SITE_URL },
+    { name: "Blog", url: `${SITE_URL}/blog` },
+    { name: post.title, url: `${SITE_URL}/blog/${params.slug}` },
+  ]);
+
+  const faqs = post.faqs ?? [];
 
   return (
     <div className="py-24 sm:py-28">
       <ReadingProgress />
-      <JsonLd data={blogSchema} />
+      <JsonLd data={article} />
+      <JsonLd data={breadcrumb} />
+      {faqs.length > 0 && (
+        <JsonLd
+          data={faqSchema(faqs.map((f) => ({ question: f.q, answer: f.a })))}
+        />
+      )}
       <article className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
         <Link
           href="/blog"
@@ -201,6 +246,26 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
         <div className="prose prose-neutral dark:prose-invert max-w-none">
           {renderMarkdown(post.content)}
         </div>
+
+        {faqs.length > 0 && (
+          <section className="mt-16">
+            <h2 className="font-sans text-2xl font-semibold tracking-tight mb-6">
+              Frequently Asked Questions
+            </h2>
+            <Accordion type="single" collapsible className="w-full">
+              {faqs.map((faq, idx) => (
+                <AccordionItem key={idx} value={`faq-${idx}`}>
+                  <AccordionTrigger className="text-left text-base font-medium">
+                    {faq.q}
+                  </AccordionTrigger>
+                  <AccordionContent className="text-muted-foreground leading-relaxed">
+                    {faq.a}
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          </section>
+        )}
 
         <div className="mt-16 relative overflow-hidden rounded-3xl border border-border/60 bg-[linear-gradient(135deg,rgba(99,102,241,0.12)_0%,rgba(139,92,246,0.08)_50%,rgba(217,70,239,0.12)_100%)] p-10 text-center">
           <div

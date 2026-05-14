@@ -18,6 +18,11 @@ import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 import { Toaster } from "@/components/ui/toaster";
 import { SonnerToaster } from "@/components/ui/sonner";
+import {
+  JsonLd,
+  organizationSchema,
+  websiteSchema,
+} from "@/components/marketing/JsonLd";
 import Script from "next/script";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
@@ -148,6 +153,8 @@ export default function RootLayout({
         </Script>
       </head>
       <body className="antialiased">
+        <JsonLd data={organizationSchema} />
+        <JsonLd data={websiteSchema} />
         {children}
         <Toaster />
         <SonnerToaster />

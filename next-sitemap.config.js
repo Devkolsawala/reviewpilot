@@ -67,6 +67,13 @@ module.exports = {
       '/about': 0.7,
       '/demo': 0.8,
       '/blog': 0.8,
+      // Phase 2 SEO blog posts
+      '/blog/play-store-review-response-examples-2026': 0.7,
+      '/blog/how-to-get-more-5-star-reviews-google-play-store': 0.7,
+      '/blog/appfollow-alternatives-for-indie-developers-2026': 0.8,
+      '/blog/best-chatgpt-prompts-for-play-store-review-replies': 0.7,
+      '/blog/how-google-play-rating-algorithm-works': 0.7,
+      '/blog/app-store-vs-play-store-review-management-differences': 0.7,
     };
 
     const changefreq = path.startsWith('/blog/')
