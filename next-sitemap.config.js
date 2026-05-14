@@ -61,15 +61,23 @@ module.exports = {
       '/compare/reviewpilot-vs-famepilot': 0.7,
       '/compare/reviewpilot-vs-podium': 0.7,
       '/compare/reviewpilot-vs-simplify360': 0.7,
+      // Free tools
+      '/tools/play-store-character-counter': 0.8,
       // Other
       '/about': 0.7,
       '/demo': 0.8,
       '/blog': 0.8,
     };
 
+    const changefreq = path.startsWith('/blog/')
+      ? 'monthly'
+      : path.startsWith('/tools/')
+        ? 'weekly'
+        : config.changefreq;
+
     return {
       loc: path,
-      changefreq: path.startsWith('/blog/') ? 'monthly' : config.changefreq,
+      changefreq,
       priority: priorities[path] ?? config.priority,
       lastmod: new Date().toISOString(),
     };

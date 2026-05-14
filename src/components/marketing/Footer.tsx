@@ -56,6 +56,15 @@ const COLUMNS: { heading: string; links: { label: string; href: string }[] }[] =
     ],
   },
   {
+    heading: "Free Tools",
+    links: [
+      {
+        label: "Play Store Character Counter",
+        href: "/tools/play-store-character-counter",
+      },
+    ],
+  },
+  {
     heading: "Company",
     links: [
       { label: "About", href: "/about" },
@@ -72,7 +81,7 @@ export function Footer() {
   return (
     <footer className="relative border-t border-border/60 bg-muted/20">
       <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8">
-        <div className="grid gap-12 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr_1fr]">
+        <div className="grid gap-12 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr_1fr_1fr]">
           {/* Brand + newsletter */}
           <div>
             <Link href="/" className="flex items-center gap-2">
