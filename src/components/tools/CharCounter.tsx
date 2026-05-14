@@ -1,39 +1,34 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  Sparkles,
-  Scissors,
-  Languages,
-  Copy,
-  Check,
-  RefreshCw,
-  Wand2,
-} from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Sparkles, Scissors, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { CounterPills } from "./CounterPills";
+import { LanguagePicker } from "./LanguagePicker";
+import {
+  ReviewContextInput,
+} from "./ReviewContextInput";
+import { VariationCards, type Variation } from "./VariationCards";
+import {
+  HistoryPanel,
+  type HistoryAction,
+  type HistoryEntry,
+} from "./HistoryPanel";
+import { LANGUAGE_BY_CODE } from "@/lib/tools/languages";
+import {
+  useToolStorage,
+  clearToolStorage,
+} from "@/lib/tools/useToolStorage";
 
 const MAX = 350;
-const AMBER_AT = 316;
 
 type Tone = "Friendly" | "Professional" | "Apologetic" | "Confident";
 const TONES: Tone[] = ["Friendly", "Professional", "Apologetic", "Confident"];
 
-type TemplateKey =
-  | "thanks"
-  | "apology"
-  | "bug"
-  | "feature"
-  | "blank";
+type TemplateKey = "thanks" | "apology" | "bug" | "feature" | "blank";
 
 const TEMPLATES: Record<TemplateKey, { label: string; body: string }> = {
   thanks: {
@@ -52,70 +47,99 @@ const TEMPLATES: Record<TemplateKey, { label: string; body: string }> = {
     label: "Feature request",
     body: "Appreciate the suggestion — that one comes up a lot and it's on the roadmap for the next two releases. We'll update this thread once it ships. In the meantime, anything else you'd like to see? We read every reply.",
   },
-  blank: {
-    label: "Blank",
-    body: "",
-  },
+  blank: { label: "Blank", body: "" },
 };
 
 type AiKind = "polish" | "shorten" | "translate";
-interface AiResult {
-  id: string;
+
+interface AiBatch {
   kind: AiKind;
-  label: string;
-  text: string;
-  charCount: number;
+  actionLabel: string;
+  variations: Variation[];
+  // For "Regenerate"
+  contextTone?: Tone;
+  contextLang?: string;
 }
 
-type Lang = "en" | "hi" | "hinglish";
-const LANG_LABELS: Record<Lang, string> = {
-  en: "English",
-  hi: "Hindi",
-  hinglish: "Hinglish",
-};
+const HISTORY_LIMIT = 5;
 
 export function CharCounter() {
-  const [text, setText] = useState(TEMPLATES.thanks.body);
-  const [activeTemplate, setActiveTemplate] = useState<TemplateKey>("thanks");
-  const [tone, setTone] = useState<Tone>("Professional");
+  // Persisted state
+  const [text, setText] = useToolStorage<string>("text", TEMPLATES.thanks.body, 500);
+  const [tone, setTone] = useToolStorage<Tone>("tone", "Professional", 0);
+  const [lang, setLang] = useToolStorage<string>("lang", "en", 0);
+  const [reviewContextOpen, setReviewContextOpen] = useToolStorage<boolean>(
+    "reviewContextOpen",
+    false,
+    0
+  );
+  const [reviewContextText, setReviewContextText] = useToolStorage<string>(
+    "reviewContextText",
+    "",
+    500
+  );
+  const [history, setHistory] = useToolStorage<HistoryEntry[]>(
+    "history",
+    [],
+    0
+  );
 
-  // debounced display count
-  const [displayCount, setDisplayCount] = useState(text.length);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
+  // If hydrated context text exists, auto-expand the panel.
   useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => setDisplayCount(text.length), 100);
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, [text]);
+    if (reviewContextText.trim().length > 0 && !reviewContextOpen) {
+      setReviewContextOpen(true);
+    }
+    // Run only on mount-equivalent hydration burst.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const [results, setResults] = useState<AiResult[]>([]);
+  // Local (non-persisted) state
+  const [activeTemplate, setActiveTemplate] = useState<TemplateKey>("blank");
+  const [batch, setBatch] = useState<AiBatch | null>(null);
   const [loading, setLoading] = useState<AiKind | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   const tooLong = text.length > MAX;
 
-  const counter = useMemo(() => {
-    if (displayCount > MAX) {
-      return {
-        text: `${displayCount} / ${MAX} · ${displayCount - MAX} over`,
-        color: "text-red-600 dark:text-red-400",
-      };
-    }
-    if (displayCount >= AMBER_AT) {
-      return {
-        text: `${displayCount} / ${MAX}`,
-        color: "text-amber-600 dark:text-amber-400",
-      };
-    }
-    return {
-      text: `${displayCount} / ${MAX}`,
-      color: "text-emerald-600 dark:text-emerald-400",
+  // Debounced manual-edit history capture
+  const lastSavedTextRef = useRef<string>(text);
+  const editTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (editTimerRef.current) clearTimeout(editTimerRef.current);
+    if (text === lastSavedTextRef.current) return;
+    editTimerRef.current = setTimeout(() => {
+      if (text.trim().length === 0) return;
+      if (text === lastSavedTextRef.current) return;
+      pushHistory({
+        action: "edited",
+        text,
+        charCount: text.length,
+      });
+      lastSavedTextRef.current = text;
+    }, 3000);
+    return () => {
+      if (editTimerRef.current) clearTimeout(editTimerRef.current);
     };
-  }, [displayCount]);
+    // pushHistory is stable via setter
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [text]);
+
+  const pushHistory = useCallback(
+    (entry: Omit<HistoryEntry, "id" | "createdAt">) => {
+      const id =
+        typeof crypto !== "undefined" && "randomUUID" in crypto
+          ? crypto.randomUUID()
+          : `h-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const newEntry: HistoryEntry = {
+        ...entry,
+        id,
+        createdAt: Date.now(),
+      };
+      setHistory([newEntry, ...history].slice(0, HISTORY_LIMIT));
+    },
+    [history, setHistory]
+  );
 
   const handleTemplate = useCallback(
     (key: TemplateKey) => {
@@ -123,7 +147,7 @@ export function CharCounter() {
       const incoming = TEMPLATES[key].body;
       if (
         text.trim() &&
-        text !== TEMPLATES[activeTemplate].body &&
+        text !== TEMPLATES[activeTemplate]?.body &&
         !window.confirm(
           "Replace your current text with the template? Your changes will be lost."
         )
@@ -131,15 +155,27 @@ export function CharCounter() {
         return;
       }
       setText(incoming);
+      lastSavedTextRef.current = incoming;
       setActiveTemplate(key);
     },
-    [activeTemplate, text]
+    [activeTemplate, text, setText]
   );
 
-  const callApi = useCallback(
-    async (kind: AiKind, body: Record<string, unknown>, label: string) => {
+  const buildBody = useCallback(
+    (extra: Record<string, unknown>) => {
+      const body: Record<string, unknown> = { text, ...extra };
+      const ctx = reviewContextText.trim();
+      if (ctx.length >= 10) body.reviewContext = ctx;
+      return body;
+    },
+    [text, reviewContextText]
+  );
+
+  const runAction = useCallback(
+    async (kind: AiKind, body: Record<string, unknown>, label: string, ctx: { tone?: Tone; lang?: string } = {}) => {
       setLoading(kind);
       setError(null);
+      setCopiedKey(null);
       try {
         const res = await fetch(`/api/tools/${endpointFor(kind)}`, {
           method: "POST",
@@ -151,16 +187,29 @@ export function CharCounter() {
           setError(data?.message || "Something went wrong. Try again.");
           return;
         }
-        setResults((prev) => {
-          const next: AiResult = {
-            id: `${kind}-${Date.now()}`,
-            kind,
-            label,
-            text: data.result as string,
-            charCount: data.charCount as number,
-          };
-          // keep latest 3
-          return [next, ...prev].slice(0, 3);
+        const variations: Variation[] = Array.isArray(data?.results)
+          ? data.results
+              .map((r: { text?: unknown; charCount?: unknown }) => ({
+                text: typeof r.text === "string" ? r.text : "",
+                charCount:
+                  typeof r.charCount === "number"
+                    ? r.charCount
+                    : typeof r.text === "string"
+                      ? r.text.length
+                      : 0,
+              }))
+              .filter((v: Variation) => v.text.length > 0)
+          : [];
+        if (variations.length === 0) {
+          setError("AI returned no usable variations. Try again.");
+          return;
+        }
+        setBatch({
+          kind,
+          actionLabel: label,
+          variations,
+          contextTone: ctx.tone,
+          contextLang: ctx.lang,
         });
       } catch {
         setError("Network error. Try again.");
@@ -172,59 +221,102 @@ export function CharCounter() {
   );
 
   const handlePolish = () =>
-    callApi("polish", { text, tone }, `Polished · ${tone}`);
-  const handleShorten = () =>
-    callApi("shorten", { text }, "Shortened to ≤350");
-  const handleTranslate = (lang: Lang) =>
-    callApi(
-      "translate",
-      { text, targetLang: lang },
-      `Translated · ${LANG_LABELS[lang]}`
+    runAction(
+      "polish",
+      buildBody({ tone }),
+      `Polished · ${tone} tone`,
+      { tone }
     );
 
-  const handleCopy = async (id: string, value: string) => {
-    try {
-      await navigator.clipboard.writeText(value);
-      setCopiedId(id);
-      setTimeout(() => setCopiedId((c) => (c === id ? null : c)), 1500);
-    } catch {
-      /* clipboard denied — silent */
-    }
-  };
+  const handleShorten = () =>
+    runAction("shorten", buildBody({}), "Shortened to ≤350", {});
 
-  const handleUse = (value: string) => {
-    setText(value);
-    setActiveTemplate("blank");
+  const handleTranslate = () => {
+    const meta = LANGUAGE_BY_CODE[lang];
+    if (!meta) return;
+    runAction(
+      "translate",
+      buildBody({ targetLang: meta.code }),
+      `Translated · ${meta.name}`,
+      { lang: meta.name }
+    );
   };
 
   const handleRegenerate = () => {
-    const last = results[0];
-    if (!last) return;
-    if (last.kind === "polish") handlePolish();
-    else if (last.kind === "shorten") handleShorten();
-    else if (last.kind === "translate") {
-      const lang = last.label.split("·")[1]?.trim().toLowerCase() as
-        | "english"
-        | "hindi"
-        | "hinglish";
-      const map: Record<string, Lang> = {
-        english: "en",
-        hindi: "hi",
-        hinglish: "hinglish",
-      };
-      handleTranslate(map[lang] || "en");
+    if (!batch) return;
+    if (batch.kind === "polish") handlePolish();
+    else if (batch.kind === "shorten") handleShorten();
+    else if (batch.kind === "translate") handleTranslate();
+  };
+
+  const handleCopy = async (key: string, value: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopiedKey(key);
+      setTimeout(() => setCopiedKey((c) => (c === key ? null : c)), 1500);
+    } catch {
+      /* clipboard denied */
     }
+  };
+
+  const handleUseVariation = (v: Variation) => {
+    setText(v.text);
+    lastSavedTextRef.current = v.text;
+    setActiveTemplate("blank");
+    if (!batch) return;
+    pushHistory({
+      action:
+        batch.kind === "polish"
+          ? "polished"
+          : batch.kind === "shorten"
+            ? "shortened"
+            : "translated",
+      tone: batch.contextTone,
+      lang: batch.contextLang,
+      text: v.text,
+      charCount: v.charCount,
+    });
+  };
+
+  const handleRestoreHistory = (entry: HistoryEntry) => {
+    setText(entry.text);
+    lastSavedTextRef.current = entry.text;
+    setActiveTemplate("blank");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleClearHistory = () => {
+    if (history.length === 0) return;
+    if (window.confirm("Clear all history entries?")) setHistory([]);
+  };
+
+  const handleResetTool = () => {
+    if (
+      !window.confirm("Clear textarea, history, and all settings?")
+    )
+      return;
+    clearToolStorage();
+    window.location.reload();
   };
 
   return (
     <div className="space-y-6">
       {/* Tool card */}
       <div className="relative overflow-hidden rounded-2xl border border-border/60 bg-card/60 p-5 backdrop-blur-sm sm:p-7">
-        {/* subtle gradient halo */}
         <div
           aria-hidden
           className="pointer-events-none absolute inset-x-0 -top-12 h-24 bg-[radial-gradient(60%_60%_at_50%_50%,rgba(139,92,246,0.18),transparent_70%)]"
         />
+
+        {/* Review context (above templates) */}
+        <div className="mb-4">
+          <ReviewContextInput
+            open={reviewContextOpen}
+            onOpenChange={setReviewContextOpen}
+            value={reviewContextText}
+            onChange={setReviewContextText}
+          />
+        </div>
 
         {/* Template tabs */}
         <Tabs
@@ -277,7 +369,6 @@ export function CharCounter() {
             value={text}
             onChange={(e) => setText(e.target.value)}
             rows={7}
-            autoFocus
             placeholder="Paste or write your Play Store reply here…"
             aria-label="Play Store reply"
             className={cn(
@@ -285,15 +376,7 @@ export function CharCounter() {
               tooLong && "border-red-400/60 focus-visible:border-red-500/60"
             )}
           />
-          <div
-            aria-live="polite"
-            className={cn(
-              "mt-2 flex items-center justify-end font-mono text-xs tabular-nums",
-              counter.color
-            )}
-          >
-            {counter.text}
-          </div>
+          <CounterPills text={text} max={MAX} />
         </div>
 
         {/* Action row */}
@@ -321,32 +404,28 @@ export function CharCounter() {
             {loading === "shorten" ? "Shortening…" : "Shorten to fit"}
           </Button>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="subtle"
-                size="sm"
-                disabled={loading !== null || text.trim().length < 5}
-                className="gap-1.5"
-              >
-                <Languages className="h-3.5 w-3.5" />
-                {loading === "translate" ? "Translating…" : "Translate"}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              <DropdownMenuItem onClick={() => handleTranslate("en")}>
-                English
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleTranslate("hi")}>
-                Hindi (हिंदी)
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleTranslate("hinglish")}>
-                Hinglish (Roman script)
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <LanguagePicker
+            value={lang}
+            onChange={(code) => {
+              setLang(code);
+              // Auto-run translate when language picked while there's text
+              if (text.trim().length >= 5 && !loading) {
+                const meta = LANGUAGE_BY_CODE[code];
+                if (meta) {
+                  runAction(
+                    "translate",
+                    buildBody({ targetLang: meta.code }),
+                    `Translated · ${meta.name}`,
+                    { lang: meta.name }
+                  );
+                }
+              }
+            }}
+            disabled={loading !== null || text.trim().length < 5}
+            loading={loading === "translate"}
+          />
 
-          {results.length > 0 && (
+          {batch && (
             <Button
               onClick={handleRegenerate}
               disabled={loading !== null}
@@ -370,75 +449,40 @@ export function CharCounter() {
         )}
       </div>
 
-      {/* AI output history */}
-      {results.length > 0 && (
-        <div className="space-y-3">
-          <h2 className="font-sans text-sm font-medium uppercase tracking-[0.15em] text-muted-foreground">
-            AI versions
-          </h2>
-          {results.map((r) => {
-            const over = r.charCount > MAX;
-            return (
-              <div
-                key={r.id}
-                className="rounded-2xl border border-border/60 bg-card/50 p-4 backdrop-blur-sm sm:p-5"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <Badge
-                    variant="secondary"
-                    className="gap-1 border-transparent bg-[linear-gradient(135deg,#6366f1,#d946ef)] text-white"
-                  >
-                    <Wand2 className="h-3 w-3" />
-                    {r.label}
-                  </Badge>
-                  <span
-                    className={cn(
-                      "font-mono text-xs tabular-nums",
-                      over
-                        ? "text-red-600 dark:text-red-400"
-                        : "text-muted-foreground"
-                    )}
-                  >
-                    {r.charCount} / {MAX}
-                  </span>
-                </div>
-                <p className="mt-3 whitespace-pre-wrap text-[15px] leading-relaxed text-foreground">
-                  {r.text}
-                </p>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <Button
-                    onClick={() => handleCopy(r.id, r.text)}
-                    size="sm"
-                    variant="subtle"
-                    className="gap-1.5"
-                  >
-                    {copiedId === r.id ? (
-                      <>
-                        <Check className="h-3.5 w-3.5" /> Copied
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="h-3.5 w-3.5" /> Copy
-                      </>
-                    )}
-                  </Button>
-                  <Button
-                    onClick={() => handleUse(r.text)}
-                    size="sm"
-                    variant="ghost"
-                    className="text-muted-foreground hover:text-foreground"
-                  >
-                    Use this
-                  </Button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+      {/* Variation cards */}
+      {batch && (
+        <VariationCards
+          variations={batch.variations}
+          actionLabel={batch.actionLabel}
+          copiedKey={copiedKey}
+          onCopy={handleCopy}
+          onUse={handleUseVariation}
+        />
       )}
+
+      {/* History */}
+      <HistoryPanel
+        entries={history}
+        onRestore={handleRestoreHistory}
+        onClear={handleClearHistory}
+      />
+
+      {/* Hard reset */}
+      <div className="text-center">
+        <button
+          type="button"
+          onClick={handleResetTool}
+          className="text-[11px] text-muted-foreground/70 underline-offset-4 transition-colors hover:text-muted-foreground hover:underline"
+        >
+          Reset tool
+        </button>
+      </div>
     </div>
   );
 }
+
+// Note: kept for parity with Phase 1 / future telemetry hooks.
+export type { HistoryAction };
 
 function endpointFor(kind: AiKind): string {
   if (kind === "polish") return "polish-reply";

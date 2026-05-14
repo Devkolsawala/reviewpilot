@@ -40,7 +40,8 @@
       "Bash(dir .env*)",
       "Bash(powershell -NoProfile -Command \"\\(Get-Content 'public\\\\sitemap.xml' -Raw\\) -replace 'https://www\\\\.reviewpilot\\\\.co\\\\.in','https://reviewpilot.co.in' | Set-Content -Encoding UTF8 'public\\\\sitemap.xml'\")",
       "Bash(NODE_OPTIONS=--max-old-space-size=8192 npm run build)",
-      "Bash(git reset *)"
+      "Bash(git reset *)",
+      "PowerShell(npx next lint --dir src/app/api/tools --dir 'src/app/\\(marketing\\)/tools' --dir src/components/tools --dir src/lib/tools 2>&1 | Select-Object -Last 50; \"EXIT=$LASTEXITCODE\")"
     ]
   }
 }

@@ -1,21 +1,17 @@
 import { NextResponse } from "next/server";
 import { checkRateLimit, getClientIp } from "@/lib/tools/rateLimit";
-import { toolCompletion, truncateAtBoundary } from "@/lib/tools/xai";
+import { toolVariations } from "@/lib/tools/xai";
+import { LANGUAGE_BY_CODE, LANGUAGE_PROMPT_NOTES } from "@/lib/tools/languages";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const MAX_REPLY_CHARS = 350;
 
-const LANG_NAMES: Record<string, string> = {
-  en: "English",
-  hi: "Hindi (Devanagari script)",
-  hinglish: "Hinglish (Hindi-English code-mix in Roman script, as used by Indian smartphone users)",
-};
-
 interface Body {
   text?: unknown;
   targetLang?: unknown;
+  reviewContext?: unknown;
 }
 
 export async function POST(request: Request) {
@@ -31,6 +27,10 @@ export async function POST(request: Request) {
 
   const text = typeof body.text === "string" ? body.text.trim() : "";
   const targetLang = typeof body.targetLang === "string" ? body.targetLang : "";
+  const reviewContext =
+    typeof body.reviewContext === "string" && body.reviewContext.trim().length >= 10
+      ? body.reviewContext.trim().slice(0, 2000)
+      : "";
 
   if (text.length < 5 || text.length > 2000) {
     return NextResponse.json(
@@ -38,7 +38,8 @@ export async function POST(request: Request) {
       { status: 400, headers: { "Cache-Control": "no-store" } }
     );
   }
-  if (!LANG_NAMES[targetLang]) {
+  const lang = LANGUAGE_BY_CODE[targetLang];
+  if (!lang) {
     return NextResponse.json(
       { error: "invalid_lang", message: "Unsupported target language." },
       { status: 400, headers: { "Cache-Control": "no-store" } }
@@ -65,39 +66,44 @@ export async function POST(request: Request) {
     );
   }
 
-  const langName = LANG_NAMES[targetLang]!;
-  const system = `Translate this Play Store review reply to ${langName}. Preserve tone, acknowledgement, and any call to action. Stay under 350 characters total. Return ONLY the translated reply — no preamble, no quotes, no markdown.`;
+  const note = LANGUAGE_PROMPT_NOTES[lang.code];
+  const noteLine = note ? ` Notes: ${note}` : "";
+  const contextBlock = reviewContext
+    ? `The user is replying to this Play Store review:\n"""\n${reviewContext}\n"""\nYour translated replies must directly acknowledge what the reviewer said.\n\n`
+    : "";
+
+  const baseSystem = `${contextBlock}Translate this Play Store review reply to ${lang.name} (${lang.nativeName}).${noteLine} Preserve tone, acknowledgement, and any call to action. Stay under 350 characters total.`;
 
   try {
-    let out = await toolCompletion({
-      system,
+    const results = await toolVariations({
+      baseSystem,
       user: text,
-      maxTokens: 220,
-      context: `translate-${targetLang}`,
+      maxChars: MAX_REPLY_CHARS,
+      maxTokens: 700,
+      context: `translate-${lang.code}`,
     });
 
-    if (out.length > MAX_REPLY_CHARS) {
-      out = await toolCompletion({
-        system:
-          system +
-          `\n\nCRITICAL: Previous attempt was ${out.length} chars. Rewrite the translation under 340 characters.`,
-        user: text,
-        maxTokens: 200,
-        context: `translate-${targetLang}-retry`,
-      });
-      if (out.length > MAX_REPLY_CHARS) {
-        out = truncateAtBoundary(out, MAX_REPLY_CHARS);
-      }
+    if (results.length === 0) {
+      return NextResponse.json(
+        {
+          error: "ai_empty",
+          message: "AI returned no usable variations. Try again.",
+        },
+        { status: 503, headers: { "Cache-Control": "no-store" } }
+      );
     }
 
     return NextResponse.json(
-      { result: out, charCount: out.length, lang: targetLang },
+      { results, lang: lang.code, langName: lang.name },
       { headers: { "Cache-Control": "no-store" } }
     );
   } catch (err) {
     console.error("[translate-reply] failed:", err);
     return NextResponse.json(
-      { error: "ai_unavailable", message: "AI temporarily unavailable, try again in a moment." },
+      {
+        error: "ai_unavailable",
+        message: "AI temporarily unavailable, try again in a moment.",
+      },
       { status: 503, headers: { "Cache-Control": "no-store" } }
     );
   }

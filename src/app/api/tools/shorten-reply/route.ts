@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { checkRateLimit, getClientIp } from "@/lib/tools/rateLimit";
-import { toolCompletion, truncateAtBoundary } from "@/lib/tools/xai";
+import { toolVariations } from "@/lib/tools/xai";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -9,6 +9,7 @@ const MAX_REPLY_CHARS = 350;
 
 interface Body {
   text?: unknown;
+  reviewContext?: unknown;
 }
 
 export async function POST(request: Request) {
@@ -23,6 +24,10 @@ export async function POST(request: Request) {
   }
 
   const text = typeof body.text === "string" ? body.text.trim() : "";
+  const reviewContext =
+    typeof body.reviewContext === "string" && body.reviewContext.trim().length >= 10
+      ? body.reviewContext.trim().slice(0, 2000)
+      : "";
 
   if (text.length < 5 || text.length > 2000) {
     return NextResponse.json(
@@ -51,43 +56,42 @@ export async function POST(request: Request) {
     );
   }
 
-  const originalLen = text.length;
-  const system = `Compress this Play Store reply to 350 characters or fewer. Keep the tone, the acknowledgement, and the action/CTA. Cut redundancies, not meaning. Return ONLY the shortened reply — no preamble, no quotes, no markdown.`;
+  const contextBlock = reviewContext
+    ? `The user is replying to this Play Store review:\n"""\n${reviewContext}\n"""\nYour shortened replies must directly acknowledge what the reviewer said.\n\n`
+    : "";
+
+  const baseSystem = `${contextBlock}Compress this Play Store reply to 350 characters or fewer. Keep the tone, the acknowledgement, and the action/CTA. Cut redundancies, not meaning.`;
 
   try {
-    let out = await toolCompletion({
-      system,
+    const results = await toolVariations({
+      baseSystem,
       user: text,
-      maxTokens: 200,
+      maxChars: MAX_REPLY_CHARS,
+      maxTokens: 600,
       context: "shorten-reply",
     });
 
-    if (out.length > MAX_REPLY_CHARS) {
-      out = await toolCompletion({
-        system:
-          system +
-          `\n\nCRITICAL: Previous attempt was ${out.length} chars. Rewrite under 340 characters. No exceptions.`,
-        user: text,
-        maxTokens: 180,
-        context: "shorten-reply-retry",
-      });
-      if (out.length > MAX_REPLY_CHARS) {
-        out = truncateAtBoundary(out, MAX_REPLY_CHARS);
-      }
+    if (results.length === 0) {
+      return NextResponse.json(
+        {
+          error: "ai_empty",
+          message: "AI returned no usable variations. Try again.",
+        },
+        { status: 503, headers: { "Cache-Control": "no-store" } }
+      );
     }
 
     return NextResponse.json(
-      {
-        result: out,
-        charCount: out.length,
-        charsRemoved: Math.max(0, originalLen - out.length),
-      },
+      { results },
       { headers: { "Cache-Control": "no-store" } }
     );
   } catch (err) {
     console.error("[shorten-reply] failed:", err);
     return NextResponse.json(
-      { error: "ai_unavailable", message: "AI temporarily unavailable, try again in a moment." },
+      {
+        error: "ai_unavailable",
+        message: "AI temporarily unavailable, try again in a moment.",
+      },
       { status: 503, headers: { "Cache-Control": "no-store" } }
     );
   }
