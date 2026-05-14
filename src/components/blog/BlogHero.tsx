@@ -49,9 +49,13 @@ export function BlogHero() {
               </motion.span>
             ))}
           </span>
-          <span className="text-gradient-brand mt-2 block">
+          <span className="mt-2 block">
             {secondLine.map((item) => (
-              <motion.span key={item} variants={word} className="mr-3 inline-block">
+              <motion.span
+                key={item}
+                variants={word}
+                className="text-gradient-brand mr-3 inline-block"
+              >
                 {item}
               </motion.span>
             ))}
