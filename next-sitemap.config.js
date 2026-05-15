@@ -63,6 +63,7 @@ module.exports = {
       '/compare/reviewpilot-vs-simplify360': 0.7,
       // Free tools
       '/tools/play-store-character-counter': 0.8,
+      '/tools/ai-review-reply-generator': 0.8,
       // Other
       '/about': 0.7,
       '/demo': 0.8,

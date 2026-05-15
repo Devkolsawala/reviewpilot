@@ -118,6 +118,24 @@ export default function PlayStoreCharacterCounterPage() {
 
         {/* CTA */}
         <ToolCTA />
+
+        {/* Related tool */}
+        <div className="mt-6 rounded-xl border border-border/60 bg-card/30 p-4 text-sm text-muted-foreground backdrop-blur-sm sm:p-5">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-foreground/80">
+            Related tool
+          </p>
+          <p className="mt-2">
+            Generate a reply from scratch with the{" "}
+            <Link
+              href="/tools/ai-review-reply-generator"
+              className="text-foreground underline decoration-accent/40 underline-offset-2 hover:decoration-accent"
+            >
+              AI Review Reply Generator
+            </Link>{" "}
+            — 3 variations in 24 languages, then drop the best one into the
+            counter above to polish it for 350 characters.
+          </p>
+        </div>
       </div>
 
       {/* SEO content block */}

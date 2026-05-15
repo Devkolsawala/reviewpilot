@@ -104,7 +104,22 @@ const NAV_LINKS: NavLink[] = [
   },
   { label: "Features", href: "/features" },
   { label: "Pricing", href: "/pricing" },
-  { label: "Tools", href: "/tools/play-store-character-counter" },
+  {
+    label: "Tools",
+    href: "#",
+    children: [
+      {
+        label: "AI Reply Generator",
+        href: "/tools/ai-review-reply-generator",
+        description: "Generate replies in 24 languages",
+      },
+      {
+        label: "Play Store Character Counter",
+        href: "/tools/play-store-character-counter",
+        description: "Stay under the 350-char limit",
+      },
+    ],
+  },
   { label: "Blog", href: "/blog" },
   { label: "Docs", href: "/docs" },
 ];
