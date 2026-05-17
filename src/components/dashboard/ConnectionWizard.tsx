@@ -39,6 +39,7 @@ import { GBP_ENABLED, GBP_STATUS_LABEL, GBP_COMING_SOON_MESSAGE } from "@/lib/fe
 import type { Connection } from "@/types/connection";
 import { WhatsAppConnectWizard } from "@/components/dashboard/WhatsAppConnectWizard";
 import { EmbeddedSignupButton } from "@/components/whatsapp/embedded-signup-button";
+import { PreflightWizard } from "@/components/whatsapp/preflight-wizard";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -64,6 +65,10 @@ export function ConnectionWizard({
  onComplete?: (connection: Connection) => void;
 }) {
  const [mode, setMode] = useState<Mode>("choose");
+ // WhatsApp now runs through a pre-flight education wizard before the
+ // existing method picker (Continue with Facebook / System User token).
+ // The picker is rendered as Step 5 inside PreflightWizard.
+ const [preflightOpen, setPreflightOpen] = useState(false);
 
  if (mode === "choose") {
  return (
@@ -133,7 +138,7 @@ export function ConnectionWizard({
  </TooltipProvider>
 
  <button
- onClick={() => setMode("whatsapp")}
+ onClick={() => setPreflightOpen(true)}
  className="text-left rounded-xl border-2 border-transparent bg-card p-6 transition-all hover:bg-[color:var(--wa-bg)]"
  style={
  {
@@ -163,6 +168,12 @@ export function ConnectionWizard({
  </Badge>
  </button>
  </div>
+
+ <PreflightWizard
+ open={preflightOpen}
+ onOpenChange={setPreflightOpen}
+ onComplete={onComplete}
+ />
  </div>
  );
  }
@@ -172,6 +183,8 @@ export function ConnectionWizard({
  }
 
  if (mode === "whatsapp") {
+ // Retained so the "Skip wizard" path can still reach the original
+ // chooser if anything else in the app calls setMode("whatsapp").
  return (
  <WhatsAppMethodChooser
  onBack={() => setMode("choose")}

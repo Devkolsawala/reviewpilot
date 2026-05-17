@@ -42,6 +42,9 @@
       "Bash(NODE_OPTIONS=--max-old-space-size=8192 npm run build)",
       "Bash(git reset *)",
       "PowerShell(npx next lint --dir src/app/api/tools --dir 'src/app/\\(marketing\\)/tools' --dir src/components/tools --dir src/lib/tools 2>&1 | Select-Object -Last 50; \"EXIT=$LASTEXITCODE\")",
+      "Bash(pnpm lint *)",
+      "Bash(npm --version)"
+      "PowerShell(npx next lint --dir src/app/api/tools --dir 'src/app/\\(marketing\\)/tools' --dir src/components/tools --dir src/lib/tools 2>&1 | Select-Object -Last 50; \"EXIT=$LASTEXITCODE\")",
       "PowerShell(npm run lint 2>&1)",
       "PowerShell($env:NODE_OPTIONS='--max-old-space-size=8192'; npm run build 2>&1 | Select-Object -Last 80)",
       "Bash(curl -sI http://localhost:3000/blog/will-google-penalize-ai-generated-replies-play-store)",
