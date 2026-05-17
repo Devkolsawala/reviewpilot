@@ -1,6 +1,26 @@
 "use client";
 
-import { useEffect, useState } from "react";
+/**
+ * WhatsApp Embedded Signup primitives.
+ *
+ * This module exposes three pieces so the v3a pre-flight wizard can drive
+ * the PIN gate from the page level (the wizard *cannot* host the PIN
+ * modal — see comment on `EmbeddedSignupButton` below for the bug we hit
+ * before):
+ *
+ *  1. `WhatsAppPinModal` — controlled PIN-collection dialog.
+ *  2. `EmbeddedSignupTrigger` — headless component that loads the FB SDK
+ *     and fires `FB.login(...)` on mount with a provided PIN.
+ *  3. `EmbeddedSignupButton` — the legacy all-in-one button kept for the
+ *     dormant `WhatsAppMethodChooser` path in ConnectionWizard. It is a
+ *     thin composition of the two pieces above.
+ *
+ * Splitting these out means the parent page can mount the PIN modal and
+ * trigger OUTSIDE the wizard's Radix Portal subtree, so closing the
+ * wizard never unmounts them.
+ */
+
+import { useEffect, useRef, useState } from "react";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +34,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "@/components/ui/use-toast";
+
+// ---------------------------------------------------------------------------
+// FB SDK types
+// ---------------------------------------------------------------------------
 
 interface FBSDK {
   init: (opts: Record<string, unknown>) => void;
@@ -33,44 +57,61 @@ declare global {
 const PIN_KEY = "ess_phone_pin";
 const SESSION_KEY = "ess_session_info";
 
-export function EmbeddedSignupButton() {
+// ---------------------------------------------------------------------------
+// Shared hooks
+// ---------------------------------------------------------------------------
+
+/**
+ * Idempotently loads the Facebook JSSDK and initializes it once. Returns
+ * `true` when `window.FB` is ready to use. Exported so the pre-flight
+ * wizard can warm-load the SDK while the user is still completing earlier
+ * steps — by the time they submit the PIN, FB.login() can fire instantly
+ * instead of showing a "Loading Facebook…" spinner.
+ */
+export function useFacebookSdk(): boolean {
   const [sdkLoaded, setSdkLoaded] = useState(false);
-  const [isLaunching, setIsLaunching] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [pinModalOpen, setPinModalOpen] = useState(false);
-  const [pin, setPin] = useState("");
-  const [pinConfirm, setPinConfirm] = useState("");
-  const [pinError, setPinError] = useState<string | null>(null);
-  const [showPin, setShowPin] = useState(false);
-  const [showConfirmPin, setShowConfirmPin] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
 
     if (window.FB) {
       setSdkLoaded(true);
-    } else {
-      window.fbAsyncInit = function () {
-        if (!window.FB) return;
-        window.FB.init({
-          appId: process.env.NEXT_PUBLIC_FB_APP_ID,
-          autoLogAppEvents: true,
-          xfbml: true,
-          version: process.env.NEXT_PUBLIC_FB_GRAPH_VERSION || "v21.0",
-        });
-        setSdkLoaded(true);
-      };
-
-      if (!document.getElementById("facebook-jssdk")) {
-        const script = document.createElement("script");
-        script.id = "facebook-jssdk";
-        script.src = "https://connect.facebook.net/en_US/sdk.js";
-        script.async = true;
-        script.defer = true;
-        script.crossOrigin = "anonymous";
-        document.body.appendChild(script);
-      }
+      return;
     }
+
+    window.fbAsyncInit = function () {
+      if (!window.FB) return;
+      window.FB.init({
+        appId: process.env.NEXT_PUBLIC_FB_APP_ID,
+        autoLogAppEvents: true,
+        xfbml: true,
+        version: process.env.NEXT_PUBLIC_FB_GRAPH_VERSION || "v21.0",
+      });
+      setSdkLoaded(true);
+    };
+
+    if (!document.getElementById("facebook-jssdk")) {
+      const script = document.createElement("script");
+      script.id = "facebook-jssdk";
+      script.src = "https://connect.facebook.net/en_US/sdk.js";
+      script.async = true;
+      script.defer = true;
+      script.crossOrigin = "anonymous";
+      document.body.appendChild(script);
+    }
+  }, []);
+
+  return sdkLoaded;
+}
+
+/**
+ * Subscribes to Meta's `WA_EMBEDDED_SIGNUP` postMessage events for the
+ * lifetime of the host component and stores the latest payload in
+ * sessionStorage so the OAuth callback POST can include it.
+ */
+function useSessionInfoListener(): void {
+  useEffect(() => {
+    if (typeof window === "undefined") return;
 
     function sessionInfoListener(event: MessageEvent) {
       if (
@@ -92,15 +133,56 @@ export function EmbeddedSignupButton() {
     window.addEventListener("message", sessionInfoListener);
     return () => window.removeEventListener("message", sessionInfoListener);
   }, []);
+}
 
-  function openPinModal() {
-    setPin("");
-    setPinConfirm("");
-    setPinError(null);
-    setShowPin(false);
-    setShowConfirmPin(false);
-    setPinModalOpen(true);
-  }
+// ---------------------------------------------------------------------------
+// WhatsAppPinModal — controlled PIN-collection dialog
+// ---------------------------------------------------------------------------
+
+export interface WhatsAppPinModalProps {
+  open: boolean;
+  /**
+   * Fired when the user submits a valid 6-digit PIN (both fields match).
+   * The plaintext PIN is passed to the parent; the parent is responsible
+   * for handing it to `EmbeddedSignupTrigger`.
+   */
+  onPinSet: (pin: string) => void;
+  /**
+   * Fired when the user explicitly clicks the "Cancel" button. The v3a
+   * wizard treats this as "go back to wizard Step 5".
+   */
+  onCancel: () => void;
+  /**
+   * Fired when the user dismisses the dialog without explicit intent —
+   * Esc, outside-click, or the X close button. The v3a wizard treats
+   * this as full-cancellation (close everything).
+   */
+  onClose: () => void;
+}
+
+export function WhatsAppPinModal({
+  open,
+  onPinSet,
+  onCancel,
+  onClose,
+}: WhatsAppPinModalProps) {
+  const [pin, setPin] = useState("");
+  const [pinConfirm, setPinConfirm] = useState("");
+  const [pinError, setPinError] = useState<string | null>(null);
+  const [showPin, setShowPin] = useState(false);
+  const [showConfirmPin, setShowConfirmPin] = useState(false);
+
+  // Reset fields whenever the modal is (re)opened so a previous attempt
+  // doesn't leak its state into the next try.
+  useEffect(() => {
+    if (open) {
+      setPin("");
+      setPinConfirm("");
+      setPinError(null);
+      setShowPin(false);
+      setShowConfirmPin(false);
+    }
+  }, [open]);
 
   const pinsValid =
     /^\d{6}$/.test(pin) && /^\d{6}$/.test(pinConfirm) && pin === pinConfirm;
@@ -116,19 +198,156 @@ export function EmbeddedSignupButton() {
       setPinError("PINs do not match.");
       return;
     }
-    // Plaintext sessionStorage is acceptable here: it lives only for the
-    // brief window between modal submit and the OAuth callback POST, and
-    // is wiped immediately on completion or failure. Server-side, the
-    // callback encrypts it with the same scheme as access tokens before
-    // storing it in phone_pin_encrypted.
-    sessionStorage.setItem(PIN_KEY, pin);
-    setPinModalOpen(false);
-    launchEmbeddedSignup();
+    onPinSet(pin);
   }
 
-  function launchEmbeddedSignup() {
-    if (!window.FB) return;
-    setIsLaunching(true);
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) onClose();
+      }}
+    >
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Set a 6-digit phone re-registration PIN</DialogTitle>
+          <DialogDescription>
+            This PIN is required by WhatsApp if your phone needs to verify
+            the number again. Save it somewhere safe — you&apos;ll need it
+            for recovery.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="ess-pin">PIN (6 digits)</Label>
+            <div className="relative">
+              <Input
+                id="ess-pin"
+                type={showPin ? "text" : "password"}
+                inputMode="numeric"
+                pattern="\d{6}"
+                maxLength={6}
+                autoComplete="off"
+                autoFocus
+                value={pin}
+                onChange={(e) =>
+                  setPin(e.target.value.replace(/\D/g, "").slice(0, 6))
+                }
+                placeholder="••••••"
+                className="pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPin((v) => !v)}
+                aria-label={showPin ? "Hide PIN" : "Show PIN"}
+                className="absolute right-3 top-1/2 -translate-y-1/2 bg-transparent text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded-sm"
+              >
+                {showPin ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Choose any 6 digits you&apos;ll remember
+            </p>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="ess-pin-confirm">Confirm PIN</Label>
+            <div className="relative">
+              <Input
+                id="ess-pin-confirm"
+                type={showConfirmPin ? "text" : "password"}
+                inputMode="numeric"
+                pattern="\d{6}"
+                maxLength={6}
+                autoComplete="off"
+                value={pinConfirm}
+                onChange={(e) =>
+                  setPinConfirm(e.target.value.replace(/\D/g, "").slice(0, 6))
+                }
+                placeholder="••••••"
+                className="pr-10"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && pinsValid) submitPin();
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPin((v) => !v)}
+                aria-label={showConfirmPin ? "Hide PIN" : "Show PIN"}
+                className="absolute right-3 top-1/2 -translate-y-1/2 bg-transparent text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded-sm"
+              >
+                {showConfirmPin ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+          </div>
+          {showMismatch && !pinError && (
+            <p className="text-xs text-destructive">PINs do not match.</p>
+          )}
+          {pinError && (
+            <p className="text-xs text-destructive">{pinError}</p>
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button onClick={submitPin} disabled={!pinsValid}>
+            Continue
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// EmbeddedSignupTrigger — headless: fires FB.login() once on mount
+// ---------------------------------------------------------------------------
+
+export interface EmbeddedSignupTriggerProps {
+  /**
+   * The 6-digit PIN already validated by `WhatsAppPinModal`. Written to
+   * sessionStorage and forwarded to the OAuth callback POST.
+   */
+  pin: string;
+  /**
+   * The user closed the Facebook popup without authorizing. The parent
+   * should reset its flow state back to "closed" (or wherever makes
+   * sense).
+   */
+  onCancel: () => void;
+  /**
+   * The OAuth callback POST returned a non-success payload, or the
+   * network request itself failed. Parent decides what to surface to the
+   * user (the trigger does not toast itself).
+   */
+  onError: (err: string) => void;
+}
+
+export function EmbeddedSignupTrigger({
+  pin,
+  onCancel,
+  onError,
+}: EmbeddedSignupTriggerProps) {
+  const sdkLoaded = useFacebookSdk();
+  useSessionInfoListener();
+
+  const [isProcessing, setIsProcessing] = useState(false);
+  // Single-fire guard so React 18 strict-mode double-invocations don't
+  // open two FB popups.
+  const launchedRef = useRef(false);
+
+  useEffect(() => {
+    if (!sdkLoaded || launchedRef.current) return;
+    if (typeof window === "undefined" || !window.FB) return;
+
+    launchedRef.current = true;
+
+    // Stash the plaintext PIN in sessionStorage. The OAuth callback POST
+    // below reads it back, and the server encrypts it before persisting
+    // to phone_pin_encrypted using the same scheme as access tokens.
+    // sessionStorage is acceptable here because the value lives only for
+    // the brief window between this assignment and the POST below.
+    sessionStorage.setItem(PIN_KEY, pin);
 
     window.FB.login(
       function (response) {
@@ -147,42 +366,32 @@ export function EmbeddedSignupButton() {
           })
             .then((res) => res.json())
             .then((data) => {
-              setIsLaunching(false);
-              // Clear PIN + session info regardless of outcome — these must
-              // not linger in sessionStorage after the callback POST.
+              // Clear PIN + session info regardless of outcome — these
+              // must not linger in sessionStorage after the callback POST.
               sessionStorage.removeItem(PIN_KEY);
               sessionStorage.removeItem(SESSION_KEY);
               if (data.success) {
-                // Use location.assign for a full page load — the connections
-                // list is a client component with hook-cached state, so a
-                // soft router push would not show the new row.
+                // Full page navigation — the connections list is a
+                // client component with hook-cached state, so a soft
+                // router push would not show the new row.
                 window.location.assign(
                   "/dashboard/settings/connections?connected=whatsapp"
                 );
               } else {
                 setIsProcessing(false);
-                toast({
-                  title: "Connection failed",
-                  description: data.error || "Unknown error",
-                  variant: "destructive",
-                });
+                onError(data.error || "Unknown error");
               }
             })
-            .catch((err) => {
-              setIsLaunching(false);
-              setIsProcessing(false);
+            .catch((err: unknown) => {
               sessionStorage.removeItem(PIN_KEY);
               sessionStorage.removeItem(SESSION_KEY);
-              toast({
-                title: "Connection failed",
-                description: err.message,
-                variant: "destructive",
-              });
+              setIsProcessing(false);
+              onError(err instanceof Error ? err.message : String(err));
             });
         } else {
-          // User canceled or denied — discard the unused PIN.
-          setIsLaunching(false);
+          // User canceled / denied — discard the unused PIN.
           sessionStorage.removeItem(PIN_KEY);
+          onCancel();
         }
       },
       {
@@ -196,24 +405,71 @@ export function EmbeddedSignupButton() {
         },
       }
     );
+    // We intentionally do not depend on onCancel / onError — they are
+    // captured once at launch time. Re-running this effect would risk
+    // double-firing FB.login.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sdkLoaded, pin]);
+
+  if (isProcessing) {
+    return (
+      <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+        <div className="bg-card p-8 rounded-lg flex flex-col items-center gap-4 max-w-sm text-center">
+          <Loader2 className="animate-spin" size={32} />
+          <p className="font-medium">
+            Setting up your WhatsApp connection...
+          </p>
+          <p className="text-sm text-muted-foreground">
+            This usually takes a few seconds
+          </p>
+        </div>
+      </div>
+    );
   }
+
+  if (!sdkLoaded) {
+    return (
+      <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+        <div className="bg-card p-8 rounded-lg flex flex-col items-center gap-4 max-w-sm text-center">
+          <Loader2 className="animate-spin" size={32} />
+          <p className="font-medium">Loading Facebook…</p>
+        </div>
+      </div>
+    );
+  }
+
+  return null;
+}
+
+// ---------------------------------------------------------------------------
+// EmbeddedSignupButton — legacy composite (kept for WhatsAppMethodChooser)
+// ---------------------------------------------------------------------------
+
+/**
+ * The original "Continue with Facebook" button — keeps its public API
+ * (no props, drops in anywhere) so the legacy `WhatsAppMethodChooser`
+ * path in ConnectionWizard.tsx still works untouched.
+ *
+ * IMPORTANT: do NOT use this inside the v3a pre-flight wizard. The PIN
+ * modal it contains lives inside the host's React tree; if the host
+ * (e.g. a Radix Dialog Portal) unmounts during the click, the modal
+ * unmounts with it and the user-visible flow silently skips the PIN
+ * gate. The v3a wizard composes `WhatsAppPinModal` +
+ * `EmbeddedSignupTrigger` at the page level instead.
+ */
+export function EmbeddedSignupButton() {
+  const sdkLoaded = useFacebookSdk();
+  // We don't subscribe to session info here — the trigger does that
+  // once it mounts. Subscribing twice is harmless but pointless.
+
+  const [pinModalOpen, setPinModalOpen] = useState(false);
+  const [activePin, setActivePin] = useState<string | null>(null);
+  const isLaunching = activePin !== null;
 
   return (
     <>
-      {isProcessing && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
-          <div className="bg-card p-8 rounded-lg flex flex-col items-center gap-4 max-w-sm text-center">
-            <Loader2 className="animate-spin" size={32} />
-            <p className="font-medium">Setting up your WhatsApp connection...</p>
-            <p className="text-sm text-muted-foreground">
-              This usually takes a few seconds
-            </p>
-          </div>
-        </div>
-      )}
-
       <Button
-        onClick={openPinModal}
+        onClick={() => setPinModalOpen(true)}
         disabled={!sdkLoaded || isLaunching}
         className="w-full"
         size="lg"
@@ -225,91 +481,30 @@ export function EmbeddedSignupButton() {
           : "Loading..."}
       </Button>
 
-      <Dialog open={pinModalOpen} onOpenChange={setPinModalOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Set a 6-digit phone re-registration PIN</DialogTitle>
-            <DialogDescription>
-              This PIN is required by WhatsApp if your phone needs to verify
-              the number again. Save it somewhere safe — you&apos;ll need it
-              for recovery.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="ess-pin">PIN (6 digits)</Label>
-              <div className="relative">
-                <Input
-                  id="ess-pin"
-                  type={showPin ? "text" : "password"}
-                  inputMode="numeric"
-                  pattern="\d{6}"
-                  maxLength={6}
-                  autoComplete="off"
-                  autoFocus
-                  value={pin}
-                  onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                  placeholder="••••••"
-                  className="pr-10"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPin((v) => !v)}
-                  aria-label={showPin ? "Hide PIN" : "Show PIN"}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 bg-transparent text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded-sm"
-                >
-                  {showPin ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Choose any 6 digits you&apos;ll remember
-              </p>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="ess-pin-confirm">Confirm PIN</Label>
-              <div className="relative">
-                <Input
-                  id="ess-pin-confirm"
-                  type={showConfirmPin ? "text" : "password"}
-                  inputMode="numeric"
-                  pattern="\d{6}"
-                  maxLength={6}
-                  autoComplete="off"
-                  value={pinConfirm}
-                  onChange={(e) => setPinConfirm(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                  placeholder="••••••"
-                  className="pr-10"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && pinsValid) submitPin();
-                  }}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPin((v) => !v)}
-                  aria-label={showConfirmPin ? "Hide PIN" : "Show PIN"}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 bg-transparent text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded-sm"
-                >
-                  {showConfirmPin ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
-              </div>
-            </div>
-            {showMismatch && !pinError && (
-              <p className="text-xs text-destructive">PINs do not match.</p>
-            )}
-            {pinError && (
-              <p className="text-xs text-destructive">{pinError}</p>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setPinModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={submitPin} disabled={!pinsValid}>
-              Continue
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <WhatsAppPinModal
+        open={pinModalOpen}
+        onPinSet={(pin) => {
+          setPinModalOpen(false);
+          setActivePin(pin);
+        }}
+        onCancel={() => setPinModalOpen(false)}
+        onClose={() => setPinModalOpen(false)}
+      />
+
+      {activePin && (
+        <EmbeddedSignupTrigger
+          pin={activePin}
+          onCancel={() => setActivePin(null)}
+          onError={(err) => {
+            setActivePin(null);
+            toast({
+              title: "Connection failed",
+              description: err,
+              variant: "destructive",
+            });
+          }}
+        />
+      )}
     </>
   );
 }

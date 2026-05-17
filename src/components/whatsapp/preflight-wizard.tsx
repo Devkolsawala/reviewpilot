@@ -56,8 +56,8 @@ import { toast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
 import type { Connection } from "@/types/connection";
 
-import { EmbeddedSignupButton } from "@/components/whatsapp/embedded-signup-button";
 import { WhatsAppConnectWizard } from "@/components/dashboard/WhatsAppConnectWizard";
+import { useFacebookSdk } from "@/components/whatsapp/embedded-signup-button";
 
 // -----------------------------------------------------------------------------
 // Constants
@@ -127,6 +127,22 @@ export interface PreflightWizardProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /**
+   * Step (0-indexed) the wizard should open on. Defaults to 0 (Step 1).
+   * The parent uses this to resume the wizard at Step 5 after the user
+   * cancels the PIN modal — Step 5 is stateless (just a picker) so
+   * jumping there with a fresh `scenario` / `checklist` is intentional
+   * and acceptable per the spec.
+   */
+  initialStep?: number;
+  /**
+   * Fired when the user picks "Continue with Facebook" in Step 5. The
+   * parent should close the wizard and open the PIN modal. The wizard
+   * does NOT close itself — the parent's state machine owns transitions
+   * so the PIN modal can mount in a portal subtree that survives the
+   * wizard's close animation.
+   */
+  onChoseEss?: () => void;
+  /**
    * Forwarded to the manual WhatsAppConnectWizard when the user picks the
    * System User token path. Called with the newly-created Connection row.
    */
@@ -136,9 +152,11 @@ export interface PreflightWizardProps {
 export function PreflightWizard({
   open,
   onOpenChange,
+  initialStep = 0,
+  onChoseEss,
   onComplete,
 }: PreflightWizardProps) {
-  const [step, setStep] = useState<number>(0); // 0-indexed; Step 1 = 0
+  const [step, setStep] = useState<number>(initialStep);
   const [scenario, setScenario] = useState<Scenario | null>(null);
   const [checklist, setChecklist] = useState<ChecklistState>(EMPTY_CHECKLIST);
   const [skipConfirmOpen, setSkipConfirmOpen] = useState(false);
@@ -147,19 +165,28 @@ export function PreflightWizard({
   // `null` means "show the picker"; "manual" swaps in WhatsAppConnectWizard.
   const [step5Method, setStep5Method] = useState<"manual" | null>(null);
 
+  // Warm-load the Facebook JSSDK as soon as the wizard mounts. The actual
+  // FB.login() call happens later (after PIN entry, in
+  // <EmbeddedSignupTrigger>) — by then this hook has already loaded the
+  // script, so the user doesn't see a "Loading Facebook…" spinner.
+  useFacebookSdk();
+
   // Reset everything when the wizard is closed so a re-open is fresh.
+  // On open, honor `initialStep` so the parent can resume at Step 5 after
+  // a PIN-modal cancel.
   useEffect(() => {
     if (!open) {
-      setStep(0);
+      setStep(initialStep);
       setScenario(null);
       setChecklist(EMPTY_CHECKLIST);
       setSkipConfirmOpen(false);
       setCancelConfirmOpen(false);
       setStep5Method(null);
     } else {
+      setStep(initialStep);
       track("wizard_opened");
     }
-  }, [open]);
+  }, [open, initialStep]);
 
   // Whenever we navigate, scroll the body back to the top so the new
   // step's heading is always in view (instead of inheriting the previous
@@ -293,10 +320,16 @@ export function PreflightWizard({
   }, [advance]);
 
   // Step 5 handler bundle.
+  //
+  // ESS path: hand control to the parent's state machine. The parent
+  // closes the wizard AND mounts the PIN modal in a sibling subtree so
+  // the modal survives this wizard's close animation. We deliberately
+  // do NOT call onOpenChange(false) here — that was the v3a bug: the
+  // wizard's Portal would unmount the PIN modal before it could paint.
   const handlePickEss = useCallback(() => {
     track("routed_to_ess");
-    onOpenChange(false);
-  }, [onOpenChange]);
+    onChoseEss?.();
+  }, [onChoseEss]);
 
   const handlePickManual = useCallback(() => {
     track("routed_to_manual");
@@ -1403,12 +1436,20 @@ const Step5Picker = memo(function Step5Picker({
             Use your Facebook account to authorize ReviewPilot. Takes about 60
             seconds. No technical setup needed.
           </p>
-          {/* `onClickCapture` lets us fire telemetry + close the wizard
-              shell BEFORE the button's own click handler launches its PIN
-              modal / FB popup. The button still owns its full lifecycle. */}
-          <div onClickCapture={onPickEss}>
-            <EmbeddedSignupButton />
-          </div>
+          {/*
+            Plain button — the actual FB.login() popup and PIN gate are
+            now mounted by the parent page (ConnectionWizard) as siblings
+            of this wizard so they survive the wizard's close animation.
+            See v3a-bugfix comment in `handlePickEss`.
+          */}
+          <Button
+            onClick={onPickEss}
+            className="w-full"
+            size="lg"
+            type="button"
+          >
+            Continue with Facebook
+          </Button>
         </div>
 
         {/* Advanced path */}

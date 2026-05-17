@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useCallback, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -35,10 +35,15 @@ import {
  TooltipProvider,
  TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { toast } from "@/components/ui/use-toast";
 import { GBP_ENABLED, GBP_STATUS_LABEL, GBP_COMING_SOON_MESSAGE } from "@/lib/feature-flags";
 import type { Connection } from "@/types/connection";
 import { WhatsAppConnectWizard } from "@/components/dashboard/WhatsAppConnectWizard";
-import { EmbeddedSignupButton } from "@/components/whatsapp/embedded-signup-button";
+import {
+ EmbeddedSignupButton,
+ EmbeddedSignupTrigger,
+ WhatsAppPinModal,
+} from "@/components/whatsapp/embedded-signup-button";
 import { PreflightWizard } from "@/components/whatsapp/preflight-wizard";
 
 // ---------------------------------------------------------------------------
@@ -59,16 +64,130 @@ interface VerifyState {
 // Root wizard — choose a source
 // ---------------------------------------------------------------------------
 
+/**
+ * Explicit WhatsApp connection state machine.
+ *
+ *   closed ──"Add WhatsApp"──▶ wizard
+ *   wizard ──Step 5 / ESS────▶ pin_modal
+ *   wizard ──X / cancel──────▶ closed
+ *   pin_modal ──Cancel btn───▶ wizard (resumed at Step 5)
+ *   pin_modal ──X / Esc──────▶ closed
+ *   pin_modal ──Continue─────▶ launching_fb
+ *   launching_fb ──success───▶ (full page reload via the trigger)
+ *   launching_fb ──cancel────▶ closed
+ *   launching_fb ──error─────▶ closed (+ toast)
+ *
+ * This lives at the parent (ConnectionWizard) deliberately so that the
+ * PIN modal and the FB trigger mount as SIBLINGS of the wizard, not as
+ * descendants of its Radix Portal. Otherwise the wizard's close
+ * animation tears them down before they can do their job — that was the
+ * v3a regression we're fixing here.
+ */
+type WhatsAppFlow = "closed" | "wizard" | "pin_modal" | "launching_fb";
+
 export function ConnectionWizard({
  onComplete,
 }: {
  onComplete?: (connection: Connection) => void;
 }) {
  const [mode, setMode] = useState<Mode>("choose");
- // WhatsApp now runs through a pre-flight education wizard before the
- // existing method picker (Continue with Facebook / System User token).
- // The picker is rendered as Step 5 inside PreflightWizard.
- const [preflightOpen, setPreflightOpen] = useState(false);
+ const [whatsappFlow, setWhatsappFlow] = useState<WhatsAppFlow>("closed");
+ // PIN is held in component state (not sessionStorage) between the PIN
+ // modal submit and the FB trigger mount. The trigger writes it to
+ // sessionStorage right before FB.login() so the OAuth callback POST can
+ // pick it up. Held as a sentinel string so EmbeddedSignupTrigger only
+ // mounts once we actually have a PIN.
+ const [pendingPin, setPendingPin] = useState<string | null>(null);
+ // 0-indexed step the wizard should resume on. 0 for a fresh open, 4
+ // (Step 5) when the user cancels the PIN modal.
+ const [wizardResumeStep, setWizardResumeStep] = useState<number>(0);
+
+ const openWhatsAppWizard = useCallback(() => {
+ setWizardResumeStep(0);
+ setPendingPin(null);
+ setWhatsappFlow("wizard");
+ }, []);
+
+ const handleWizardChoseEss = useCallback(() => {
+ // Transition wizard → PIN modal. Both portals can briefly coexist
+ // during their respective animations; the PIN modal mounts at the
+ // parent level so it survives the wizard's exit animation.
+ setWhatsappFlow("pin_modal");
+ }, []);
+
+ const handleWizardOpenChange = useCallback((next: boolean) => {
+ if (!next) setWhatsappFlow("closed");
+ }, []);
+
+ const handlePinSet = useCallback((pin: string) => {
+ setPendingPin(pin);
+ setWhatsappFlow("launching_fb");
+ }, []);
+
+ // Cancel button on the PIN modal: go back to the wizard at Step 5 so
+ // the user can change their mind. (Per the spec: explicit Cancel ≠
+ // X/Esc dismissal.)
+ const handlePinCancel = useCallback(() => {
+ setWizardResumeStep(4);
+ setWhatsappFlow("wizard");
+ }, []);
+
+ // X / Esc / outside-click on the PIN modal: treat as full cancellation.
+ const handlePinClose = useCallback(() => {
+ setWhatsappFlow("closed");
+ }, []);
+
+ const handleEssCancel = useCallback(() => {
+ setPendingPin(null);
+ setWhatsappFlow("closed");
+ }, []);
+
+ const handleEssError = useCallback((err: string) => {
+ setPendingPin(null);
+ setWhatsappFlow("closed");
+ toast({
+ title: "Connection failed",
+ description: err,
+ variant: "destructive",
+ });
+ }, []);
+
+ // Manual sub-wizard inside Step 5 still completes through the existing
+ // path — forward to the page-level onComplete and close everything.
+ const handleManualComplete = useCallback(
+ (conn: Connection) => {
+ setWhatsappFlow("closed");
+ onComplete?.(conn);
+ },
+ [onComplete]
+ );
+
+ // WhatsApp-flow portals are rendered alongside whatever the current
+ // mode is, so they keep working even if `mode` is "choose".
+ const whatsappPortals = (
+ <>
+ <PreflightWizard
+ open={whatsappFlow === "wizard"}
+ onOpenChange={handleWizardOpenChange}
+ initialStep={wizardResumeStep}
+ onChoseEss={handleWizardChoseEss}
+ onComplete={handleManualComplete}
+ />
+ <WhatsAppPinModal
+ open={whatsappFlow === "pin_modal"}
+ onPinSet={handlePinSet}
+ onCancel={handlePinCancel}
+ onClose={handlePinClose}
+ />
+ {whatsappFlow === "launching_fb" && pendingPin && (
+ <EmbeddedSignupTrigger
+ pin={pendingPin}
+ onCancel={handleEssCancel}
+ onError={handleEssError}
+ />
+ )}
+ </>
+ );
 
  if (mode === "choose") {
  return (
@@ -138,7 +257,7 @@ export function ConnectionWizard({
  </TooltipProvider>
 
  <button
- onClick={() => setPreflightOpen(true)}
+ onClick={openWhatsAppWizard}
  className="text-left rounded-xl border-2 border-transparent bg-card p-6 transition-all hover:bg-[color:var(--wa-bg)]"
  style={
  {
@@ -169,11 +288,7 @@ export function ConnectionWizard({
  </button>
  </div>
 
- <PreflightWizard
- open={preflightOpen}
- onOpenChange={setPreflightOpen}
- onComplete={onComplete}
- />
+ {whatsappPortals}
  </div>
  );
  }
