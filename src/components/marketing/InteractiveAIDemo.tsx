@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
+import { REPLY_PRESETS } from "@/lib/tools/replyPresets";
 
 type Tone = "friendly" | "professional" | "apologetic";
 
@@ -27,35 +28,35 @@ interface Sample {
   text: string;
 }
 
+// Curated subset of REPLY_PRESETS rendered as chips on the homepage demo.
+// Same 4 reviews as before — sourced from the shared presets file so any
+// future copy edits stay in sync with /tools/ai-review-reply-generator.
+function presetById(id: string) {
+  const p = REPLY_PRESETS.find((x) => x.id === id);
+  if (!p) throw new Error(`replyPreset ${id} missing`);
+  return p;
+}
+
+function sampleFrom(
+  id: string,
+  label: string,
+  source: "Play Store" | "GBP"
+): Sample {
+  const p = presetById(id);
+  return {
+    id: p.id,
+    label,
+    source,
+    rating: p.suggestedRating,
+    text: p.reviewText,
+  };
+}
+
 const SAMPLES: Sample[] = [
-  {
-    id: "play-1",
-    label: "Crash complaint",
-    source: "Play Store",
-    rating: 1,
-    text: "App keeps crashing every time I try to log in. Lost all my saved data twice already. Worst app, complete waste of money.",
-  },
-  {
-    id: "play-5",
-    label: "5★ praise",
-    source: "Play Store",
-    rating: 5,
-    text: "Genuinely the best budgeting app I've used in India. Clean UI, no ads, and the new dark mode is beautiful. Worth every rupee.",
-  },
-  {
-    id: "gbp-2",
-    label: "Bad service",
-    source: "GBP",
-    rating: 2,
-    text: "Waited 45 minutes past my appointment time. Staff was polite but the wait was unacceptable. Won't be coming back.",
-  },
-  {
-    id: "gbp-5",
-    label: "Glowing GBP",
-    source: "GBP",
-    rating: 5,
-    text: "Dr. Sharma is incredibly thorough and patient. Took the time to explain everything. Highly recommend for anyone in the Ahmedabad area.",
-  },
+  sampleFrom("play-1", "Crash complaint", "Play Store"),
+  sampleFrom("play-5", "5★ praise", "Play Store"),
+  sampleFrom("gbp-wait", "Bad service", "GBP"),
+  sampleFrom("gbp-glowing", "Glowing GBP", "GBP"),
 ];
 
 const TONES: { value: Tone; label: string }[] = [
@@ -509,6 +510,15 @@ export function InteractiveAIDemo() {
           </div>
         </div>
 
+        <p className="mt-5 text-center text-xs text-muted-foreground">
+          Want platform toggle, 24 languages, and 3 variations?{" "}
+          <Link
+            href="/tools/ai-review-reply-generator"
+            className="text-foreground underline decoration-accent/40 underline-offset-2 hover:decoration-accent"
+          >
+            Try the full Reply Generator →
+          </Link>
+        </p>
       </div>
     </section>
   );

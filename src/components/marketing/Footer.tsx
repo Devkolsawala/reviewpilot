@@ -59,6 +59,10 @@ const COLUMNS: { heading: string; links: { label: string; href: string }[] }[] =
     heading: "Free Tools",
     links: [
       {
+        label: "AI Reply Generator",
+        href: "/tools/ai-review-reply-generator",
+      },
+      {
         label: "Play Store Character Counter",
         href: "/tools/play-store-character-counter",
       },
