@@ -1,0 +1,215 @@
+---
+title: "Android In-App Review API Tutorial (2026): Code + Best Practices"
+metaTitle: "Android In-App Review API Tutorial (2026): Kotlin Code"
+metaDescription: "Step-by-step Android In-App Review API tutorial with Kotlin code, quota handling, and timing strategy. Get 10x more Play Store reviews without annoying users."
+author: "ReviewPilot Team"
+datePublished: "2026-06-07"
+dateDisplay: "June 7, 2026"
+readTime: "11 min read"
+tags: ["App Developers"]
+faqs:
+  - q: "What does the Android In-App Review API actually do?"
+    a: "It launches Google's official rating dialog from inside your app, so users can rate and review without being deep-linked out to the Play Store listing. Google controls the UI, the star selection, and the wording — which keeps you policy-safe and dramatically lifts completion rates compared to a 'go to the Play Store' button."
+  - q: "How often can I show the In-App Review dialog?"
+    a: "Google enforces a quota that is not publicly documented in exact terms. Industry consensus and Google's own guidance is a maximum of one prompt every 24-48 hours per user, and the API will silently no-op if the quota is exceeded. Always design as if the prompt may not show, and never block the user on it appearing."
+  - q: "Why does my In-App Review dialog not appear during testing?"
+    a: "Google's test environment uses a fake review flow that only fires in specific setups: internal app sharing builds, internal testing track installs, or the Play Console fake review flow. The real production dialog will not show on debug builds installed via Android Studio. Use internal testing to validate the integration end-to-end."
+  - q: "Can I skip the In-App Review API and just link to the Play Store?"
+    a: "You can, but completion rates drop dramatically. Deep-linking to the Play Store loses the user from your app and forces them through the full listing page, which kills momentum. The In-App Review API completes 5-10x more reviews because the flow stays in-context. Use the API as default and only fall back to a Play Store link if the API quota fails."
+  - q: "Is the pre-filter pattern (NPS-style) safe under Google policy?"
+    a: "Yes, as long as you do not actively block detractors from leaving Play Store reviews. Routing happy users to the In-App Review dialog and unhappy users to your support channel is standard practice for top-rated apps. The line is suppression: you cannot intercept and stop a 1-star review. You can only offer a faster alternative path."
+---
+
+Most indie Android apps get fewer than 1% of their daily active users to leave a Play Store review. Apps that integrate the In-App Review API correctly hit 3-8%. The math compounds fast: at 10,000 DAU, that is the difference between 100 reviews a year and 1,500.
+
+This tutorial walks through the full integration in Kotlin, the gotchas most copy-paste guides miss (pre-caching, quota handling, test environments), the timing patterns that maximize conversions, and the pre-filter pattern that keeps detractors out of your Play Store rating while staying within Google policy. By the end you will have production-ready code and a deployment checklist.
+
+## Why use the In-App Review API at all
+
+Before the API existed, the standard pattern was "rate us" buttons that deep-linked to the Play Store listing. That flow has three problems:
+
+- **It loses the user from your app.** Once they leave for the Play Store, most do not come back to finish their session.
+- **It forces them through the full listing.** They see other reviews, screenshots, and the install button before they get to "Rate this app" — a long path with high drop-off.
+- **Completion rates are low.** Internal data from teams that switched to the In-App Review API consistently reports 5-10x lifts in completed reviews.
+
+The In-App Review API solves all three. Google renders a native dialog directly inside your app, the user picks stars and optionally writes a review without leaving, and the entire flow takes under 30 seconds.
+
+## Gradle setup
+
+Add the Play Review library to your module-level `build.gradle.kts`:
+
+```kotlin
+dependencies {
+    implementation("com.google.android.play:review:2.0.2")
+    // Kotlin extensions for coroutine-friendly APIs
+    implementation("com.google.android.play:review-ktx:2.0.2")
+}
+```
+
+Check Google's official Play Core release notes for the current version. As of 2026 the stable version line is 2.0.x.
+
+You do not need to declare any additional permissions in the manifest. The library handles Play Store binding through the existing `Google Play services` infrastructure already present on every certified Android device.
+
+## Basic Kotlin implementation
+
+The flow is two API calls: `requestReviewFlow()` returns a `ReviewInfo` object, and `launchReviewFlow()` shows the dialog using that object.
+
+```kotlin
+import com.google.android.play.core.review.ReviewManagerFactory
+import com.google.android.play.core.review.ReviewException
+import com.google.android.play.core.review.model.ReviewErrorCode
+
+class ReviewPromptManager(private val activity: Activity) {
+
+    private val manager = ReviewManagerFactory.create(activity)
+    private var cachedReviewInfo: ReviewInfo? = null
+
+    // Call this when you predict the prompt is about to fire.
+    fun prefetch() {
+        val request = manager.requestReviewFlow()
+        request.addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                cachedReviewInfo = task.result
+            } else {
+                val reviewErrorCode = (task.exception as? ReviewException)?.errorCode
+                Log.w("Review", "Prefetch failed: $reviewErrorCode")
+            }
+        }
+    }
+
+    // Call this at the exact moment of the positive in-app event.
+    fun showPrompt() {
+        val info = cachedReviewInfo ?: return
+        val flow = manager.launchReviewFlow(activity, info)
+        flow.addOnCompleteListener {
+            // The flow has finished. We don't know whether the user
+            // submitted a review or dismissed — Google does not tell us.
+            // Clear the cache to force a fresh request next time.
+            cachedReviewInfo = null
+        }
+    }
+}
+```
+
+Three things to internalize about this code:
+
+- The completion listener fires whether the user submitted a review, dismissed the dialog, or the dialog was silently skipped due to quota. **You cannot tell which happened.** Design your UI to never block on the result.
+- `requestReviewFlow()` can take seconds on slow networks. If you wait until the moment of the prompt to call it, the dialog will not appear in time. **Always pre-cache.**
+- The `ReviewInfo` object has a lifetime. Google does not publish the exact TTL but it expires within minutes. Cache it just before you need it, not at app launch.
+
+## Pre-caching the ReviewInfo — the detail most tutorials miss
+
+This is the single biggest mistake in copy-paste tutorials. They call `requestReviewFlow()` and `launchReviewFlow()` back-to-back in the same function. On a fast connection this works. On a slow Indian 4G network, the request takes 3-5 seconds, and by the time the dialog launches, the user has moved on.
+
+The correct pattern:
+
+1. **Predict the moment.** When the user begins an action that will likely succeed (start checkout, begin a level, open the export sheet), call `prefetch()`.
+2. **Fire the prompt on success.** When the action completes successfully, call `showPrompt()` immediately. The `ReviewInfo` is already cached, the dialog appears instantly.
+
+```kotlin
+// Inside your checkout flow
+fun startCheckout() {
+    reviewPromptManager.prefetch()
+    // ...checkout logic...
+}
+
+fun onCheckoutSuccess() {
+    // Show your own success UI first
+    showSuccessScreen()
+    // Then prompt for review after a short delay
+    delay(2000) {
+        reviewPromptManager.showPrompt()
+    }
+}
+```
+
+This pattern lifts completion rates because the dialog appears in the half-second between "purchase succeeded" and "user starts thinking about what's next."
+
+## Quota handling
+
+Google enforces a time-bound quota per user (per app, per device). The exact number is not documented but two patterns hold:
+
+- Maximum one prompt every 24-48 hours per user.
+- A daily/weekly cap that is not published — observably, the dialog silently no-ops after 2-3 prompts in a short window.
+
+When quota is exceeded, `launchReviewFlow()` completes successfully but the dialog never appears. **You will get no error.** This is by design — Google explicitly does not want apps trying to "retry harder" when the quota is hit.
+
+Defensive code:
+
+```kotlin
+private var lastPromptTimestamp: Long = 0
+private val PROMPT_COOLDOWN_MS = 48 * 60 * 60 * 1000L
+
+fun shouldShowPrompt(): Boolean {
+    val now = System.currentTimeMillis()
+    return now - lastPromptTimestamp > PROMPT_COOLDOWN_MS
+}
+
+fun showPrompt() {
+    if (!shouldShowPrompt()) return
+    val info = cachedReviewInfo ?: return
+    lastPromptTimestamp = System.currentTimeMillis()
+    manager.launchReviewFlow(activity, info)
+    // ...
+}
+```
+
+Track your own cooldown alongside Google's. This prevents you from burning quota on a user who is not engaged enough yet.
+
+## Timing patterns that work
+
+Where you trigger the prompt matters more than the code itself. Based on patterns across well-rated apps:
+
+- **After a positive in-app event.** Completed onboarding, finished a task, reached a milestone, successful payment. Never time-based ("user has been in app for 5 minutes").
+- **Never during onboarding.** First-run users have no opinion yet. Wait until they have used the app at least three sessions.
+- **Never after an error.** Even a small error in the session before the prompt poisons the result.
+- **Never mid-purchase.** It interrupts intent and tanks conversion on both the purchase and the review.
+- **Wait 24-48 hours between prompts.** Even if Google's quota would allow it, your users will not.
+- **Use exponential backoff if dismissed.** If the user dismisses, do not prompt again for at least a week.
+- **Only prompt engaged users.** Three or more sessions, ideally with a recent positive interaction.
+
+## The pre-filter pattern (NPS-style)
+
+For apps with mixed-quality experiences, the pre-filter pattern is widely used. Show your own "How are we doing?" sheet in-app. Route promoters (4-5) to the In-App Review dialog. Route detractors (1-3) to your support channel.
+
+```kotlin
+fun onUserPickedSatisfaction(rating: Int) {
+    if (rating >= 4) {
+        reviewPromptManager.showPrompt()
+    } else {
+        // Open a support form or email composer
+        openSupportFlow()
+    }
+}
+```
+
+This is policy-safe as long as you do not actively block detractors from leaving Play Store reviews. You are giving them a faster path to get their problem solved, not preventing them from reviewing. Many will not bother leaving a public review after a good support interaction. For the rating-recovery context, this pattern is discussed in depth in [How to recover your app rating from 2 stars to 4+ stars](/blog/how-to-recover-app-rating-2-stars-to-4-stars).
+
+## Common errors and debugging
+
+A few error patterns and their fixes:
+
+- **`ReviewException` with `NO_ERROR` but no dialog.** Quota exceeded. Wait, retry the next day.
+- **`PLAY_STORE_NOT_FOUND`.** Device does not have Play Store (Huawei, FireOS, custom ROMs). Fall back to a deep link to your support page.
+- **`NETWORK_ERROR` on `requestReviewFlow()`.** Retry with exponential backoff. Do not block the user.
+- **Dialog appears but no review is submitted.** Expected — many users dismiss. You cannot tell. Move on.
+
+## Testing the flow
+
+Three test environments work:
+
+- **Internal app sharing.** Upload your build, install via the Play Store link. The real In-App Review API runs but submitted reviews do not affect your public rating.
+- **Internal testing track.** Same as above with a tester list.
+- **Fake review dialog (Play Console).** For unit-test-level validation. Useful for verifying your prefetch logic without actually triggering the network call.
+
+The dialog will not show on debug builds installed via Android Studio. This is the most common "why doesn't it work" question on Stack Overflow.
+
+## iOS comparison
+
+For teams shipping dual-platform, iOS has the equivalent `SKStoreReviewController.requestReview()` API. The principles are identical — pre-cache nothing (iOS handles caching internally), trigger after positive events, respect a 3-prompt-per-year hard cap (iOS-enforced). Full comparison in [App Store vs Play Store review management differences](/blog/app-store-vs-play-store-review-management-differences).
+
+## What about the negative reviews that still slip through?
+
+Implementing the In-App Review API gets you more reviews — but not all of them are positive. You will still get a steady trickle of 1-2 star reviews, and replying to them within 24 hours is the second-biggest lever for rating recovery. The [Play Store Character Counter](/tools/play-store-character-counter) keeps your replies under the 350-char limit, and the [AI Review Reply Generator](/tools/ai-review-reply-generator) drafts contextual replies in your tone at scale. Combine the In-App Review API for collection with fast AI-drafted replies for response, and you have the full Play Store reputation loop.
+
+The API is mature, the library is stable, and the integration takes a single afternoon. There is no reason in 2026 to deep-link to the Play Store for review collection.

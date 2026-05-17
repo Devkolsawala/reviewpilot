@@ -74,6 +74,13 @@ module.exports = {
       '/blog/best-chatgpt-prompts-for-play-store-review-replies': 0.7,
       '/blog/how-google-play-rating-algorithm-works': 0.7,
       '/blog/app-store-vs-play-store-review-management-differences': 0.7,
+      // Phase 2.5 SEO blog posts
+      '/blog/play-store-ai-review-summaries-developer-guide-2026': 0.8,
+      '/blog/how-to-recover-app-rating-2-stars-to-4-stars': 0.8,
+      '/blog/android-in-app-review-api-tutorial-2026': 0.7,
+      '/blog/app-review-velocity-ranking-signal-2026': 0.7,
+      '/blog/how-to-remove-fake-reviews-play-store-2026': 0.7,
+      '/blog/will-google-penalize-ai-generated-replies-play-store': 0.8,
     };
 
     const changefreq = path.startsWith('/blog/')
