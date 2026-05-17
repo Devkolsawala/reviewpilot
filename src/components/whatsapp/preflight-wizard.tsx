@@ -12,10 +12,19 @@
  * Step 5 reuses the existing two-option picker from v1 and hands the user
  * off to either <EmbeddedSignupButton /> (which then shows the PIN modal
  * and the FB popup) or <WhatsAppConnectWizard /> (the manual flow).
+ *
+ * Rendering strategy (v3a perf fix):
+ *  - All 5 steps live in the DOM at once; only the active one is `block`,
+ *    the rest are `hidden`. This kills the unmount/remount churn that the
+ *    previous Framer Motion AnimatePresence(mode="wait") was causing,
+ *    including the expensive Facebook JSSDK re-init inside Step 5 on
+ *    every navigation.
+ *  - Step transitions are instant (no fade/slide). Snappier than any
+ *    200ms animation could ever feel on a mid-range Android.
  */
 
-import { useCallback, useEffect, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
+import { memo, useCallback, useEffect, useState } from "react";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -63,8 +72,7 @@ const TOTAL_STEPS = 5;
 export type Scenario = "A" | "B" | "C" | "D";
 
 // -----------------------------------------------------------------------------
-// Telemetry helper — keeps the call-sites tidy and the format consistent.
-// Placeholder until a real analytics SDK is wired up.
+// Telemetry helper — placeholder until a real analytics SDK is wired up.
 // -----------------------------------------------------------------------------
 
 type TelemetryEvent =
@@ -133,7 +141,6 @@ export function PreflightWizard({
   const [step, setStep] = useState<number>(0); // 0-indexed; Step 1 = 0
   const [scenario, setScenario] = useState<Scenario | null>(null);
   const [checklist, setChecklist] = useState<ChecklistState>(EMPTY_CHECKLIST);
-  const [direction, setDirection] = useState<1 | -1>(1);
   const [skipConfirmOpen, setSkipConfirmOpen] = useState(false);
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
   // Step 5 sub-state: which method the user picked inside the final step.
@@ -146,7 +153,6 @@ export function PreflightWizard({
       setStep(0);
       setScenario(null);
       setChecklist(EMPTY_CHECKLIST);
-      setDirection(1);
       setSkipConfirmOpen(false);
       setCancelConfirmOpen(false);
       setStep5Method(null);
@@ -155,10 +161,18 @@ export function PreflightWizard({
     }
   }, [open]);
 
+  // Whenever we navigate, scroll the body back to the top so the new
+  // step's heading is always in view (instead of inheriting the previous
+  // step's scroll position).
+  useEffect(() => {
+    if (!open) return;
+    const el = document.getElementById("preflight-scroll-body");
+    if (el) el.scrollTop = 0;
+  }, [step, open]);
+
   const advance = useCallback(
     (to: number) => {
       track("step_advanced", { from: step + 1, to: to + 1 });
-      setDirection(1);
       setStep(to);
       if (to === TOTAL_STEPS - 1) {
         track("completed");
@@ -170,13 +184,9 @@ export function PreflightWizard({
   const goBack = useCallback(() => {
     if (step === 0) return;
     track("step_back", { from: step + 1 });
-    setDirection(-1);
     setStep((s) => Math.max(0, s - 1));
   }, [step]);
 
-  // Centralized "the user wants to leave mid-flow" handler. Always asks
-  // for confirmation so accidental clicks (or stray Escape presses) don't
-  // wipe their progress.
   const requestCancel = useCallback(() => {
     setCancelConfirmOpen(true);
   }, []);
@@ -195,41 +205,38 @@ export function PreflightWizard({
   const confirmSkip = useCallback(() => {
     track("skip_confirmed", { atStep: step + 1 });
     setSkipConfirmOpen(false);
-    setDirection(1);
     setStep(TOTAL_STEPS - 1);
     track("completed");
   }, [step]);
 
-  function handleScenarioSelect(s: Scenario) {
+  const handleScenarioSelect = useCallback((s: Scenario) => {
     setScenario(s);
     track("scenario_selected", { scenario: s });
-  }
+  }, []);
 
-  function handleChecklistChange<K extends keyof ChecklistState>(
-    key: K,
-    value: boolean
-  ) {
-    setChecklist((prev) => {
-      const next = { ...prev, [key]: value };
-      const requiredKeys: (keyof ChecklistState)[] = [
-        "metaAdmin",
-        "phoneAccess",
-        "historyAccepted",
-        "warningsAccepted",
-      ];
-      const allRequired = requiredKeys.every((k) => next[k]);
-      const wasAllRequired = requiredKeys.every((k) => prev[k]);
-      if (allRequired && !wasAllRequired) {
-        track("checklist_completed");
-      }
-      return next;
-    });
-  }
+  const handleChecklistChange = useCallback(
+    <K extends keyof ChecklistState>(key: K, value: boolean) => {
+      setChecklist((prev) => {
+        const next = { ...prev, [key]: value };
+        const requiredKeys: (keyof ChecklistState)[] = [
+          "metaAdmin",
+          "phoneAccess",
+          "historyAccepted",
+          "warningsAccepted",
+        ];
+        const allRequired = requiredKeys.every((k) => next[k]);
+        const wasAllRequired = requiredKeys.every((k) => prev[k]);
+        if (allRequired && !wasAllRequired) {
+          track("checklist_completed");
+        }
+        return next;
+      });
+    },
+    []
+  );
 
-  // After Step 4 → 5, optionally fire the email summary. We don't block on
-  // it — the wizard advances immediately and any failure is surfaced as a
-  // small toast (per spec).
-  async function maybeSendEmailSummary() {
+  // Fire-and-forget — don't block the wizard on the email send.
+  const maybeSendEmailSummary = useCallback(async () => {
     if (!checklist.emailSummary || !scenario) return;
     try {
       const res = await fetch("/api/whatsapp/preflight-summary", {
@@ -258,147 +265,187 @@ export function PreflightWizard({
         variant: "destructive",
       });
     }
-  }
+  }, [checklist.emailSummary, scenario]);
 
-  function handleReadyClick() {
+  const handleReadyClick = useCallback(() => {
     advance(4);
-    // Fire-and-forget — don't await; user is already on Step 5.
     void maybeSendEmailSummary();
-  }
+  }, [advance, maybeSendEmailSummary]);
 
-  // -- Dialog open/close routing ---------------------------------------------
-  //
-  // Radix's Dialog will fire onOpenChange on:
-  //  · backdrop click  → we suppress via onInteractOutside.preventDefault.
-  //  · Escape          → we suppress via onEscapeKeyDown.preventDefault.
-  //  · explicit close  → only via our Close button → requestCancel.
-  // The wrapper still uses controlled `open` so React stays in charge.
+  // Step 3 handler bundle (stable refs so memoized step subtrees don't churn).
+  const handleChooseDifferentNumber = useCallback(() => {
+    track("cancelled", {
+      atStep: 3,
+      scenario,
+      reason: "different_number_recommended",
+    });
+    toast({
+      title: "Come back when ready",
+      description: "Come back when you have a dedicated business number ready.",
+    });
+    onOpenChange(false);
+  }, [onOpenChange, scenario]);
 
-  function handleDialogOpenChange(next: boolean) {
-    if (!next) {
-      requestCancel();
-    } else {
-      onOpenChange(true);
-    }
-  }
+  const handleScenarioOverrideToB = useCallback(() => {
+    setScenario("B");
+    track("scenario_selected", { scenario: "B", via: "D_continue_anyway" });
+    advance(3);
+  }, [advance]);
+
+  // Step 5 handler bundle.
+  const handlePickEss = useCallback(() => {
+    track("routed_to_ess");
+    onOpenChange(false);
+  }, [onOpenChange]);
+
+  const handlePickManual = useCallback(() => {
+    track("routed_to_manual");
+    setStep5Method("manual");
+  }, []);
+
+  const handleManualBack = useCallback(() => setStep5Method(null), []);
+  const handleManualComplete = useCallback(
+    (conn: Connection) => {
+      onOpenChange(false);
+      onComplete?.(conn);
+    },
+    [onComplete, onOpenChange]
+  );
 
   return (
     <>
-      <Dialog open={open} onOpenChange={handleDialogOpenChange}>
-        <DialogContent
-          showCloseButton={false}
-          onInteractOutside={(e) => e.preventDefault()}
-          onEscapeKeyDown={(e) => {
-            e.preventDefault();
-            requestCancel();
-          }}
-          className={cn(
-            // Mobile: full-screen slide-up. Desktop: centered modal capped
-            // at 640px. We override the default Radix Dialog positioning
-            // for the small-screen layout because the default uses a fixed
-            // translate that doesn't play well with a full-height sheet.
-            "max-w-[640px] p-0 gap-0 overflow-hidden",
-            "sm:max-h-[calc(100dvh-3rem)] sm:rounded-2xl",
-            // mobile = full-screen sheet
-            "w-screen h-[100dvh] max-h-[100dvh] rounded-none border-0 left-0 top-0 translate-x-0 translate-y-0",
-            // desktop = centered card
-            "sm:w-[calc(100vw-2rem)] sm:h-auto sm:left-[50%] sm:top-[50%] sm:translate-x-[-50%] sm:translate-y-[-50%]"
-          )}
-          aria-label="WhatsApp connection pre-flight wizard"
-        >
-          {/* Header: stepper + skip + close */}
-          <div className="flex items-start justify-between gap-2 border-b border-border/60 bg-background/95 px-4 py-3 sm:px-6 sm:py-4 backdrop-blur">
-            <Stepper currentStep={step} />
-            <div className="flex shrink-0 items-center gap-1">
-              {step < TOTAL_STEPS - 1 && (
-                <button
-                  type="button"
-                  onClick={requestSkip}
-                  className="hidden text-xs font-medium text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-md px-2 py-1 sm:inline-flex"
-                  aria-label="Skip wizard (I know what I'm doing)"
-                >
-                  Skip wizard (I know what I&apos;m doing)
-                </button>
+      <Dialog
+        open={open}
+        onOpenChange={(next) => {
+          if (!next) requestCancel();
+          else onOpenChange(true);
+        }}
+      >
+        <DialogPrimitive.Portal>
+          {/*
+            Plain semi-transparent overlay — no backdrop-blur. Blur is
+            GPU-expensive on the mid-range Android phones our target users
+            are on, and was contributing to the perceived "drag" during
+            step navigation.
+          */}
+          <DialogPrimitive.Overlay
+            className={cn(
+              "fixed inset-0 z-50 bg-black/60",
+              "data-[state=open]:animate-in data-[state=open]:fade-in-0",
+              "data-[state=closed]:animate-out data-[state=closed]:fade-out-0"
+            )}
+          />
+          <DialogPrimitive.Content
+            onInteractOutside={(e) => e.preventDefault()}
+            onEscapeKeyDown={(e) => {
+              e.preventDefault();
+              requestCancel();
+            }}
+            aria-label="WhatsApp connection pre-flight wizard"
+            className={cn(
+              // Outer wrapper — full viewport, used as the flex centering
+              // container for the inner card.
+              "fixed inset-0 z-50 flex justify-center outline-none",
+              "items-end sm:items-center sm:p-4",
+              // 100dvh on mobile so the iOS Safari URL bar appearing /
+              // disappearing doesn't shove the layout around.
+              "h-[100dvh] sm:h-auto",
+              // Gentle slide-up entrance only — no exit animation.
+              "data-[state=open]:animate-in data-[state=open]:duration-200",
+              "data-[state=open]:slide-in-from-bottom-4 sm:data-[state=open]:fade-in-0 sm:data-[state=open]:zoom-in-95",
+              "data-[state=closed]:animate-out data-[state=closed]:duration-150",
+              "data-[state=closed]:fade-out-0"
+            )}
+          >
+            <div
+              className={cn(
+                // Inner card — mobile full-screen sheet, desktop centered card.
+                "flex flex-col bg-card text-card-foreground overflow-hidden",
+                "w-full h-[100dvh] rounded-none border-0",
+                "sm:w-[640px] sm:max-w-[calc(100vw-2rem)] sm:h-auto sm:max-h-[calc(100dvh-2rem)] sm:rounded-2xl sm:border sm:border-border/60 sm:shadow-[0_24px_80px_-24px_rgba(0,0,0,0.6)]"
               )}
-              <button
-                type="button"
-                onClick={requestCancel}
-                className="rounded-md p-1.5 text-muted-foreground hover:text-foreground hover:bg-secondary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                aria-label="Close wizard"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
+            >
+              {/* Hidden DialogTitle for screen readers (Radix requires one
+                  per Content for a11y; the visual title lives inside each
+                  step heading). */}
+              <DialogPrimitive.Title className="sr-only">
+                Connect WhatsApp — pre-flight wizard, step {step + 1} of{" "}
+                {TOTAL_STEPS}
+              </DialogPrimitive.Title>
+              <DialogPrimitive.Description className="sr-only">
+                A short {TOTAL_STEPS}-step checklist that explains what
+                changes when you connect your WhatsApp number to ReviewPilot.
+              </DialogPrimitive.Description>
 
-          {/* Mobile skip link (header is too cramped on small viewports) */}
-          {step < TOTAL_STEPS - 1 && (
-            <div className="border-b border-border/40 bg-secondary/30 px-4 py-2 text-center sm:hidden">
-              <button
-                type="button"
-                onClick={requestSkip}
-                className="text-xs font-medium text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
-              >
-                Skip wizard (I know what I&apos;m doing)
-              </button>
-            </div>
-          )}
+              {/* Header: stepper + (desktop) skip + close */}
+              <div className="flex-shrink-0 flex items-center justify-between gap-3 border-b border-border/60 bg-card px-4 py-3 sm:px-6 sm:py-4">
+                <Stepper currentStep={step} />
+                <div className="flex shrink-0 items-center gap-1">
+                  {step < TOTAL_STEPS - 1 && (
+                    <button
+                      type="button"
+                      onClick={requestSkip}
+                      className="hidden md:inline-flex text-xs font-medium text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-md px-2 py-1"
+                    >
+                      Skip wizard (I know what I&apos;m doing)
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={requestCancel}
+                    className="flex h-9 w-9 sm:h-8 sm:w-8 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    aria-label="Close wizard"
+                  >
+                    <X className="h-5 w-5 sm:h-4 sm:w-4" />
+                  </button>
+                </div>
+              </div>
 
-          {/* Scrollable body */}
-          <div className="flex-1 overflow-y-auto px-4 py-5 sm:px-6 sm:py-6">
-            <AnimatePresence mode="wait" custom={direction}>
-              <motion.div
-                key={step}
-                custom={direction}
-                initial={{ opacity: 0, x: direction === 1 ? 24 : -24 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: direction === 1 ? -24 : 24 }}
-                transition={{ duration: 0.22, ease: "easeOut" }}
+              {/* Mobile skip link (tucked below header to keep the header
+                  uncluttered on tiny viewports) */}
+              {step < TOTAL_STEPS - 1 && (
+                <div className="md:hidden flex-shrink-0 border-b border-border/40 bg-secondary/30 px-4 py-1.5 text-center">
+                  <button
+                    type="button"
+                    onClick={requestSkip}
+                    className="text-xs font-medium text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+                  >
+                    Skip wizard
+                  </button>
+                </div>
+              )}
+
+              {/* Scrollable body — render ALL 5 steps and toggle via
+                  `hidden`. No unmount / remount, so the Facebook JSSDK
+                  inside Step 5 only initializes once per wizard open. */}
+              <div
+                id="preflight-scroll-body"
+                className="flex-1 overflow-y-auto overscroll-contain px-4 py-5 sm:px-6 sm:py-6"
               >
-                {step === 0 && (
+                <div hidden={step !== 0} aria-hidden={step !== 0}>
                   <Step1Welcome
                     onContinue={() => advance(1)}
                     onCancel={requestCancel}
                   />
-                )}
-                {step === 1 && (
+                </div>
+                <div hidden={step !== 1} aria-hidden={step !== 1}>
                   <Step2Scenario
                     selected={scenario}
                     onSelect={handleScenarioSelect}
                     onBack={goBack}
                     onNext={() => advance(2)}
                   />
-                )}
-                {step === 2 && (
+                </div>
+                <div hidden={step !== 2} aria-hidden={step !== 2}>
                   <Step3Conditional
                     scenario={scenario}
                     onBack={goBack}
                     onProceed={() => advance(3)}
-                    onChooseDifferentNumber={() => {
-                      track("cancelled", {
-                        atStep: 3,
-                        scenario,
-                        reason: "different_number_recommended",
-                      });
-                      toast({
-                        title: "Come back when ready",
-                        description:
-                          "Come back when you have a dedicated business number ready.",
-                      });
-                      onOpenChange(false);
-                    }}
-                    onScenarioOverrideToB={() => {
-                      // Option D → "Continue anyway" : per spec, treat as B
-                      setScenario("B");
-                      track("scenario_selected", {
-                        scenario: "B",
-                        via: "D_continue_anyway",
-                      });
-                      advance(3);
-                    }}
+                    onChooseDifferentNumber={handleChooseDifferentNumber}
+                    onScenarioOverrideToB={handleScenarioOverrideToB}
                   />
-                )}
-                {step === 3 && (
+                </div>
+                <div hidden={step !== 3} aria-hidden={step !== 3}>
                   <Step4Checklist
                     scenario={scenario}
                     checklist={checklist}
@@ -406,32 +453,20 @@ export function PreflightWizard({
                     onBack={goBack}
                     onReady={handleReadyClick}
                   />
-                )}
-                {step === 4 && (
+                </div>
+                <div hidden={step !== 4} aria-hidden={step !== 4}>
                   <Step5Picker
                     method={step5Method}
-                    onPickEss={() => {
-                      track("routed_to_ess");
-                      // Close the wizard so the ESS button takes over with
-                      // its own PIN modal + FB popup. The button is still
-                      // rendered above (it owns its own lifecycle).
-                      onOpenChange(false);
-                    }}
-                    onPickManual={() => {
-                      track("routed_to_manual");
-                      setStep5Method("manual");
-                    }}
-                    onManualBack={() => setStep5Method(null)}
-                    onManualComplete={(conn) => {
-                      onOpenChange(false);
-                      onComplete?.(conn);
-                    }}
+                    onPickEss={handlePickEss}
+                    onPickManual={handlePickManual}
+                    onManualBack={handleManualBack}
+                    onManualComplete={handleManualComplete}
                   />
-                )}
-              </motion.div>
-            </AnimatePresence>
-          </div>
-        </DialogContent>
+                </div>
+              </div>
+            </div>
+          </DialogPrimitive.Content>
+        </DialogPrimitive.Portal>
       </Dialog>
 
       {/* "Skip the wizard?" confirmation */}
@@ -460,7 +495,7 @@ export function PreflightWizard({
         </DialogContent>
       </Dialog>
 
-      {/* "Cancel and lose progress?" confirmation */}
+      {/* "Cancel and exit?" confirmation */}
       <Dialog open={cancelConfirmOpen} onOpenChange={setCancelConfirmOpen}>
         <DialogContent>
           <DialogHeader>
@@ -492,10 +527,14 @@ export function PreflightWizard({
 // Stepper UI
 // -----------------------------------------------------------------------------
 
-function Stepper({ currentStep }: { currentStep: number }) {
+const Stepper = memo(function Stepper({
+  currentStep,
+}: {
+  currentStep: number;
+}) {
   return (
     <div
-      className="flex items-center gap-1.5 sm:gap-2"
+      className="flex items-center gap-1 sm:gap-1.5"
       role="progressbar"
       aria-valuemin={1}
       aria-valuemax={TOTAL_STEPS}
@@ -509,26 +548,23 @@ function Stepper({ currentStep }: { currentStep: number }) {
           <div key={i} className="flex items-center">
             <div
               className={cn(
-                "flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-full text-[10px] sm:text-xs font-semibold transition-colors",
+                "flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full text-[11px] sm:text-xs font-semibold transition-colors",
                 state === "current" &&
                   "bg-[linear-gradient(135deg,#6366f1_0%,#8b5cf6_50%,#d946ef_100%)] text-white shadow-[0_0_0_3px_hsl(var(--ring)/0.15)]",
-                state === "done" &&
-                  "bg-accent/20 text-accent",
-                state === "future" &&
-                  "bg-secondary text-muted-foreground"
+                state === "done" && "bg-accent/20 text-accent",
+                state === "future" && "bg-secondary text-muted-foreground"
               )}
               aria-current={state === "current" ? "step" : undefined}
             >
-              {state === "done" ? (
-                <Check className="h-3.5 w-3.5" />
-              ) : (
-                i + 1
-              )}
+              {state === "done" ? <Check className="h-3.5 w-3.5" /> : i + 1}
             </div>
             {i < TOTAL_STEPS - 1 && (
               <div
                 className={cn(
-                  "h-px w-3 sm:w-6 transition-colors",
+                  "h-px transition-colors",
+                  // Tiny connector on mobile so 5 circles fit beside the
+                  // close button on a 360 px-wide phone.
+                  "w-2 sm:w-4",
                   i < currentStep ? "bg-accent/40" : "bg-border"
                 )}
               />
@@ -538,7 +574,7 @@ function Stepper({ currentStep }: { currentStep: number }) {
       })}
     </div>
   );
-}
+});
 
 // -----------------------------------------------------------------------------
 // Shared bits
@@ -552,12 +588,12 @@ function StepHeading({
   subtitle?: string;
 }) {
   return (
-    <div className="mb-5">
-      <h2 className="font-sans text-xl sm:text-2xl font-semibold tracking-tight text-foreground">
+    <div className="mb-4 sm:mb-5">
+      <h2 className="font-sans text-lg sm:text-2xl font-semibold tracking-tight text-foreground leading-tight">
         {title}
       </h2>
       {subtitle && (
-        <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+        <p className="mt-2 text-sm sm:text-base text-muted-foreground leading-relaxed">
           {subtitle}
         </p>
       )}
@@ -569,7 +605,7 @@ function StepHeading({
 // Step 1 — Welcome + critical disclaimer
 // -----------------------------------------------------------------------------
 
-function Step1Welcome({
+const Step1Welcome = memo(function Step1Welcome({
   onContinue,
   onCancel,
 }: {
@@ -586,21 +622,23 @@ function Step1Welcome({
       <div className="rounded-xl border border-amber-300/60 bg-amber-50 dark:border-amber-500/30 dark:bg-amber-950/30 p-4 sm:p-5">
         <div className="flex items-start gap-3">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-100 dark:bg-amber-900/40">
-            <Info className="h-[18px] w-[18px] text-amber-700 dark:text-amber-300" aria-hidden />
+            <Info
+              className="h-5 w-5 sm:h-6 sm:w-6 text-amber-700 dark:text-amber-300"
+              aria-hidden
+            />
           </div>
-          <div className="space-y-2.5">
-            <p className="text-sm font-semibold text-amber-900 dark:text-amber-100">
+          <div className="space-y-2.5 min-w-0">
+            <p className="text-base sm:text-lg font-semibold text-amber-900 dark:text-amber-100 leading-snug">
               Important: We only see messages from the moment you connect.
             </p>
-            <p className="text-sm text-amber-900/90 dark:text-amber-100/90 leading-relaxed">
-              ReviewPilot will receive new customer messages starting from
-              the moment you complete this connection. We do{" "}
-              <strong>NOT</strong> have access to your existing WhatsApp chat
-              history — those messages stay in WhatsApp&apos;s servers and
-              your phone app, but they will not appear in your ReviewPilot
-              inbox.
+            <p className="text-sm sm:text-base text-amber-900/90 dark:text-amber-100/90 leading-relaxed">
+              ReviewPilot will receive new customer messages starting from the
+              moment you complete this connection. We do <strong>NOT</strong>{" "}
+              have access to your existing WhatsApp chat history — those
+              messages stay in WhatsApp&apos;s servers and your phone app, but
+              they will not appear in your ReviewPilot inbox.
             </p>
-            <p className="text-sm text-amber-900/90 dark:text-amber-100/90 leading-relaxed">
+            <p className="text-sm sm:text-base text-amber-900/90 dark:text-amber-100/90 leading-relaxed">
               This means: any reviews, complaints, or customer conversations
               from before connecting are not retrievable through ReviewPilot.
             </p>
@@ -612,7 +650,7 @@ function Step1Welcome({
         <Button
           variant="gradient"
           size="lg"
-          className="w-full"
+          className="w-full min-h-[48px]"
           onClick={onContinue}
         >
           I understand — let&apos;s continue
@@ -621,14 +659,14 @@ function Step1Welcome({
         <button
           type="button"
           onClick={onCancel}
-          className="block w-full text-center text-xs font-medium text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-md py-1"
+          className="block w-full text-center text-xs sm:text-sm font-medium text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-md py-2"
         >
           Cancel and go back
         </button>
       </div>
     </div>
   );
-}
+});
 
 // -----------------------------------------------------------------------------
 // Step 2 — Current WhatsApp setup
@@ -656,8 +694,7 @@ const SCENARIO_OPTIONS: ScenarioOption[] = [
   },
   {
     id: "C",
-    title:
-      "I have a separate business number not yet on any WhatsApp app",
+    title: "I have a separate business number not yet on any WhatsApp app",
     sub: "A new SIM or unused number specifically for this business",
     Icon: Phone,
   },
@@ -669,7 +706,7 @@ const SCENARIO_OPTIONS: ScenarioOption[] = [
   },
 ];
 
-function Step2Scenario({
+const Step2Scenario = memo(function Step2Scenario({
   selected,
   onSelect,
   onBack,
@@ -680,7 +717,6 @@ function Step2Scenario({
   onBack: () => void;
   onNext: () => void;
 }) {
-  // Arrow-key roving focus for accessibility.
   function handleKeyDown(
     e: React.KeyboardEvent<HTMLDivElement>,
     index: number
@@ -689,9 +725,7 @@ function Step2Scenario({
       e.preventDefault();
       const next = SCENARIO_OPTIONS[(index + 1) % SCENARIO_OPTIONS.length];
       onSelect(next.id);
-      document
-        .getElementById(`scenario-option-${next.id}`)
-        ?.focus();
+      document.getElementById(`scenario-option-${next.id}`)?.focus();
     }
     if (e.key === "ArrowUp" || e.key === "ArrowLeft") {
       e.preventDefault();
@@ -700,9 +734,7 @@ function Step2Scenario({
           (index - 1 + SCENARIO_OPTIONS.length) % SCENARIO_OPTIONS.length
         ];
       onSelect(prev.id);
-      document
-        .getElementById(`scenario-option-${prev.id}`)
-        ?.focus();
+      document.getElementById(`scenario-option-${prev.id}`)?.focus();
     }
   }
 
@@ -716,7 +748,7 @@ function Step2Scenario({
       <div
         role="radiogroup"
         aria-label="WhatsApp setup scenario"
-        className="space-y-2.5"
+        className="grid grid-cols-1 gap-3"
       >
         {SCENARIO_OPTIONS.map((opt, idx) => {
           const isSelected = selected === opt.id;
@@ -737,7 +769,9 @@ function Step2Scenario({
                 }
               }}
               className={cn(
-                "group flex cursor-pointer items-start gap-3 rounded-xl border-2 p-3.5 sm:p-4 transition-all",
+                "group flex cursor-pointer items-start gap-3 rounded-xl border-2 p-4 min-h-[64px]",
+                // Cheap transition — colors only.
+                "transition-colors duration-150",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                 isSelected
                   ? "border-accent/60 bg-accent/5"
@@ -746,25 +780,25 @@ function Step2Scenario({
             >
               <div
                 className={cn(
-                  "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors",
+                  "flex h-8 w-8 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-lg",
                   isSelected
                     ? "bg-accent/10 text-accent"
                     : "bg-secondary text-muted-foreground group-hover:text-foreground"
                 )}
               >
-                <opt.Icon className="h-5 w-5" aria-hidden />
+                <opt.Icon className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-foreground">
+                <p className="text-sm sm:text-base font-semibold text-foreground leading-snug">
                   {opt.title}
                 </p>
-                <p className="mt-0.5 text-xs text-muted-foreground leading-snug">
+                <p className="mt-0.5 text-xs sm:text-sm text-muted-foreground leading-snug">
                   {opt.sub}
                 </p>
               </div>
               <div
                 className={cn(
-                  "mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors",
+                  "mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2",
                   isSelected
                     ? "border-accent bg-accent"
                     : "border-muted-foreground/40"
@@ -780,14 +814,18 @@ function Step2Scenario({
         })}
       </div>
 
-      <div className="mt-6 flex gap-2">
-        <Button variant="outline" onClick={onBack}>
+      <div className="mt-6 flex flex-col-reverse sm:flex-row gap-2">
+        <Button
+          variant="outline"
+          onClick={onBack}
+          className="min-h-[44px] sm:flex-none"
+        >
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back
         </Button>
         <Button
           variant="gradient"
-          className="flex-1"
+          className="flex-1 min-h-[44px]"
           disabled={!selected}
           onClick={onNext}
         >
@@ -797,13 +835,13 @@ function Step2Scenario({
       </div>
     </div>
   );
-}
+});
 
 // -----------------------------------------------------------------------------
 // Step 3 — Conditional content
 // -----------------------------------------------------------------------------
 
-function Step3Conditional({
+const Step3Conditional = memo(function Step3Conditional({
   scenario,
   onBack,
   onProceed,
@@ -817,8 +855,6 @@ function Step3Conditional({
   onScenarioOverrideToB: () => void;
 }) {
   if (!scenario) {
-    // Defensive — shouldn't happen because Step 2 disables Next without
-    // a selection, but guard anyway.
     return (
       <div className="text-sm text-muted-foreground">
         Please go back and pick an option.
@@ -835,10 +871,10 @@ function Step3Conditional({
       <div>
         <StepHeading title="Important: connecting will change how your WhatsApp Business app works" />
 
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           {/* Keep column */}
           <div className="rounded-xl border border-emerald-300/60 bg-emerald-50 dark:border-emerald-500/30 dark:bg-emerald-950/30 p-4">
-            <p className="mb-2.5 text-sm font-semibold text-emerald-900 dark:text-emerald-100">
+            <p className="mb-2.5 text-sm sm:text-base font-semibold text-emerald-900 dark:text-emerald-100">
               What you&apos;ll keep ✅
             </p>
             <ul className="space-y-1.5 text-sm text-emerald-900/90 dark:text-emerald-100/90">
@@ -854,7 +890,7 @@ function Step3Conditional({
 
           {/* Changes column */}
           <div className="rounded-xl border border-amber-300/60 bg-amber-50 dark:border-amber-500/30 dark:bg-amber-950/30 p-4">
-            <p className="mb-2.5 text-sm font-semibold text-amber-900 dark:text-amber-100">
+            <p className="mb-2.5 text-sm sm:text-base font-semibold text-amber-900 dark:text-amber-100">
               What changes ⚠️
             </p>
             <ul className="space-y-1.5 text-sm text-amber-900/90 dark:text-amber-100/90">
@@ -870,12 +906,8 @@ function Step3Conditional({
               <ChangeBullet>
                 Group chats won&apos;t sync to ReviewPilot
               </ChangeBullet>
-              <ChangeBullet>
-                WhatsApp Status updates won&apos;t sync
-              </ChangeBullet>
-              <ChangeBullet>
-                Message editing/revoke gets disabled
-              </ChangeBullet>
+              <ChangeBullet>WhatsApp Status updates won&apos;t sync</ChangeBullet>
+              <ChangeBullet>Message editing/revoke gets disabled</ChangeBullet>
             </ul>
           </div>
         </div>
@@ -884,18 +916,26 @@ function Step3Conditional({
           <p>
             <strong>Coexistence support is coming soon.</strong> This will let
             you keep using the WhatsApp Business app alongside ReviewPilot. If
-            you want to wait for Coexistence support before connecting,
-            contact us to be notified when it&apos;s ready.
+            you want to wait for Coexistence support before connecting, contact
+            us to be notified when it&apos;s ready.
           </p>
         </InfoBox>
 
         <div className="mt-6 space-y-2">
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={onBack}>
+          <div className="flex flex-col-reverse sm:flex-row gap-2">
+            <Button
+              variant="outline"
+              onClick={onBack}
+              className="min-h-[44px] sm:flex-none"
+            >
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back
             </Button>
-            <Button variant="gradient" className="flex-1" onClick={onProceed}>
+            <Button
+              variant="gradient"
+              className="flex-1 min-h-[44px]"
+              onClick={onProceed}
+            >
               I understand — proceed with connection
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
@@ -905,7 +945,7 @@ function Step3Conditional({
             target="_blank"
             rel="noopener noreferrer"
             onClick={trackBooking}
-            className="block text-center text-xs font-medium text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-md py-1"
+            className="block text-center text-xs sm:text-sm font-medium text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-md py-2"
           >
             Wait for Coexistence — contact us
           </a>
@@ -923,31 +963,31 @@ function Step3Conditional({
           <div className="flex items-start gap-3">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-100 dark:bg-red-900/40">
               <ShieldAlert
-                className="h-[18px] w-[18px] text-red-700 dark:text-red-300"
+                className="h-5 w-5 sm:h-6 sm:w-6 text-red-700 dark:text-red-300"
                 aria-hidden
               />
             </div>
-            <div className="space-y-2.5">
-              <p className="text-sm text-red-950 dark:text-red-100 leading-relaxed">
+            <div className="space-y-2.5 min-w-0">
+              <p className="text-sm sm:text-base text-red-950 dark:text-red-100 leading-relaxed">
                 Connecting this number to ReviewPilot will permanently move it
                 to WhatsApp&apos;s Business platform. This means:
               </p>
-              <ul className="space-y-1.5 text-sm text-red-950/90 dark:text-red-100/90">
+              <ul className="space-y-2 text-sm sm:text-base text-red-950/90 dark:text-red-100/90 leading-relaxed">
                 <RedBullet>
                   Your personal WhatsApp on this number will stop working
                 </RedBullet>
                 <RedBullet>
-                  You will lose access to all chat history in the WhatsApp
-                  app (it stays on Meta&apos;s servers but is no longer
-                  accessible from a phone)
+                  You will lose access to all chat history in the WhatsApp app
+                  (it stays on Meta&apos;s servers but is no longer accessible
+                  from a phone)
                 </RedBullet>
                 <RedBullet>
                   You cannot reverse this without going through a 7-day
                   cooldown period
                 </RedBullet>
                 <RedBullet>
-                  Family and friends who message you on this number will
-                  reach your business inbox in ReviewPilot
+                  Family and friends who message you on this number will reach
+                  your business inbox in ReviewPilot
                 </RedBullet>
               </ul>
             </div>
@@ -957,29 +997,34 @@ function Step3Conditional({
         <InfoBox>
           <p>
             <strong>Strong recommendation:</strong> get a separate SIM card
-            (₹50-100 in India) and use that as your business number. Keep
-            your existing personal WhatsApp untouched. This is what most
-            businesses we work with end up doing.
+            (₹50-100 in India) and use that as your business number. Keep your
+            existing personal WhatsApp untouched. This is what most businesses
+            we work with end up doing.
           </p>
         </InfoBox>
 
         <div className="mt-6 space-y-2">
           <Button
             variant="gradient"
-            className="w-full"
+            className="w-full min-h-[48px] whitespace-normal h-auto py-3 text-sm sm:text-base"
             onClick={onChooseDifferentNumber}
           >
             I&apos;ll use a different business number — let me come back later
           </Button>
           <Button
             variant="outline"
-            className="w-full border-red-400/60 text-red-700 hover:bg-red-50 dark:border-red-500/40 dark:text-red-300 dark:hover:bg-red-950/30"
+            className="w-full min-h-[44px] border-red-400/60 text-red-700 hover:bg-red-50 dark:border-red-500/40 dark:text-red-300 dark:hover:bg-red-950/30"
             onClick={onProceed}
           >
             I understand the risks — proceed anyway
           </Button>
           <div className="flex items-center justify-between gap-2 pt-1">
-            <Button variant="ghost" size="sm" onClick={onBack}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onBack}
+              className="min-h-[40px]"
+            >
               <ArrowLeft className="mr-1.5 h-4 w-4" />
               Back
             </Button>
@@ -988,7 +1033,7 @@ function Step3Conditional({
               target="_blank"
               rel="noopener noreferrer"
               onClick={trackBooking}
-              className="text-xs font-medium text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-md px-1 py-0.5"
+              className="text-xs sm:text-sm font-medium text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-md px-2 py-2"
             >
               Talk to founder before deciding
             </a>
@@ -1007,12 +1052,12 @@ function Step3Conditional({
           <div className="flex items-start gap-3">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-100 dark:bg-emerald-900/40">
               <Sparkles
-                className="h-[18px] w-[18px] text-emerald-700 dark:text-emerald-300"
+                className="h-5 w-5 sm:h-6 sm:w-6 text-emerald-700 dark:text-emerald-300"
                 aria-hidden
               />
             </div>
-            <div className="space-y-2.5">
-              <p className="text-sm text-emerald-950 dark:text-emerald-100 leading-relaxed">
+            <div className="space-y-2.5 min-w-0">
+              <p className="text-sm sm:text-base text-emerald-950 dark:text-emerald-100 leading-relaxed">
                 Since this number isn&apos;t on any existing WhatsApp app, you
                 can connect it directly without losing any data.
               </p>
@@ -1021,9 +1066,7 @@ function Step3Conditional({
                 <KeepBullet>
                   All future customer messages flow into ReviewPilot
                 </KeepBullet>
-                <KeepBullet>
-                  AI-drafted replies for fast response times
-                </KeepBullet>
+                <KeepBullet>AI-drafted replies for fast response times</KeepBullet>
                 <KeepBullet>
                   Full template management from the dashboard
                 </KeepBullet>
@@ -1032,17 +1075,25 @@ function Step3Conditional({
           </div>
         </div>
 
-        <p className="mt-4 text-xs text-muted-foreground">
+        <p className="mt-4 text-xs sm:text-sm text-muted-foreground">
           You&apos;ll need to verify this number via SMS or voice call during
           the next step.
         </p>
 
-        <div className="mt-6 flex gap-2">
-          <Button variant="outline" onClick={onBack}>
+        <div className="mt-6 flex flex-col-reverse sm:flex-row gap-2">
+          <Button
+            variant="outline"
+            onClick={onBack}
+            className="min-h-[44px] sm:flex-none"
+          >
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back
           </Button>
-          <Button variant="gradient" className="flex-1" onClick={onProceed}>
+          <Button
+            variant="gradient"
+            className="flex-1 min-h-[44px]"
+            onClick={onProceed}
+          >
             Continue to connection
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
@@ -1067,27 +1118,36 @@ function Step3Conditional({
           onClick={trackBooking}
           className="block"
         >
-          <Button variant="gradient" className="w-full" type="button">
+          <Button
+            variant="gradient"
+            className="w-full min-h-[48px]"
+            type="button"
+          >
             Talk to founder first (recommended)
           </Button>
         </a>
         <Button
           variant="outline"
-          className="w-full"
+          className="w-full min-h-[44px] whitespace-normal h-auto py-3 text-sm sm:text-base"
           onClick={onChooseDifferentNumber}
         >
           I&apos;ll use a different number that&apos;s not currently on
           WhatsApp
         </Button>
         <div className="flex items-center justify-between gap-2 pt-1">
-          <Button variant="ghost" size="sm" onClick={onBack}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onBack}
+            className="min-h-[40px]"
+          >
             <ArrowLeft className="mr-1.5 h-4 w-4" />
             Back
           </Button>
           <button
             type="button"
             onClick={onScenarioOverrideToB}
-            className="text-xs font-medium text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-md px-1 py-0.5"
+            className="text-xs sm:text-sm font-medium text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-md px-2 py-2"
           >
             Continue anyway and I&apos;ll figure it out
           </button>
@@ -1095,11 +1155,11 @@ function Step3Conditional({
       </div>
     </div>
   );
-}
+});
 
 function InfoBox({ children }: { children: React.ReactNode }) {
   return (
-    <div className="mt-4 rounded-xl border border-blue-300/60 bg-blue-50 dark:border-blue-500/30 dark:bg-blue-950/30 p-4 text-sm text-blue-950 dark:text-blue-100 leading-relaxed">
+    <div className="mt-4 rounded-xl border border-blue-300/60 bg-blue-50 dark:border-blue-500/30 dark:bg-blue-950/30 p-4 text-sm sm:text-base text-blue-950 dark:text-blue-100 leading-relaxed">
       {children}
     </div>
   );
@@ -1133,7 +1193,7 @@ function RedBullet({ children }: { children: React.ReactNode }) {
   return (
     <li className="flex items-start gap-2">
       <ShieldAlert
-        className="mt-0.5 h-3.5 w-3.5 shrink-0 text-red-600 dark:text-red-400"
+        className="mt-0.5 h-4 w-4 shrink-0 text-red-600 dark:text-red-400"
         aria-hidden
       />
       <span>{children}</span>
@@ -1145,7 +1205,7 @@ function RedBullet({ children }: { children: React.ReactNode }) {
 // Step 4 — Pre-connection checklist
 // -----------------------------------------------------------------------------
 
-function Step4Checklist({
+const Step4Checklist = memo(function Step4Checklist({
   scenario,
   checklist,
   onChange,
@@ -1154,10 +1214,7 @@ function Step4Checklist({
 }: {
   scenario: Scenario | null;
   checklist: ChecklistState;
-  onChange: <K extends keyof ChecklistState>(
-    key: K,
-    value: boolean
-  ) => void;
+  onChange: <K extends keyof ChecklistState>(key: K, value: boolean) => void;
   onBack: () => void;
   onReady: () => void;
 }) {
@@ -1167,8 +1224,6 @@ function Step4Checklist({
     checklist.historyAccepted &&
     checklist.warningsAccepted;
 
-  // Adjust the "warnings" copy slightly based on chosen scenario so the
-  // checkbox reads truthfully.
   const warningsLabel =
     scenario === "B"
       ? "I have read the warnings on the previous screen — including the personal-WhatsApp risks — and accept the implications"
@@ -1183,7 +1238,7 @@ function Step4Checklist({
         subtitle="Please confirm each of these before we connect:"
       />
 
-      <div className="space-y-2.5">
+      <div className="space-y-3">
         <ChecklistItem
           id="cl-meta"
           checked={checklist.metaAdmin}
@@ -1210,7 +1265,7 @@ function Step4Checklist({
         />
       </div>
 
-      <div className="mt-4 rounded-xl border border-dashed border-border bg-secondary/40 p-3">
+      <div className="mt-4 rounded-xl border border-dashed border-border bg-secondary/40 p-2 sm:p-3">
         <ChecklistItem
           id="cl-email"
           variant="optional"
@@ -1228,14 +1283,18 @@ function Step4Checklist({
         />
       </div>
 
-      <div className="mt-6 flex gap-2">
-        <Button variant="outline" onClick={onBack}>
+      <div className="mt-6 flex flex-col-reverse sm:flex-row gap-2">
+        <Button
+          variant="outline"
+          onClick={onBack}
+          className="min-h-[44px] sm:flex-none"
+        >
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back
         </Button>
         <Button
           variant="gradient"
-          className="flex-1"
+          className="flex-1 min-h-[48px]"
           disabled={!allRequired}
           onClick={onReady}
         >
@@ -1245,7 +1304,7 @@ function Step4Checklist({
       </div>
     </div>
   );
-}
+});
 
 function ChecklistItem({
   id,
@@ -1264,7 +1323,7 @@ function ChecklistItem({
     <label
       htmlFor={id}
       className={cn(
-        "group flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors",
+        "group flex cursor-pointer items-start gap-3 rounded-lg border p-3 min-h-[44px] transition-colors duration-150",
         variant === "required"
           ? checked
             ? "border-accent/40 bg-accent/5"
@@ -1278,11 +1337,14 @@ function ChecklistItem({
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
         className={cn(
-          "mt-0.5 h-4 w-4 shrink-0 rounded border-2 border-border bg-background text-accent cursor-pointer",
+          // Slightly bigger box on mobile for fat-finger tap accuracy.
+          "mt-0.5 h-5 w-5 sm:h-4 sm:w-4 shrink-0 rounded border-2 border-border bg-background text-accent cursor-pointer",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         )}
       />
-      <span className="text-sm leading-snug text-foreground">{label}</span>
+      <span className="text-sm sm:text-base leading-snug text-foreground">
+        {label}
+      </span>
     </label>
   );
 }
@@ -1291,7 +1353,7 @@ function ChecklistItem({
 // Step 5 — Connection method picker (final step)
 // -----------------------------------------------------------------------------
 
-function Step5Picker({
+const Step5Picker = memo(function Step5Picker({
   method,
   onPickEss,
   onPickManual,
@@ -1305,9 +1367,6 @@ function Step5Picker({
   onManualComplete: (conn: Connection) => void;
 }) {
   if (method === "manual") {
-    // The existing manual wizard takes over the rest of the flow. We pass
-    // its onBack into our local "go back to the picker" handler so the
-    // user can switch methods without dismissing the modal.
     return (
       <WhatsAppConnectWizard
         onBack={onManualBack}
@@ -1320,17 +1379,17 @@ function Step5Picker({
     <div>
       <StepHeading title="How would you like to connect?" />
 
-      <div className="space-y-3">
-        {/* Recommended path — wraps EmbeddedSignupButton so the existing
-            PIN modal + FB popup still drive the rest of the flow. */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {/* Recommended path */}
         <div
           className={cn(
-            "rounded-xl border-2 p-4 transition-colors",
-            "border-accent/40 bg-accent/5"
+            "rounded-xl border-2 p-4",
+            "border-accent/40 bg-accent/5",
+            "flex flex-col"
           )}
         >
-          <div className="mb-3 flex items-center gap-2">
-            <span className="text-sm font-semibold text-foreground">
+          <div className="mb-2 flex items-center gap-2 flex-wrap">
+            <span className="text-sm sm:text-base font-semibold text-foreground">
               Continue with Facebook
             </span>
             <Badge
@@ -1340,13 +1399,13 @@ function Step5Picker({
               Recommended
             </Badge>
           </div>
-          <p className="mb-3 text-xs text-muted-foreground leading-snug">
-            Use your Facebook account to authorize ReviewPilot. Takes about
-            60 seconds. No technical setup needed.
+          <p className="mb-3 text-xs sm:text-sm text-muted-foreground leading-snug flex-1">
+            Use your Facebook account to authorize ReviewPilot. Takes about 60
+            seconds. No technical setup needed.
           </p>
-          {/* Wrap the existing button so clicking it both logs telemetry
-              and tells the wizard to close. The button still owns its own
-              PIN modal + FB popup. */}
+          {/* `onClickCapture` lets us fire telemetry + close the wizard
+              shell BEFORE the button's own click handler launches its PIN
+              modal / FB popup. The button still owns its full lifecycle. */}
           <div onClickCapture={onPickEss}>
             <EmbeddedSignupButton />
           </div>
@@ -1357,26 +1416,26 @@ function Step5Picker({
           type="button"
           onClick={onPickManual}
           className={cn(
-            "block w-full rounded-xl border-2 border-border p-4 text-left transition-colors",
+            "rounded-xl border-2 border-border p-4 text-left transition-colors duration-150",
             "hover:border-blue-400/50 hover:bg-blue-50/40 dark:hover:bg-blue-950/20",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+            "min-h-[44px]"
           )}
         >
-          <div className="mb-1.5 flex items-center gap-2">
-            <span className="text-sm font-semibold text-foreground">
+          <div className="mb-2 flex items-center gap-2 flex-wrap">
+            <span className="text-sm sm:text-base font-semibold text-foreground">
               Connect with System User token
             </span>
             <Badge variant="secondary" className="text-[10px]">
               Advanced
             </Badge>
           </div>
-          <p className="text-xs text-muted-foreground leading-snug">
+          <p className="text-xs sm:text-sm text-muted-foreground leading-snug">
             For developers and customers with existing Meta Business setups.
-            Requires WhatsApp Business Account ID and System User access
-            token.
+            Requires WhatsApp Business Account ID and System User access token.
           </p>
         </button>
       </div>
     </div>
   );
-}
+});
