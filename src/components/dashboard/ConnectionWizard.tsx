@@ -39,6 +39,7 @@ import { toast } from "@/components/ui/use-toast";
 import { GBP_ENABLED, GBP_STATUS_LABEL, GBP_COMING_SOON_MESSAGE } from "@/lib/feature-flags";
 import type { Connection } from "@/types/connection";
 import { WhatsAppConnectWizard } from "@/components/dashboard/WhatsAppConnectWizard";
+import { SecurityTrustBanner } from "@/components/dashboard/SecurityTrustBanner";
 import {
  EmbeddedSignupButton,
  EmbeddedSignupTrigger,
@@ -750,6 +751,7 @@ function InviteEmailWizard({
  </CardDescription>
  </CardHeader>
  <CardContent className="space-y-4">
+ <SecurityTrustBanner />
  <div className="space-y-2">
  <Label>App package name</Label>
  <Input
@@ -1175,6 +1177,7 @@ function OwnServiceAccountWizard({
  </CardDescription>
  </CardHeader>
  <CardContent className="space-y-4">
+ <SecurityTrustBanner />
  {/* File upload */}
  <div className="space-y-2">
  <Label>Service Account JSON Key</Label>

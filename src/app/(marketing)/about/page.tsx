@@ -110,7 +110,7 @@ export default function AboutPage() {
               name="Dev Kolsawala"
               role="Co-founder"
               bio="Product and engineering. Previously shipped apps drowning in Play Store reviews — which is how this whole thing started."
-              href="https://www.linkedin.com/in/dev-kolsawala-a79637200/"
+              href="https://www.linkedin.com/in/dev-kolsawala"
             />
             <FounderCard
               initials="AR"
