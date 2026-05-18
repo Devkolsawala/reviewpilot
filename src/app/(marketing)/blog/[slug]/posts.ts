@@ -19,6 +19,12 @@ export type BlogPost = {
 const CONTENT_BLOG_DIR = path.join(process.cwd(), "content", "blog");
 
 const MDX_POST_SLUGS = [
+  "google-play-console-permissions-reply-reviews-guide",
+  "how-app-reviews-affect-install-conversion-rate-data-study",
+  "indie-app-developer-review-management-workflow-2026",
+  "multi-language-play-store-reply-strategy-localized-ai",
+  "1-star-reviews-after-app-update-recovery-playbook",
+  "play-store-aso-ranking-factors-2026-reviews-impact",
   "review-reply-rate-play-store-ranking-signal",
   "google-maps-ranking-review-replies-local-business",
   "unanswered-reviews-revenue-loss-calculation",

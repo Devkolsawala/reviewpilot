@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { JsonLd, SITE_URL } from "@/components/marketing/JsonLd";
 import { BlogGrid, type BlogGridPost } from "@/components/blog/BlogGrid";
 import { BlogHero } from "@/components/blog/BlogHero";
@@ -78,6 +79,11 @@ export default function BlogPage() {
     <div>
       <JsonLd data={blogListSchema} />
       <BlogHero />
+      <div className="mx-auto max-w-6xl px-4 pt-8 sm:px-6 lg:px-8">
+        <Link href="/play-store-reviews-guide" className="inline-flex rounded-full border border-fuchsia-400/30 bg-fuchsia-500/10 px-4 py-2 text-sm text-fuchsia-200 transition-colors hover:border-fuchsia-300/60">
+          Start here: The Complete Play Store Reviews Guide
+        </Link>
+      </div>
       <BlogGrid posts={posts} />
     </div>
   );

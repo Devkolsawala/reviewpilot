@@ -68,6 +68,7 @@ module.exports = {
       '/about': 0.7,
       '/demo': 0.8,
       '/blog': 0.8,
+      '/play-store-reviews-guide': { priority: 1.0, changefreq: 'monthly' },
       // Phase 2 SEO blog posts
       '/blog/play-store-review-response-examples-2026': 0.7,
       '/blog/how-to-get-more-5-star-reviews-google-play-store': 0.7,
@@ -82,18 +83,33 @@ module.exports = {
       '/blog/app-review-velocity-ranking-signal-2026': 0.7,
       '/blog/how-to-remove-fake-reviews-play-store-2026': 0.7,
       '/blog/will-google-penalize-ai-generated-replies-play-store': 0.8,
+      // Phase 2.6 SEO blog posts
+      '/blog/play-store-aso-ranking-factors-2026-reviews-impact': { priority: 0.9, changefreq: 'monthly' },
+      '/blog/1-star-reviews-after-app-update-recovery-playbook': { priority: 0.8, changefreq: 'monthly' },
+      '/blog/multi-language-play-store-reply-strategy-localized-ai': { priority: 0.7, changefreq: 'monthly' },
+      '/blog/indie-app-developer-review-management-workflow-2026': { priority: 0.7, changefreq: 'monthly' },
+      '/blog/how-app-reviews-affect-install-conversion-rate-data-study': { priority: 0.8, changefreq: 'monthly' },
+      '/blog/google-play-console-permissions-reply-reviews-guide': { priority: 0.7, changefreq: 'monthly' },
     };
 
-    const changefreq = path.startsWith('/blog/')
-      ? 'monthly'
-      : path.startsWith('/tools/')
-        ? 'weekly'
-        : config.changefreq;
+    const pathConfig = priorities[path];
+
+    const changefreq =
+      typeof pathConfig === 'object'
+        ? pathConfig.changefreq
+        : path.startsWith('/blog/')
+          ? 'monthly'
+          : path.startsWith('/tools/')
+            ? 'weekly'
+            : config.changefreq;
 
     return {
       loc: path,
       changefreq,
-      priority: priorities[path] ?? config.priority,
+      priority:
+        typeof pathConfig === 'object'
+          ? pathConfig.priority
+          : pathConfig ?? config.priority,
       lastmod: new Date().toISOString(),
     };
   },
