@@ -10,6 +10,7 @@ import {
   breadcrumbSchema,
   faqSchema,
 } from "@/components/marketing/JsonLd";
+import { GuideToc } from "./GuideToc";
 
 const title = "The Complete Guide to Play Store Review Management in 2026";
 const description =
@@ -135,7 +136,7 @@ export default function PlayStoreReviewsGuidePage() {
         />
         <div className="relative mx-auto max-w-6xl">
           <div className="max-w-4xl">
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-fuchsia-400/30 bg-fuchsia-500/10 px-3 py-1.5 text-sm text-fuchsia-200">
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-violet-500/25 bg-violet-500/10 px-3 py-1.5 text-sm font-medium text-violet-700 shadow-sm backdrop-blur dark:text-violet-200">
               <Sparkles className="h-4 w-4" />
               Evergreen Play Store review management hub
             </div>
@@ -163,23 +164,7 @@ export default function PlayStoreReviewsGuidePage() {
 
       <div className="mx-auto grid max-w-7xl gap-10 px-4 py-14 sm:px-6 lg:grid-cols-[280px_minmax(0,1fr)] lg:px-8">
         <aside className="lg:sticky lg:top-24 lg:self-start">
-          <nav className="rounded-xl border border-border/60 bg-card/50 p-4 shadow-sm backdrop-blur">
-            <p className="mb-3 font-mono text-xs uppercase tracking-wider text-muted-foreground">
-              Guide sections
-            </p>
-            <ol className="space-y-2">
-              {toc.map((item) => (
-                <li key={item.href}>
-                  <Link
-                    href={item.href}
-                    className="block rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
-                  >
-                    {item.label}
-                  </Link>
-                </li>
-              ))}
-            </ol>
-          </nav>
+          <GuideToc items={toc} />
         </aside>
 
         <article className="max-w-4xl">

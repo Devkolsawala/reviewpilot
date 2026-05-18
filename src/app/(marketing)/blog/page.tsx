@@ -80,7 +80,7 @@ export default function BlogPage() {
       <JsonLd data={blogListSchema} />
       <BlogHero />
       <div className="mx-auto max-w-6xl px-4 pt-8 sm:px-6 lg:px-8">
-        <Link href="/play-store-reviews-guide" className="inline-flex rounded-full border border-fuchsia-400/30 bg-fuchsia-500/10 px-4 py-2 text-sm text-fuchsia-200 transition-colors hover:border-fuchsia-300/60">
+        <Link href="/play-store-reviews-guide" className="inline-flex rounded-full border border-violet-500/25 bg-violet-500/10 px-4 py-2 text-sm font-medium text-violet-700 shadow-sm transition-colors hover:border-violet-500/45 hover:bg-violet-500/15 dark:text-violet-200">
           Start here: The Complete Play Store Reviews Guide
         </Link>
       </div>
