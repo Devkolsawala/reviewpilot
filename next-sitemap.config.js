@@ -64,6 +64,7 @@ module.exports = {
       // Free tools
       '/tools/play-store-character-counter': 0.8,
       '/tools/ai-review-reply-generator': 0.8,
+      '/tools/app-rating-calculator': { priority: 0.9, changefreq: 'monthly' },
       // Other
       '/about': 0.7,
       '/demo': 0.8,
@@ -90,6 +91,13 @@ module.exports = {
       '/blog/indie-app-developer-review-management-workflow-2026': { priority: 0.7, changefreq: 'monthly' },
       '/blog/how-app-reviews-affect-install-conversion-rate-data-study': { priority: 0.8, changefreq: 'monthly' },
       '/blog/google-play-console-permissions-reply-reviews-guide': { priority: 0.7, changefreq: 'monthly' },
+      // Phase 2.7 SEO blog posts
+      '/blog/generative-engine-optimization-for-apps-and-saas-2026': { priority: 0.9, changefreq: 'monthly' },
+      '/blog/how-to-reply-to-hinglish-and-indian-language-play-store-reviews': { priority: 0.8, changefreq: 'monthly' },
+      '/blog/best-free-ai-tools-to-reply-to-app-reviews-2026-comparison': { priority: 0.9, changefreq: 'monthly' },
+      '/blog/psychology-of-1-star-app-reviews-what-users-really-mean': { priority: 0.8, changefreq: 'monthly' },
+      '/blog/how-to-ask-for-app-reviews-without-violating-google-policies-2026': { priority: 0.7, changefreq: 'monthly' },
+      '/blog/competitive-review-analysis-how-to-mine-competitor-app-reviews-in-2026': { priority: 0.7, changefreq: 'monthly' },
     };
 
     const pathConfig = priorities[path];

@@ -118,6 +118,11 @@ const NAV_LINKS: NavLink[] = [
         href: "/tools/play-store-character-counter",
         description: "Stay under the 350-char limit",
       },
+      {
+        label: "App Rating Calculator",
+        href: "/tools/app-rating-calculator",
+        description: "Find the 5-star reviews you need",
+      },
     ],
   },
   { label: "Blog", href: "/blog" },

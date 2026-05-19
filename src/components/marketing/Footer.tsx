@@ -66,6 +66,10 @@ const COLUMNS: { heading: string; links: { label: string; href: string }[] }[] =
         label: "Play Store Character Counter",
         href: "/tools/play-store-character-counter",
       },
+      {
+        label: "App Rating Calculator",
+        href: "/tools/app-rating-calculator",
+      },
     ],
   },
   {

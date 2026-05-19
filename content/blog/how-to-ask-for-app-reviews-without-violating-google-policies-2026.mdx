@@ -1,0 +1,214 @@
+---
+title: "How to Ask for App Reviews Without Violating Google Policies"
+metaTitle: "How to Ask for App Reviews Policy Guide"
+metaDescription: "How to ask for app reviews without violating Google policy: compliant prompts, review API timing, and copy examples. Stay safe."
+author: "Dev Kolsawala"
+datePublished: "2026-06-23"
+dateDisplay: "June 23, 2026"
+readTime: "13 min read"
+tags: ["Play Store", "App Developers", "Policy"]
+faqs:
+  - q: "How do I ask for app reviews safely?"
+    a: "Ask for app reviews after genuine success moments, use Google's In-App Review API where possible, and never pressure users toward a specific rating. The safest prompt is neutral, optional, non-incentivized, and shown after the user has received value from the app."
+  - q: "Can I offer rewards for Play Store reviews?"
+    a: "No. Do not offer coins, discounts, premium access, cashback, entries, or any other incentive in exchange for ratings or reviews. Google's policies prohibit fraudulent or incentivized reviews and ratings because they manipulate app placement and user trust."
+  - q: "Is review gating allowed on Google Play?"
+    a: "Avoid review gating. Do not ask users whether they are happy and then show the public review prompt only to positive users. Google's In-App Review API guidance says not to ask opinion questions before or while presenting the rating prompt."
+  - q: "When should I show the In-App Review API prompt?"
+    a: "Show the prompt after a clear success moment, such as completing a task, saving time, finishing onboarding, exporting a file, or using the app repeatedly. Do not interrupt first launch, checkout, support flows, or moments where the user is already frustrated."
+  - q: "Can ReviewPilot help with compliant review requests?"
+    a: "ReviewPilot helps teams reply, monitor, and recover reviews, but compliant review requests still depend on your app flow and policy choices. Use ReviewPilot to identify happy moments and recovery opportunities, not to buy, gate, or pressure users into ratings."
+---
+
+How to ask for app reviews is a policy question before it is a growth question. A review prompt can lift rating velocity, but the wrong prompt can violate Google Play policy, damage user trust, or cause suspicious review patterns that get filtered.
+
+The compliant path is clear: ask neutrally, ask after value, do not reward reviews, do not request only positive ratings, and use the official In-App Review API when it fits. Google's Developer Program Policy prohibits illegitimate rating and review manipulation, including fraudulent or incentivized reviews. Google's In-App Review API guidance also says your app should not ask users opinion questions before or while showing the rating card.
+
+If you are calculating the rating impact of a compliant campaign, use the [App Rating Calculator](/tools/app-rating-calculator) before you ship the prompt.
+
+## What does Google policy actually prohibit?
+
+Google's policy language focuses on manipulation. The platform wants ratings and reviews to reflect real user experience, not rewards, pressure, deception, or filtering.
+
+The safest interpretation:
+
+- Do not buy reviews.
+- Do not reward reviews.
+- Do not ask for a positive review.
+- Do not block unhappy users from the public review path.
+- Do not imitate Google's review UI.
+- Do not mislead users about what happens after they rate.
+- Do not use dark patterns that make the prompt hard to dismiss.
+
+The official sources to keep bookmarked are [Google Play Developer Program Policies](https://support.google.com/googleplay/android-developer/answer/16070163?hl=en) and the [Google Play In-App Review API guide](https://developer.android.com/guide/playcore/in-app-review). Read them before building your prompt flow, not after a warning email.
+
+## What are the 5 lines you cannot cross?
+
+### Incentivized reviews
+
+Do not offer anything in exchange for a review. That includes coins, coupons, free months, credits, premium features, leaderboard boosts, cash, contest entries, or unlocks. Even if you say "any rating is fine," the reward still contaminates the rating signal.
+
+Bad copy:
+
+> Rate us 5 stars and get 100 coins.
+
+Still risky:
+
+> Leave any review and get one free month.
+
+Safe copy:
+
+> Enjoying the app? You can leave a quick review on Google Play. It helps us improve and helps other users decide.
+
+### Review gating
+
+Review gating means filtering users before the public prompt. A common version asks "Do you love the app?" If the user says yes, the app opens the Play Store review prompt. If they say no, it sends them to private feedback. That creates a biased public rating stream.
+
+The In-App Review API guide is explicit that your app should not ask opinion questions before or while presenting the rating card. Do not build a happy-or-unhappy gate in front of the official review UI.
+
+### Deceptive prompts
+
+Do not design a fake rating UI that looks like Google's prompt, stores a private rating, and then redirects only some users. Do not use wording that implies a rating is required to continue. Do not hide the dismiss option.
+
+Safe prompts are honest:
+
+- Optional.
+- Clearly about Google Play.
+- Easy to dismiss.
+- Not blocking a core task.
+- Not tied to rewards.
+
+### Requesting only positive reviews
+
+Never say "please give us 5 stars" or "support us with a positive review." You can ask for an honest review. You can say reviews help the team. You cannot tell users what rating to leave.
+
+Bad copy:
+
+> Please give us 5 stars if you like the app.
+
+Better copy:
+
+> If the app has helped, an honest Play Store review would mean a lot to the team.
+
+### Off-platform redirection as a filter
+
+It is fine to have support channels. It is not fine to use support channels to quietly divert unhappy users away from public reviews while sending only happy users to Google Play. The intent matters and the pattern is easy to detect if review flow data looks unnatural.
+
+Offer support because users need help, not because you want to hide negative sentiment.
+
+## What can you do instead?
+
+You can ask for reviews in a way that respects user choice and platform rules.
+
+Use success moments:
+
+- After the user completes a workout streak.
+- After they export a report successfully.
+- After they complete a delivery or booking.
+- After they save money, time, or effort.
+- After several active sessions, not first launch.
+- After a support issue is resolved.
+
+Use neutral copy:
+
+> Would you like to leave an honest review on Google Play? It helps other users understand whether the app is useful.
+
+Use the official In-App Review API where possible. It lets users leave a rating and review without leaving the app, and Google controls display quotas and UI. Your job is to choose the right moment, not force the card to appear constantly.
+
+## When should you trigger the In-App Review API?
+
+Good timing is contextual. The user should have just received value and should not be in the middle of a fragile task.
+
+Good trigger examples:
+
+- A finance app after the user successfully creates a monthly budget.
+- A learning app after the user completes a lesson streak.
+- A productivity app after the user exports a file.
+- A fitness app after a completed plan week.
+- A travel app after a successful booking.
+- A photo app after export or share completes.
+
+Bad trigger examples:
+
+- First launch.
+- Immediately after signup.
+- During payment.
+- After a crash recovery.
+- While support chat is open.
+- Every time the app opens.
+- Before the user has finished the task.
+
+Respect that Google may not show the prompt every time you request it. The API has quotas and internal logic. Do not build your own pressure loop to compensate.
+
+## What compliant prompt copy can you use?
+
+### General app
+
+> Are you finding the app useful? An honest Google Play review helps other users decide and helps our team improve.
+
+### Productivity app
+
+> You just completed your third export. If the app is saving you time, an honest Play Store review would help the team.
+
+### Fitness app
+
+> Great work finishing this week's plan. If the app is helping your routine, you can leave an honest review on Google Play.
+
+### Learning app
+
+> You completed five lessons. If the experience has been useful, an honest Play Store review helps us improve the course.
+
+### Finance app
+
+> You finished setting up your budget. If the app is useful, you can share an honest review on Google Play.
+
+### Support recovery
+
+> Glad we could resolve the issue. If you feel the app is working better now, an honest updated review on Google Play would be appreciated.
+
+Notice what the copy does not do: it does not mention five stars, rewards, urgency, guilt, or private filtering.
+
+## How do replies and recovery fit policy-safe growth?
+
+The most overlooked compliant rating strategy is responding to existing reviews. You are allowed to reply to reviews, fix issues, and invite users to contact support. If a user later updates their rating because the app improved, that is a legitimate recovery path.
+
+Start with recent negative reviews:
+
+1. Tag the issue.
+2. Fix the real bug where possible.
+3. Reply publicly with the fix or next step.
+4. Follow up when the fix ships if you have a compliant channel.
+5. Ask neutrally after the user confirms the issue is resolved.
+
+This is slower than buying fake praise, but it builds durable rating improvement. For implementation details, read [Android In-App Review API tutorial](/blog/android-in-app-review-api-tutorial-2026), [how to get more 5-star reviews on Play Store](/blog/how-to-get-more-5-star-reviews-google-play-store), and [will Google penalize AI-generated replies on Play Store](/blog/will-google-penalize-ai-generated-replies-play-store).
+
+## What should your policy-safe checklist include?
+
+Before shipping a review prompt, answer these questions:
+
+- Is the prompt neutral?
+- Is it optional and dismissible?
+- Is there any reward tied to rating or review?
+- Are unhappy users treated differently from happy users?
+- Does the prompt appear after real value?
+- Does it avoid first launch and payment moments?
+- Does it use official Google UI where possible?
+- Does analytics track abuse signals without targeting only positive users?
+- Has support reviewed edge cases?
+- Can you disable the prompt quickly if complaints rise?
+
+If any answer is weak, fix the flow before launch.
+
+## What is the safest 30-day rollout?
+
+Week one: audit current prompts and remove risky language. Kill any "5-star" wording, rewards, or opinion gates.
+
+Week two: implement the In-App Review API after one or two success moments. Keep frequency conservative.
+
+Week three: monitor review volume, rating movement, complaint themes, and uninstall rate. A prompt that increases negative reviews is not a policy failure, but it may be a product signal.
+
+Week four: add review recovery for fixed issues. Reply to negative reviews, ship fixes, and ask neutrally only after the user has a better experience.
+
+The right review request strategy does not pressure users. It creates more chances for genuine satisfied users to speak, while giving unhappy users a clear path to resolution. That is the version that survives policy scrutiny and improves the app.
+
+Document the decision, owner, trigger, and disable switch in your release checklist so every future prompt change gets the same policy review before it reaches production.

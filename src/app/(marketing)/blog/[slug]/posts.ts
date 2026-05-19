@@ -54,6 +54,12 @@ const MDX_POST_SLUGS = [
   "app-review-velocity-ranking-signal-2026",
   "how-to-remove-fake-reviews-play-store-2026",
   "will-google-penalize-ai-generated-replies-play-store",
+  "generative-engine-optimization-for-apps-and-saas-2026",
+  "how-to-reply-to-hinglish-and-indian-language-play-store-reviews",
+  "best-free-ai-tools-to-reply-to-app-reviews-2026-comparison",
+  "psychology-of-1-star-app-reviews-what-users-really-mean",
+  "how-to-ask-for-app-reviews-without-violating-google-policies-2026",
+  "competitive-review-analysis-how-to-mine-competitor-app-reviews-in-2026",
 ] as const;
 
 function unquote(value: string): string {

@@ -35,6 +35,43 @@ export function softwareApplicationSchema(input: {
   };
 }
 
+export function howToSchema(input: {
+  name: string;
+  description: string;
+  url?: string;
+  steps: { name: string; text: string; url?: string }[];
+}): JsonLdObject {
+  return {
+    "@context": "https://schema.org",
+    "@type": "HowTo",
+    name: input.name,
+    description: input.description,
+    ...(input.url ? { url: input.url } : {}),
+    step: input.steps.map((step, i) => ({
+      "@type": "HowToStep",
+      position: i + 1,
+      name: step.name,
+      text: step.text,
+      ...(step.url ? { url: step.url } : {}),
+    })),
+  };
+}
+
+export function aggregateRatingSchema(input: {
+  ratingValue: number;
+  reviewCount: number;
+  bestRating?: number;
+  worstRating?: number;
+}): JsonLdObject {
+  return {
+    "@type": "AggregateRating",
+    ratingValue: input.ratingValue,
+    reviewCount: input.reviewCount,
+    bestRating: input.bestRating ?? 5,
+    worstRating: input.worstRating ?? 1,
+  };
+}
+
 export function faqSchema(
   faqs: { question: string; answer: string }[]
 ): JsonLdObject {
