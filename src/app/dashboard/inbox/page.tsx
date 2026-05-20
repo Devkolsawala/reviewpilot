@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, useCallback, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ReviewCard } from "@/components/dashboard/ReviewCard";
 import { AIReplyGenerator } from "@/components/dashboard/AIReplyGenerator";
 import { EmptyState } from "@/components/dashboard/EmptyState";
@@ -9,7 +9,7 @@ import { PageTransition } from "@/components/dashboard/PageTransition";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, CheckCheck, Inbox, Zap, Info, BookOpen, ChevronDown, Bot, Loader2, ArrowLeft, MessageCircle } from "lucide-react";
+import { Search, CheckCheck, Inbox, Zap, Info, BookOpen, ChevronDown, Bot, Loader2, ArrowLeft, MessageCircle, X } from "lucide-react";
 import { UpgradeGate } from "@/components/dashboard/UpgradeGate";
 import { AppSwitcher } from "@/components/dashboard/AppSwitcher";
 import { toast } from "@/components/ui/use-toast";
@@ -29,6 +29,7 @@ type RatingFilter = "all" | 1 | 2 | 3 | 4 | 5;
 type StatusFilter = "all" | "pending" | "drafted" | "published";
 
 function InboxPageInner() {
+ const router = useRouter();
  const searchParams = useSearchParams();
  const { reviews: rawReviews, isMock, updateReview, refetch } = useReviews();
  const { connections } = useConnections();
@@ -41,6 +42,16 @@ function InboxPageInner() {
  const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
  const [ratingFilter, setRatingFilter] = useState<RatingFilter>("all");
  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+ // Theme filter is URL-driven (?theme=<theme> from ThemeMapCard links). The
+ // chip above the filter groups lets the user clear it.
+ const themeFilter = (searchParams?.get("theme") || "").trim().toLowerCase();
+
+ const clearThemeFilter = useCallback(() => {
+ const params = new URLSearchParams(Array.from(searchParams?.entries() ?? []));
+ params.delete("theme");
+ const qs = params.toString();
+ router.replace(`/dashboard/inbox${qs ? `?${qs}` : ""}`, { scroll: false });
+ }, [router, searchParams]);
  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
  const [aiReplyingAll, setAiReplyingAll] = useState(false);
  const [aiReplyProgress, setAiReplyProgress] = useState<{ current: number; total: number } | null>(null);
@@ -90,6 +101,10 @@ function InboxPageInner() {
  if (sourceFilter !== "all" && r.source !== sourceFilter) return false;
  if (ratingFilter !== "all" && r.rating !== ratingFilter) return false;
  if (statusFilter !== "all" && r.reply_status !== statusFilter) return false;
+ if (themeFilter) {
+ const t = (r.ai_theme || "").trim().toLowerCase();
+ if (t !== themeFilter) return false;
+ }
  if (search) {
  const q = search.toLowerCase();
  return (
@@ -99,7 +114,7 @@ function InboxPageInner() {
  }
  return true;
  });
- }, [appScopedReviews, sourceFilter, ratingFilter, statusFilter, search]);
+ }, [appScopedReviews, sourceFilter, ratingFilter, statusFilter, search, themeFilter]);
 
  const selectedReview = filteredReviews.find((r) => r.id === selectedId);
  const pendingCount = appScopedReviews.filter((r) => r.reply_status === "pending").length;
@@ -395,6 +410,29 @@ function InboxPageInner() {
  onChange={(e) => setSearch(e.target.value)}
  />
  </div>
+
+ {/* Applied filter chips — currently only theme (from ThemeMapCard
+ deep links). Sits above the filter groups so it's visually distinct
+ from the always-present source/status/rating filters. */}
+ {themeFilter && (
+ <div className="flex flex-wrap items-center gap-1.5">
+ <span className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground/60 whitespace-nowrap w-14 shrink-0">
+ Applied
+ </span>
+ <button
+ onClick={clearThemeFilter}
+ className={cn(
+ "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium",
+ "bg-accent/15 text-accent ring-1 ring-inset ring-accent/40",
+ "hover:bg-accent/25 transition-colors"
+ )}
+ aria-label={`Clear theme filter: ${themeFilter}`}
+ >
+ <span className="capitalize">Theme: {themeFilter}</span>
+ <X className="h-3 w-3" aria-hidden />
+ </button>
+ </div>
+ )}
 
  {/* Filter groups — wrap to additional lines so every chip stays visible. */}
  <div className="space-y-2">

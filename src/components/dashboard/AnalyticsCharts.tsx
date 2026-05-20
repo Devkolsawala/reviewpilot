@@ -21,7 +21,6 @@ import { cn } from "@/lib/utils";
 interface AnalyticsChartsProps {
  ratingTrend: { date: string; avg_rating: number; count: number }[];
  sentimentBreakdown: Record<string, number>;
- topKeywords: { word: string; count: number }[];
  sourceBreakdown: { name: string; value: number; color: string }[];
  ratingDistribution?: { star: number; count: number }[];
  replyRate?: number;
@@ -33,11 +32,6 @@ const SENTIMENT_COLORS: Record<string, string> = {
  neutral: "#94a3b8",
  mixed: "#f59e0b",
 };
-
-const POSITIVE_KEYWORDS = new Set([
- "great service", "friendly staff", "recommend", "easy to use",
- "original quality", "batch download", "amazing", "best",
-]);
 
 const tooltipStyle = {
  borderRadius: 10,
@@ -60,7 +54,6 @@ const STAR_SENTIMENT: Record<number, { fill: string; track: string; label: strin
 export function AnalyticsCharts({
  ratingTrend,
  sentimentBreakdown,
- topKeywords,
  sourceBreakdown,
  ratingDistribution,
  replyRate,
@@ -284,6 +277,28 @@ export function AnalyticsCharts({
  <div className="text-center">
  <p className="text-2xl font-bold font-sans tracking-tight">{sentimentTotal}</p>
  <p className="text-[10px] text-muted-foreground">reviews</p>
+ {(() => {
+ if (sentimentTotal === 0) return null;
+ const pos = sentimentBreakdown.positive ?? 0;
+ const neg = sentimentBreakdown.negative ?? 0;
+ const nss = Math.round(((pos - neg) / sentimentTotal) * 100);
+ // Near-zero band (|nss| ≤ 5) shown gray to avoid noisy red/green flips.
+ const colorClass =
+ nss > 5
+ ? "text-emerald-600 dark:text-emerald-400"
+ : nss < -5
+ ? "text-rose-600 dark:text-rose-400"
+ : "text-muted-foreground";
+ const sign = nss > 0 ? "+" : "";
+ return (
+ <p className="text-[10px] mt-1 tabular-nums">
+ <span className="text-muted-foreground/70">Net sentiment: </span>
+ <span className={cn("font-semibold", colorClass)}>
+ {sign}{nss}
+ </span>
+ </p>
+ );
+ })()}
  </div>
  </div>
  </div>
@@ -333,37 +348,8 @@ export function AnalyticsCharts({
  </Card>
  )}
 
- {/* Top keywords — tag chips */}
- <Card className={cn(replyRate === undefined ? "" : "lg:col-span-2")}>
- <CardHeader className="pb-2">
- <CardTitle className="text-base font-semibold">Top Keywords</CardTitle>
- </CardHeader>
- <CardContent>
- {topKeywords.length === 0 ? (
- <p className="text-sm text-muted-foreground">No keywords yet.</p>
- ) : (
- <div className="flex flex-wrap gap-2 pt-1">
- {topKeywords.map((kw) => {
- const positive = POSITIVE_KEYWORDS.has(kw.word);
- return (
- <div
- key={kw.word}
- className={cn(
- "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium",
- positive
- ? "bg-accent/10 text-accent dark:bg-accent/10 dark:text-accent"
- : "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400"
- )}
- >
- {kw.word}
- <span className="opacity-60 font-normal">{kw.count}</span>
- </div>
- );
- })}
- </div>
- )}
- </CardContent>
- </Card>
+ {/* Top Keywords removed — replaced by <ThemeMapCard /> rendered in
+     /dashboard/analytics/page.tsx (Phase 1 sentiment intelligence). */}
 
  {/* Source breakdown */}
  <Card className="lg:col-span-2">

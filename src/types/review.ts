@@ -26,6 +26,22 @@ export interface Review {
   is_auto_replied?: boolean;
   review_created_at: string;
   created_at?: string;
+  // AI insights (populated by classifyReviewInsights via
+  // /api/internal/classify-insights). Null until classified.
+  ai_theme?: string | null;
+  ai_emotion?:
+    | "frustrated"
+    | "angry"
+    | "disappointed"
+    | "satisfied"
+    | "delighted"
+    | "confused"
+    | "hopeful"
+    | "neutral"
+    | null;
+  ai_urgency?: "low" | "medium" | "high" | "critical" | null;
+  ai_sentiment?: "positive" | "neutral" | "negative" | null;
+  ai_insights_classified_at?: string | null;
 }
 
 export interface ReviewFilter {

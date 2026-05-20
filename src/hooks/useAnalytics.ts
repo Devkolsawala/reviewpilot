@@ -21,6 +21,31 @@ export interface AnalyticsTotals {
   auto_replies_this_month_drafted: number;
 }
 
+export type AiSentimentLabel = "positive" | "neutral" | "negative";
+export type AiUrgency = "low" | "medium" | "high" | "critical";
+
+export interface ThemeAggregate {
+  theme: string;
+  // Dominant sentiment (the one with the highest count for this theme in
+  // the current period). Used for the colored dot prefix in the card.
+  sentiment: AiSentimentLabel;
+  count: number;
+  avgRating: number; // 0 if no rated reviews
+  previousCount: number; // 0 if no data in the prior period
+  changePct: number | null; // null when prior is 0 (treated as "no change indicator")
+}
+
+export interface CriticalIssue {
+  id: string;
+  author_name: string;
+  text: string;
+  rating: number | null;
+  source: string | null;
+  created_at: string; // review_created_at
+  ai_theme: string | null;
+  ai_emotion: string | null;
+}
+
 export interface Analytics {
   totals: AnalyticsTotals;
   previousPeriodTotals: AnalyticsTotals;
@@ -30,6 +55,13 @@ export interface Analytics {
   top_keywords: { word: string; count: number }[];
   source_breakdown: { name: string; value: number; color: string }[];
   connectionAgeDays: number | null;
+  // Theme Map (STEP 7) — aggregated over the selected range, with prior-period delta.
+  themes: ThemeAggregate[];
+  // Number of reviews in the selected range with ai_theme IS NULL (or
+  // "general feedback"). Shown as a small footer count in the card.
+  themesUnclassifiedCount: number;
+  // Critical Issues card (STEP 8) — last 7 days only, independent of range.
+  criticalIssues: CriticalIssue[];
 }
 
 const EMPTY_TOTALS: AnalyticsTotals = {
@@ -51,6 +83,9 @@ const EMPTY_ANALYTICS: Analytics = {
   top_keywords: [],
   source_breakdown: [],
   connectionAgeDays: null,
+  themes: [],
+  themesUnclassifiedCount: 0,
+  criticalIssues: [],
 };
 
 const SOURCE_META: Record<string, { name: string; color: string }> = {
@@ -68,6 +103,7 @@ function seededRand(seed: number): () => number {
 }
 
 type MockReview = {
+  id: string;
   rating: number;
   review_created_at: string;
   reply_status: "pending" | "drafted" | "published";
@@ -75,12 +111,65 @@ type MockReview = {
   source: string;
   sentiment: string;
   keywords: string[];
+  author_name: string;
+  review_text: string;
+  ai_theme: string | null;
+  ai_emotion: string | null;
+  ai_urgency: AiUrgency | null;
+  ai_sentiment: AiSentimentLabel | null;
+  ai_insights_classified_at: string | null;
 };
 
 const KEYWORDS = [
   "great service", "friendly staff", "recommend", "easy to use", "fast",
   "slow", "crash", "ads", "wait time", "amazing", "buggy", "love it",
   "too expensive", "clean", "helpful",
+];
+
+// Realistic theme clusters for the Theme Map mock. Each entry: theme,
+// sentiment, base rating, sample text. The mock generator picks one of these
+// per review (weighted by `weight`) so the Theme Map shows clusters.
+const MOCK_THEMES: Array<{
+  theme: string;
+  sentiment: AiSentimentLabel;
+  emotion: string;
+  ratingRange: [number, number];
+  weight: number;
+  texts: string[];
+}> = [
+  { theme: "camera crashes", sentiment: "negative", emotion: "frustrated", ratingRange: [1, 2], weight: 5,
+    texts: ["Camera crashes every time I open it.", "App keeps closing on the camera screen, please fix."] },
+  { theme: "slow checkout", sentiment: "negative", emotion: "frustrated", ratingRange: [1, 3], weight: 4,
+    texts: ["Checkout is so slow, takes forever.", "Payment screen lag is unbearable."] },
+  { theme: "great support", sentiment: "positive", emotion: "delighted", ratingRange: [4, 5], weight: 4,
+    texts: ["Support team helped me in minutes.", "Loved how quickly support replied!"] },
+  { theme: "polite staff", sentiment: "positive", emotion: "satisfied", ratingRange: [4, 5], weight: 3,
+    texts: ["Staff was very polite and helpful.", "Friendly and patient staff, will return."] },
+  { theme: "long wait time", sentiment: "negative", emotion: "disappointed", ratingRange: [1, 3], weight: 3,
+    texts: ["Waited 45 minutes for service.", "Wait time was way too long."] },
+  { theme: "good food quality", sentiment: "positive", emotion: "satisfied", ratingRange: [4, 5], weight: 3,
+    texts: ["Food quality was excellent.", "Tasted great, fresh ingredients."] },
+  { theme: "dark mode missing", sentiment: "neutral", emotion: "hopeful", ratingRange: [3, 4], weight: 2,
+    texts: ["Please add dark mode!", "Would love a dark theme option."] },
+  { theme: "too many ads", sentiment: "negative", emotion: "frustrated", ratingRange: [1, 2], weight: 3,
+    texts: ["Ads after every action, ridiculous.", "Too many ads, ruins the experience."] },
+];
+
+// Theme-weighted picker for the mock dataset.
+function pickTheme(rand: () => number) {
+  const totalWeight = MOCK_THEMES.reduce((s, t) => s + t.weight, 0);
+  let r = rand() * totalWeight;
+  for (const t of MOCK_THEMES) {
+    r -= t.weight;
+    if (r <= 0) return t;
+  }
+  return MOCK_THEMES[0];
+}
+
+const MOCK_NAMES = [
+  "Rahul Sharma", "Priya Patel", "Amit Kumar", "Sneha Reddy", "Vikram Singh",
+  "Arjun Nair", "Meera Joshi", "Deepak Verma", "Kavita Deshmukh", "Suresh Menon",
+  "Ananya Chatterjee", "Rohit Gupta", "Fatima Sheikh", "Kiran Rao", "Rajesh Pillai",
 ];
 
 let MOCK_CACHE: MockReview[] | null = null;
@@ -95,7 +184,13 @@ function buildMockDataset(): MockReview[] {
     for (let i = 0; i < count; i++) {
       const hourOffset = Math.floor(rand() * 24);
       const created = new Date(now - d * 86400000 - hourOffset * 3600000);
-      const rating = Math.min(5, Math.max(1, 1 + Math.floor(rand() * 5) + (rand() > 0.5 ? 1 : 0)));
+
+      // Pick a theme cluster; rating + sentiment derive from it so the Theme
+      // Map shows realistic per-theme averages.
+      const themeMeta = pickTheme(rand);
+      const [rLo, rHi] = themeMeta.ratingRange;
+      const rating = Math.min(5, Math.max(1, rLo + Math.floor(rand() * (rHi - rLo + 1))));
+
       const source = rand() > 0.6 ? "play_store" : "google_business";
       const statusRoll = rand();
       const reply_status: MockReview["reply_status"] =
@@ -107,7 +202,10 @@ function buildMockDataset(): MockReview[] {
       for (let k = 0; k < kwCount; k++) {
         keywords.push(KEYWORDS[Math.floor(rand() * KEYWORDS.length)]);
       }
+      const author_name = MOCK_NAMES[Math.floor(rand() * MOCK_NAMES.length)];
+      const review_text = themeMeta.texts[Math.floor(rand() * themeMeta.texts.length)];
       reviews.push({
+        id: `mock-an-${d}-${i}`,
         rating,
         review_created_at: created.toISOString(),
         reply_status,
@@ -115,15 +213,66 @@ function buildMockDataset(): MockReview[] {
         source,
         sentiment,
         keywords,
+        author_name,
+        review_text,
+        ai_theme: themeMeta.theme,
+        ai_emotion: themeMeta.emotion,
+        ai_urgency:
+          themeMeta.sentiment === "negative" && rating <= 2 ? "high" : "low",
+        ai_sentiment: themeMeta.sentiment,
+        ai_insights_classified_at: created.toISOString(),
       });
     }
   }
+
+  // ── Critical reviews — explicit injections so the Critical Issues card
+  //    has predictable data in mock mode. One inside the last 7d window
+  //    (alarm variant), one outside (>7d, must NOT appear) so the filter
+  //    is verifiable.
+  reviews.push({
+    id: "mock-an-critical-recent",
+    rating: 1,
+    review_created_at: new Date(now - 2 * 86400000).toISOString(),
+    reply_status: "pending",
+    is_auto_replied: false,
+    source: "play_store",
+    sentiment: "negative",
+    keywords: ["payment", "fraud"],
+    author_name: "Karan Mehta",
+    review_text:
+      "Paid for premium but never got access, support not responding. Filing chargeback.",
+    ai_theme: "payment lost",
+    ai_emotion: "angry",
+    ai_urgency: "critical",
+    ai_sentiment: "negative",
+    ai_insights_classified_at: new Date(now - 2 * 86400000).toISOString(),
+  });
+  reviews.push({
+    id: "mock-an-critical-old",
+    rating: 1,
+    review_created_at: new Date(now - 20 * 86400000).toISOString(),
+    reply_status: "published",
+    is_auto_replied: false,
+    source: "google_business",
+    sentiment: "negative",
+    keywords: ["food poisoning"],
+    author_name: "Riya Bhatt",
+    review_text:
+      "Got food poisoning after eating here last week, terrible experience.",
+    ai_theme: "food poisoning",
+    ai_emotion: "angry",
+    ai_urgency: "critical",
+    ai_sentiment: "negative",
+    ai_insights_classified_at: new Date(now - 20 * 86400000).toISOString(),
+  });
+
   MOCK_CACHE = reviews;
   return reviews;
 }
 
 // ── Aggregation helpers ─────────────────────────────────────────────────────
 type MinReview = {
+  id?: string;
   rating: number | null;
   reply_status: string | null;
   sentiment?: string | null;
@@ -131,6 +280,13 @@ type MinReview = {
   review_created_at: string;
   source?: string | null;
   is_auto_replied?: boolean | null;
+  author_name?: string | null;
+  review_text?: string | null;
+  ai_theme?: string | null;
+  ai_emotion?: string | null;
+  ai_urgency?: AiUrgency | string | null;
+  ai_sentiment?: AiSentimentLabel | string | null;
+  ai_insights_classified_at?: string | null;
 };
 
 function computeTotals(rows: MinReview[], monthStart: Date): AnalyticsTotals {
@@ -195,6 +351,112 @@ function computeTrend(rows: MinReview[], range: AnalyticsRange): { date: string;
       date,
       avg_rating: Math.round((sum / count) * 10) / 10,
       count,
+    }));
+}
+
+function isValidAiSentiment(v: unknown): v is AiSentimentLabel {
+  return v === "positive" || v === "neutral" || v === "negative";
+}
+
+function computeThemes(
+  current: MinReview[],
+  previous: MinReview[]
+): { themes: ThemeAggregate[]; unclassifiedCount: number } {
+  // Group current-period rows by theme. Each theme tracks per-sentiment counts
+  // (so we can pick the dominant sentiment) and rating sum/count.
+  type Bucket = {
+    count: number;
+    ratingSum: number;
+    ratingCount: number;
+    sentCounts: Record<AiSentimentLabel, number>;
+  };
+  const buckets: Record<string, Bucket> = {};
+  let unclassifiedCount = 0;
+
+  for (const r of current) {
+    const theme = (r.ai_theme || "").trim();
+    if (!theme || theme === "general feedback") {
+      unclassifiedCount++;
+      continue;
+    }
+    if (!buckets[theme]) {
+      buckets[theme] = {
+        count: 0,
+        ratingSum: 0,
+        ratingCount: 0,
+        sentCounts: { positive: 0, neutral: 0, negative: 0 },
+      };
+    }
+    const b = buckets[theme];
+    b.count++;
+    if (r.rating != null) {
+      b.ratingSum += r.rating;
+      b.ratingCount++;
+    }
+    const s = isValidAiSentiment(r.ai_sentiment) ? r.ai_sentiment : "neutral";
+    b.sentCounts[s]++;
+  }
+
+  // Previous period counts per theme.
+  const prevCounts: Record<string, number> = {};
+  for (const r of previous) {
+    const theme = (r.ai_theme || "").trim();
+    if (!theme || theme === "general feedback") continue;
+    prevCounts[theme] = (prevCounts[theme] || 0) + 1;
+  }
+
+  const themes: ThemeAggregate[] = Object.entries(buckets).map(([theme, b]) => {
+    // Dominant sentiment for the colored dot prefix
+    let dom: AiSentimentLabel = "neutral";
+    let domCount = -1;
+    (["negative", "positive", "neutral"] as AiSentimentLabel[]).forEach((s) => {
+      if (b.sentCounts[s] > domCount) {
+        dom = s;
+        domCount = b.sentCounts[s];
+      }
+    });
+    const prev = prevCounts[theme] || 0;
+    const avgRating =
+      b.ratingCount > 0 ? Math.round((b.ratingSum / b.ratingCount) * 10) / 10 : 0;
+    const changePct =
+      prev === 0 ? null : Math.round(((b.count - prev) / prev) * 100);
+    return {
+      theme,
+      sentiment: dom,
+      count: b.count,
+      avgRating,
+      previousCount: prev,
+      changePct,
+    };
+  });
+
+  themes.sort((a, b) => b.count - a.count);
+  return { themes: themes.slice(0, 12), unclassifiedCount };
+}
+
+function computeCriticalIssues(all: MinReview[], now: Date): CriticalIssue[] {
+  const sevenDaysAgo = now.getTime() - 7 * 86400000;
+  return all
+    .filter((r) => {
+      if (r.ai_urgency !== "critical") return false;
+      const t = new Date(r.review_created_at).getTime();
+      return !isNaN(t) && t >= sevenDaysAgo;
+    })
+    .sort(
+      (a, b) =>
+        new Date(b.review_created_at).getTime() -
+        new Date(a.review_created_at).getTime()
+    )
+    .slice(0, 5)
+    .map((r) => ({
+      id: r.id || "",
+      author_name: r.author_name || "Anonymous",
+      text: r.review_text || "",
+      rating: r.rating,
+      source: r.source || null,
+      created_at: r.review_created_at,
+      ai_theme: r.ai_theme || null,
+      ai_emotion: r.ai_emotion || null,
     }));
 }
 
@@ -292,7 +554,7 @@ export function useAnalytics(range: AnalyticsRange = "30d") {
         const { data, error } = await supabase
           .from("reviews")
           .select(
-            "rating, reply_status, sentiment, keywords, review_created_at, source, is_auto_replied"
+            "id, rating, reply_status, sentiment, keywords, review_created_at, source, is_auto_replied, author_name, review_text, ai_theme, ai_emotion, ai_urgency, ai_sentiment, ai_insights_classified_at"
           )
           .in("connection_id", connections.map((c) => c.id))
           .order("review_created_at", { ascending: false })
@@ -332,12 +594,19 @@ export function useAnalytics(range: AnalyticsRange = "30d") {
     const totals = computeTotals(currentRows, monthStart);
     const prevTotals = computeTotals(previousRows, monthStart);
     const agg = computeAggregates(currentRows, range);
+    const { themes, unclassifiedCount } = computeThemes(currentRows, previousRows);
+    // Critical issues use the WHOLE dataset filtered to last 7 days — they
+    // are independent of the selected `range` (always "last 7d" semantics).
+    const criticalIssues = computeCriticalIssues(rows, now);
 
     return {
       totals,
       previousPeriodTotals: prevTotals,
       ...agg,
       connectionAgeDays,
+      themes,
+      themesUnclassifiedCount: unclassifiedCount,
+      criticalIssues,
     };
   }, [rows, range, connectionAgeDays]);
 

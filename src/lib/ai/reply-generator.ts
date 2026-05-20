@@ -1,25 +1,8 @@
-import OpenAI from "openai";
 import { buildReplyPrompt } from "./prompts";
 import { waitForRateLimit, retryWithBackoff } from "./rate-limiter";
+import { getXaiClient, getReplyModel } from "./xai-client";
 import type { AppContext } from "@/types/database";
 import type { Review } from "@/types/review";
-
-let xaiClient: OpenAI | null = null;
-
-function getXaiClient(): OpenAI | null {
-  if (!process.env.XAI_API_KEY) return null;
-  if (!xaiClient) {
-    xaiClient = new OpenAI({
-      apiKey: process.env.XAI_API_KEY,
-      baseURL: process.env.XAI_BASE_URL || "https://api.x.ai/v1",
-      // Disable built-in auto-retry (default is 2). We have our own
-      // retryWithBackoff wrapper so we don't want SDK silently duplicating
-      // requests — that was causing 2× billing on xAI console.
-      maxRetries: 0,
-    });
-  }
-  return xaiClient;
-}
 
 export interface GenerateReplyParams {
   appContext: AppContext | Record<string, unknown>;
@@ -44,7 +27,7 @@ export async function generateReply(params: GenerateReplyParams): Promise<string
       toneOverride: params.tone,
     });
 
-    const model = process.env.XAI_MODEL || "grok-4.3";
+    const model = getReplyModel();
 
     // Respect local RPM cap before calling the API
     await waitForRateLimit();

@@ -15,6 +15,8 @@ import { useTeamRole } from "@/hooks/useTeamRole";
 import { cn } from "@/lib/utils";
 import { Zap, CheckCircle2, Clock, Info, Timer, TrendingUp, Bot, IndianRupee, Mail, X } from "lucide-react";
 import { UpgradeGate } from "@/components/dashboard/UpgradeGate";
+import { ThemeMapCard } from "@/components/dashboard/ThemeMapCard";
+import { CriticalIssuesCard } from "@/components/dashboard/CriticalIssuesCard";
 
 const DIGEST_BANNER_DISMISS_KEY = "reviewpilot_digest_banner_dismissed";
 
@@ -193,6 +195,14 @@ function AnalyticsPageInner() {
           </div>
         </div>
 
+        {/* Critical Issues — available on ALL plans (no UpgradeGate). Sits
+            above StatsCards so urgent reviews are the first thing a user
+            sees. Empty state shows "All Clear" reassurance variant. */}
+        <CriticalIssuesCard
+          issues={analytics.criticalIssues}
+          loading={loading}
+        />
+
         {loading ? (
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {[0, 1, 2, 3].map((i) => (
@@ -353,12 +363,19 @@ function AnalyticsPageInner() {
           <AnalyticsCharts
             ratingTrend={analytics.trend}
             sentimentBreakdown={analytics.sentiment_breakdown}
-            topKeywords={analytics.top_keywords}
             sourceBreakdown={analytics.source_breakdown}
             ratingDistribution={analytics.distribution}
             replyRate={totals.response_rate ?? 0}
           />
         </UpgradeGate>
+
+        {/* Theme Map — available on ALL plans (no UpgradeGate). Replaces the
+            old Top Keywords pill row. Sentiment intelligence Phase 1. */}
+        <ThemeMapCard
+          themes={analytics.themes}
+          unclassifiedCount={analytics.themesUnclassifiedCount}
+          loading={loading}
+        />
       </div>
     </PageTransition>
   );
