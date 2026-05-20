@@ -91,9 +91,17 @@ export interface Analytics {
   // Critical Issues card (STEP 8) — last 7 days only, independent of range.
   criticalIssues: CriticalIssue[];
   // Phase 2 — Aspect sentiment aggregates over the selected range.
-  // Filtered to aspects with ≥3 mentions to suppress noise. Sorted by total
-  // mentions descending.
+  // Filtered with an ADAPTIVE noise threshold (min 2 mentions, scales up
+  // with reviewCountInRange/20) so low-volume users still see aspects.
+  // Sorted by total mentions descending.
   aspectAggregates: AspectAggregate[];
+  // All-time count of reviews across the user's active connections
+  // (independent of the page's range selector). Drives empty-state copy that
+  // distinguishes "no reviews ever" from "no reviews in this range".
+  totalReviewCountAllTime: number;
+  // Count of reviews in the selected range (== currentRows.length). Exposed
+  // explicitly because several cards branch their empty state on it.
+  reviewCountInRange: number;
   // Phase 2 — Day-by-day (or hourly for 1d, weekly for 90d) NSS series for
   // the sentiment card sparkline.
   nssTrend: NssTrendPoint[];
@@ -129,6 +137,8 @@ const EMPTY_ANALYTICS: Analytics = {
   hasReviewsInRange: false,
   criticalIssues: [],
   aspectAggregates: [],
+  totalReviewCountAllTime: 0,
+  reviewCountInRange: 0,
   nssTrend: [],
   nssCurrent: null,
   nssPrevious: null,
@@ -570,7 +580,10 @@ function computeNssTrend(
     }));
 }
 
-function computeAspectAggregates(rows: MinReview[]): AspectAggregate[] {
+function computeAspectAggregates(
+  rows: MinReview[],
+  minMentions: number
+): AspectAggregate[] {
   const map = new Map<
     string,
     { positive: number; neutral: number; negative: number }
@@ -608,8 +621,10 @@ function computeAspectAggregates(rows: MinReview[]): AspectAggregate[] {
             : 0,
       };
     })
-    // Hide noise — only aspects with at least 3 mentions are surfaced.
-    .filter((a) => a.total >= 3)
+    // Hide noise — adaptive threshold from caller (min 2, scaling up with
+    // review volume) so low-volume users still see aspects instead of an
+    // empty state forever.
+    .filter((a) => a.total >= minMentions)
     .sort((a, b) => b.total - a.total);
 }
 
@@ -710,6 +725,10 @@ export function useAnalytics(range: AnalyticsRange = "30d") {
   const [loading, setLoading] = useState(true);
   const [isMock, setIsMock] = useState(false);
   const [connectionAgeDays, setConnectionAgeDays] = useState<number | null>(null);
+  // All-time review count, separate from `rows` (which is .limit(5000)) so we
+  // can distinguish "no reviews ever" from "no reviews in this range" even on
+  // accounts with > 5000 reviews. Cheap count-only query against Supabase.
+  const [totalReviewCountAllTime, setTotalReviewCountAllTime] = useState(0);
   // Incremented by callers to force a re-fetch (e.g. after the user clicks
   // "Classify N pending reviews" on the Theme Map card).
   const [refreshTick, setRefreshTick] = useState(0);
@@ -721,9 +740,11 @@ export function useAnalytics(range: AnalyticsRange = "30d") {
       try {
         if (process.env.NEXT_PUBLIC_USE_MOCK === "true") {
           if (cancelled) return;
-          setRows(buildMockDataset());
+          const mock = buildMockDataset();
+          setRows(mock);
           setIsMock(true);
           setConnectionAgeDays(120);
+          setTotalReviewCountAllTime(mock.length);
           return;
         }
 
@@ -735,9 +756,11 @@ export function useAnalytics(range: AnalyticsRange = "30d") {
 
         if (!connections || connections.length === 0) {
           if (cancelled) return;
-          setRows(buildMockDataset());
+          const mock = buildMockDataset();
+          setRows(mock);
           setIsMock(true);
           setConnectionAgeDays(120);
+          setTotalReviewCountAllTime(mock.length);
           return;
         }
 
@@ -747,12 +770,21 @@ export function useAnalytics(range: AnalyticsRange = "30d") {
         }, Date.now());
         const ageDays = Math.floor((Date.now() - oldest) / 86400000);
 
+        const connectionIds = connections.map((c) => c.id);
+
+        // Count-only query for the all-time total. Separate from the rows
+        // load so it stays cheap even for > 5000-review accounts.
+        const { count: allTimeCount } = await supabase
+          .from("reviews")
+          .select("id", { count: "exact", head: true })
+          .in("connection_id", connectionIds);
+
         const { data, error } = await supabase
           .from("reviews")
           .select(
             "id, rating, reply_status, sentiment, keywords, review_created_at, source, is_auto_replied, author_name, review_text, ai_theme, ai_emotion, ai_urgency, ai_sentiment, ai_insights_classified_at, ai_aspects"
           )
-          .in("connection_id", connections.map((c) => c.id))
+          .in("connection_id", connectionIds)
           .order("review_created_at", { ascending: false })
           .limit(5000);
 
@@ -761,11 +793,15 @@ export function useAnalytics(range: AnalyticsRange = "30d") {
         setRows((data || []) as MinReview[]);
         setIsMock(false);
         setConnectionAgeDays(ageDays);
+        setTotalReviewCountAllTime(
+          typeof allTimeCount === "number" ? allTimeCount : (data?.length ?? 0)
+        );
       } catch (err) {
         if (cancelled) return;
         console.error("[useAnalytics]", err);
         setRows([]);
         setIsMock(false);
+        setTotalReviewCountAllTime(0);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -797,7 +833,11 @@ export function useAnalytics(range: AnalyticsRange = "30d") {
     // matches the page's range selector so the card copy ("today" / "last
     // 7/30/90 days") and the rows agree.
     const criticalIssues = computeCriticalIssues(rows, now, range);
-    const aspectAggregates = computeAspectAggregates(currentRows);
+    // Adaptive threshold: 22 reviews → 2, 100 → 5, 200 → 10. Low-volume users
+    // no longer get a perpetually-empty ABSA card just because the prior
+    // hard-coded floor of 3 was too high for them.
+    const minMentions = Math.max(2, Math.ceil(currentRows.length / 20));
+    const aspectAggregates = computeAspectAggregates(currentRows, minMentions);
 
     const { nss: nssCurrent } = nssFor(currentRows);
     const { nss: nssPrevious } = nssFor(previousRows);
@@ -824,12 +864,17 @@ export function useAnalytics(range: AnalyticsRange = "30d") {
       hasReviewsInRange,
       criticalIssues,
       aspectAggregates,
+      // All-time count is what the empty-state copy needs ("no reviews ever"
+      // vs "no reviews in this range"). When `rows` undershoots due to the
+      // 5000-row limit, fall back to that value.
+      totalReviewCountAllTime: Math.max(totalReviewCountAllTime, rows.length),
+      reviewCountInRange: currentRows.length,
       nssTrend,
       nssCurrent,
       nssPrevious,
       nssDelta,
     };
-  }, [rows, range, connectionAgeDays]);
+  }, [rows, range, connectionAgeDays, totalReviewCountAllTime]);
 
   const refetch = () => setRefreshTick((t) => t + 1);
   return { analytics, loading, isMock, range, refetch };

@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useReviews } from "@/hooks/useReviews";
 import { useAnalytics } from "@/hooks/useAnalytics";
 import { useConnections } from "@/hooks/useConnection";
+import { deriveConnectionState } from "@/lib/connection-state";
 import {
   MessageSquare,
   Megaphone,
@@ -195,6 +196,24 @@ export default function DashboardPage() {
 
   const pendingReviews = reviews.filter((r) => r.reply_status === "pending");
 
+  const connectionState = deriveConnectionState(connections);
+  const {
+    hasAnyConnection,
+    primarySourceLabel,
+    oldestConnectionDaysAgo,
+    connectionCount,
+  } = connectionState;
+  // Most recent sync across all active connections. Drives the header
+  // "Last synced …" indicator (STEP 8). Null = never synced.
+  const lastSyncedAt = connections.reduce<string | null>((acc, c) => {
+    if (!c.last_synced_at) return acc;
+    if (!acc) return c.last_synced_at;
+    return new Date(c.last_synced_at).getTime() >
+      new Date(acc).getTime()
+      ? c.last_synced_at
+      : acc;
+  }, null);
+
   const hasConnections = connections.length > 0;
   const hasReplied = reviews.some((r) => r.reply_status === "published" && !!r.reply_published_at);
 
@@ -261,6 +280,19 @@ export default function DashboardPage() {
             <p className="text-xs sm:text-sm text-muted-foreground mt-1 font-mono">
               {greetingDate}
             </p>
+            {/* Sync-status signal — keeps users from wondering whether the
+                connection is stuck. Wraps below the greeting on mobile so
+                long timestamps don't push the header off-screen. */}
+            {hasAnyConnection && lastSyncedAt && (
+              <p className="text-[11px] text-muted-foreground/70 mt-1 font-mono">
+                Last synced {timeAgo(lastSyncedAt)}
+              </p>
+            )}
+            {hasAnyConnection && !lastSyncedAt && (
+              <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-1 font-mono">
+                Waiting for first sync…
+              </p>
+            )}
           </div>
           <div className="flex gap-2 shrink-0">
             <Button size="sm" variant="ghost" asChild className="border border-border/60">
@@ -322,6 +354,7 @@ export default function DashboardPage() {
           previousAvgRating={analytics.previousPeriodTotals.avg_rating}
           previousResponseRate={analytics.previousPeriodTotals.response_rate}
           trend={analytics.trend}
+          oldestConnectionDaysAgo={isMock ? null : analytics.connectionAgeDays}
         />
 
         {/* Two-column layout */}
@@ -338,21 +371,77 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent className="p-0">
               {reviews.length === 0 && !isMock ? (
-                <div className="flex flex-col items-center justify-center py-14 text-center px-6">
-                  <div className="rounded-2xl bg-secondary/60 p-4 mb-4 ring-1 ring-border/60">
-                    <Inbox className="h-7 w-7 text-muted-foreground/50 mx-auto" />
+                // Empty-state branches — match the user's actual situation so
+                // the CTA isn't misleading. Three buckets:
+                //   1. No connection yet           → "Connect a source" CTA
+                //   2. Fresh connection (< 1 day)  → "Reviews will appear shortly" (no CTA)
+                //   3. Old connection, no reviews  → "No reviews to display" + soft link
+                !hasAnyConnection ? (
+                  <div className="flex flex-col items-center justify-center py-14 text-center px-6">
+                    <div className="rounded-2xl bg-secondary/60 p-4 mb-4 ring-1 ring-border/60">
+                      <Inbox className="h-7 w-7 text-muted-foreground/50 mx-auto" />
+                    </div>
+                    <p className="text-sm font-medium mb-1">No reviews yet</p>
+                    <p className="text-xs text-muted-foreground mb-4 max-w-xs">
+                      Connect a source to start pulling reviews from your Play Store app or Google Business Profile.
+                    </p>
+                    <Button size="sm" variant="gradient" asChild>
+                      <Link href="/dashboard/settings/connections">
+                        <Link2 className="mr-2 h-3.5 w-3.5" />
+                        Connect a source
+                      </Link>
+                    </Button>
                   </div>
-                  <p className="text-sm font-medium mb-1">No reviews yet</p>
-                  <p className="text-xs text-muted-foreground mb-4 max-w-xs">
-                    Connect a source to start pulling reviews from your Play Store or Google Business Profile.
-                  </p>
-                  <Button size="sm" variant="gradient" asChild>
-                    <Link href="/dashboard/settings/connections">
-                      <Link2 className="mr-2 h-3.5 w-3.5" />
-                      Connect a source
-                    </Link>
-                  </Button>
-                </div>
+                ) : oldestConnectionDaysAgo !== null &&
+                  oldestConnectionDaysAgo < 1 ? (
+                  <div className="flex flex-col items-center justify-center py-14 text-center px-6">
+                    <div className="rounded-2xl bg-secondary/60 p-4 mb-4 ring-1 ring-border/60">
+                      <Inbox className="h-7 w-7 text-muted-foreground/50 mx-auto" />
+                    </div>
+                    <p className="text-sm font-medium mb-1">
+                      Reviews will appear here shortly
+                    </p>
+                    <p className="text-xs text-muted-foreground mb-2 max-w-sm">
+                      We&apos;re checking{" "}
+                      {primarySourceLabel === "app"
+                        ? "your Play Store app"
+                        : primarySourceLabel === "business"
+                        ? "your Google Business Profile"
+                        : "your connected sources"}{" "}
+                      for reviews. First sync usually completes within 15 minutes.
+                    </p>
+                    <p className="text-[11px] text-muted-foreground/70 max-w-sm">
+                      If reviews still don&apos;t appear after an hour, your source may not have any recent reviews yet.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-14 text-center px-6">
+                    <div className="rounded-2xl bg-secondary/60 p-4 mb-4 ring-1 ring-border/60">
+                      <Inbox className="h-7 w-7 text-muted-foreground/50 mx-auto" />
+                    </div>
+                    <p className="text-sm font-medium mb-1">
+                      No reviews to display
+                    </p>
+                    <p className="text-xs text-muted-foreground mb-2 max-w-sm">
+                      Your connected{" "}
+                      {primarySourceLabel === "app"
+                        ? "app"
+                        : primarySourceLabel === "business"
+                        ? "business"
+                        : "sources"}{" "}
+                      {connectionCount > 1 ? "haven't" : "hasn't"} received any reviews yet. Reviews will sync automatically once they arrive.
+                    </p>
+                    <p className="text-[11px] text-muted-foreground/70">
+                      Need to verify the connection?{" "}
+                      <Link
+                        href="/dashboard/settings/connections"
+                        className="underline underline-offset-2 hover:text-foreground"
+                      >
+                        Check connection status
+                      </Link>
+                    </p>
+                  </div>
+                )
               ) : (
                 <div>
                   {reviews.slice(0, 5).map((review) => (

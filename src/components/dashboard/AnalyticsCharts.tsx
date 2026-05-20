@@ -17,10 +17,12 @@ import {
  Line,
  LineChart,
 } from "recharts";
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { ArrowUpRight, ArrowDownRight, Minus } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, Minus, Link2 } from "lucide-react";
 import type { NssTrendPoint } from "@/hooks/useAnalytics";
+import type { ConnectionState } from "@/lib/connection-state";
 
 interface AnalyticsChartsProps {
  ratingTrend: { date: string; avg_rating: number; count: number }[];
@@ -44,6 +46,12 @@ interface AnalyticsChartsProps {
   * Omit to render everything in a single grid (legacy behavior).
   */
  slot?: "row1" | "row2";
+ /** Context-aware empty-state props (hotfix). */
+ connectionState?: ConnectionState;
+ /** All-time review count. */
+ totalReviewCount?: number;
+ /** Reviews in the selected range. */
+ reviewCountInRange?: number;
 }
 
 const SENTIMENT_COLORS: Record<string, string> = {
@@ -81,7 +89,17 @@ export function AnalyticsCharts({
  nssCurrent = null,
  nssDelta = null,
  slot,
+ connectionState,
+ totalReviewCount,
+ reviewCountInRange,
 }: AnalyticsChartsProps) {
+ // Empty-state branching props (hotfix). When omitted, components fall back
+ // to the legacy "Not enough reviews" copy so older call sites don't break.
+ const hasAnyConnection = connectionState?.hasAnyConnection ?? true;
+ const totalReviewsKnown = typeof totalReviewCount === "number";
+ const rangeCountKnown = typeof reviewCountInRange === "number";
+ const hasAnyReviews = totalReviewsKnown ? (totalReviewCount as number) > 0 : true;
+ const rangeReviewCount = rangeCountKnown ? (reviewCountInRange as number) : 0;
  const sentimentData = Object.entries(sentimentBreakdown).map(([name, value]) => ({
  name: name.charAt(0).toUpperCase() + name.slice(1),
  value,
@@ -322,12 +340,37 @@ export function AnalyticsCharts({
  </CardHeader>
  <CardContent>
  {sentimentTotal === 0 ? (
- <div className="py-6 text-center">
+ // Inline (compact) empty-state variants — proportional to the card so
+ // we don't drop a huge centered placeholder into a half-width tile.
+ !hasAnyConnection ? (
+ <div className="py-4 text-center">
+ <p className="text-sm font-medium">Connect a source</p>
+ <p className="text-xs text-muted-foreground/80 mt-1">
+ Sentiment data will appear once reviews start syncing.
+ </p>
+ </div>
+ ) : !hasAnyReviews ? (
+ <div className="py-4 text-center">
+ <p className="text-sm font-medium">Waiting for first reviews</p>
+ <p className="text-xs text-muted-foreground/80 mt-1">
+ Sentiment will populate as reviews come in.
+ </p>
+ </div>
+ ) : rangeCountKnown && rangeReviewCount < 3 ? (
+ <div className="py-4 text-center">
+ <p className="text-sm font-medium">Not enough reviews for this range</p>
+ <p className="text-xs text-muted-foreground/80 mt-1">
+ Widen the range above or wait for more reviews.
+ </p>
+ </div>
+ ) : (
+ <div className="py-4 text-center">
  <p className="text-sm font-medium">Not enough reviews</p>
- <p className="text-xs text-muted-foreground/80 mt-1.5 max-w-sm mx-auto">
+ <p className="text-xs text-muted-foreground/80 mt-1">
  Not enough reviews to compute sentiment for this period.
  </p>
  </div>
+ )
  ) : (
  <>
  {/* Stacked bar — full width. Segments use min-width so a 1–2% slice
@@ -513,9 +556,26 @@ export function AnalyticsCharts({
  </CardHeader>
  <CardContent>
  {sourceData.length === 0 ? (
+ !hasAnyConnection ? (
+ <div className="flex flex-col items-center justify-center h-24 text-center gap-2">
+ <p className="text-sm font-medium">No sources connected</p>
+ <Link
+ href="/dashboard/settings/connections"
+ className="inline-flex items-center gap-1.5 text-xs font-semibold text-accent hover:underline"
+ >
+ <Link2 className="h-3 w-3" />
+ Connect a source →
+ </Link>
+ </div>
+ ) : !hasAnyReviews ? (
+ <div className="flex items-center justify-center h-24 text-sm text-muted-foreground">
+ Reviews will appear here once synced.
+ </div>
+ ) : (
  <div className="flex items-center justify-center h-24 text-sm text-muted-foreground">
  No reviews synced yet.
  </div>
+ )
  ) : (
  // Mobile (<sm): chart on top, single-column legend below (collision-free
  // even at 348px). Desktop: side-by-side with a 2-col legend grid.

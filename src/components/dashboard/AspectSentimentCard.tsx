@@ -1,10 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { Sparkles, Loader2, LayoutGrid } from "lucide-react";
+import { Sparkles, Loader2, LayoutGrid, Link2 } from "lucide-react";
 import type { AspectAggregate } from "@/hooks/useAnalytics";
+import {
+  exampleAspectsFor,
+  type ConnectionState,
+} from "@/lib/connection-state";
 
 interface AspectSentimentCardProps {
   aspects: AspectAggregate[];
@@ -14,6 +19,12 @@ interface AspectSentimentCardProps {
    * been produced yet.
    */
   pendingCount?: number;
+  /** All-time review count — distinguishes "no reviews ever" branches. */
+  totalReviewCount?: number;
+  /** Range-scoped review count — drives "no reviews in range" copy. */
+  reviewCountInRange?: number;
+  /** Connection set summary — drives source-aware title + example aspects. */
+  connectionState?: ConnectionState;
   onClassifyPending?: () => Promise<void> | void;
   loading?: boolean;
 }
@@ -40,6 +51,9 @@ function netColor(net: number): string {
 export function AspectSentimentCard({
   aspects,
   pendingCount = 0,
+  totalReviewCount,
+  reviewCountInRange,
+  connectionState,
   onClassifyPending,
   loading,
 }: AspectSentimentCardProps) {
@@ -55,13 +69,39 @@ export function AspectSentimentCard({
     }
   };
 
+  const hasAnyConnection = connectionState?.hasAnyConnection ?? true;
+  const primarySourceLabel = connectionState?.primarySourceLabel ?? "none";
+
+  // Source-aware title — "your app" / "your business" / generic "each aspect".
+  // Subhead stays put (per spec 4b — it's already generic).
+  const cardTitle =
+    primarySourceLabel === "app"
+      ? "How customers feel about each part of your app"
+      : primarySourceLabel === "business"
+      ? "How customers feel about each part of your business"
+      : "How customers feel about each aspect";
+
+  // Threshold check — fall back to "true" when totals weren't passed so
+  // legacy call sites still render correctly.
+  const totalReviewsKnown = typeof totalReviewCount === "number";
+  const rangeCountKnown = typeof reviewCountInRange === "number";
+  const hasAnyReviews = totalReviewsKnown
+    ? (totalReviewCount as number) > 0
+    : true;
+  const hasReviewsInRange = rangeCountKnown
+    ? (reviewCountInRange as number) > 0
+    : true;
+  // Per product rules: never show "Classify now" to a user without a
+  // connection — there's literally nothing to classify.
+  const canShowClassifyCta = hasAnyConnection && pendingCount > 0 && !!onClassifyPending;
+
   if (loading) {
     return (
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-base font-semibold flex items-center gap-2">
             <LayoutGrid className="h-4 w-4 text-accent shrink-0" />
-            What customers feel about each part of your business
+            {cardTitle}
           </CardTitle>
           <p className="text-[11px] text-muted-foreground/70 mt-0.5">
             Sentiment broken down by aspect, based on review content
@@ -81,12 +121,19 @@ export function AspectSentimentCard({
     );
   }
 
+  // Pre-compute the example-aspects string once so we only call it when we
+  // have a connectionState (avoids "product, service, pricing, support" copy
+  // mis-firing if upstream forgets to thread the state through).
+  const exampleAspects = connectionState
+    ? exampleAspectsFor(connectionState)
+    : "product, service, pricing, support";
+
   return (
     <Card>
       <CardHeader className="pb-2">
         <CardTitle className="text-base font-semibold flex items-center gap-2">
           <LayoutGrid className="h-4 w-4 text-accent shrink-0" />
-          What customers feel about each part of your business
+          {cardTitle}
         </CardTitle>
         <p className="text-[11px] text-muted-foreground/70 mt-0.5">
           Sentiment broken down by aspect, based on review content
@@ -94,46 +141,81 @@ export function AspectSentimentCard({
       </CardHeader>
       <CardContent>
         {aspects.length === 0 ? (
-          pendingCount > 0 ? (
+          // Empty-state ladder — most specific branch wins:
+          //   1. No connection            → "Connect a source" CTA
+          //   2. No reviews ever          → "Aspects will appear once …"
+          //   3. No reviews in range      → "Widen the date range"
+          //   4. Reviews classifying      → "Being analyzed" + Classify CTA
+          //   5. Reviews classified, none → source-aware example list
+          !hasAnyConnection ? (
             <div className="py-6 text-center">
-              <p className="text-sm font-medium">Not enough aspect data yet</p>
-              <p className="text-xs text-muted-foreground/80 mt-1.5 max-w-sm mx-auto">
-                Aspect sentiment appears when reviews mention specific parts of
-                your business.
+              <p className="text-sm font-medium">
+                Connect a source to see aspect sentiment
               </p>
-              {onClassifyPending && (
-                <button
-                  type="button"
-                  onClick={handleClassify}
-                  disabled={classifying}
-                  className={cn(
-                    "mt-4 inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold",
-                    "bg-accent text-white hover:bg-accent/90 transition-colors",
-                    "disabled:opacity-60 disabled:cursor-not-allowed"
-                  )}
-                >
-                  {classifying ? (
-                    <>
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                      Classifying…
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="h-3 w-3" />
-                      Classify pending reviews ({pendingCount}) →
-                    </>
-                  )}
-                </button>
-              )}
+              <p className="text-xs text-muted-foreground/80 mt-1.5 max-w-sm mx-auto">
+                See which parts of your app or business customers love and which they don&apos;t.
+              </p>
+              <Link
+                href="/dashboard/settings/connections"
+                className={cn(
+                  "mt-4 inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold",
+                  "bg-accent text-white hover:bg-accent/90 transition-colors"
+                )}
+              >
+                <Link2 className="h-3 w-3" />
+                Connect a source
+              </Link>
+            </div>
+          ) : !hasAnyReviews ? (
+            <div className="py-6 text-center">
+              <p className="text-sm font-medium">
+                Aspects will appear once you have reviews
+              </p>
+              <p className="text-xs text-muted-foreground/80 mt-1.5 max-w-sm mx-auto">
+                Aspect sentiment breaks each review into what customers liked or disliked about specific parts of your offering.
+              </p>
+            </div>
+          ) : !hasReviewsInRange ? (
+            <div className="py-6 text-center">
+              <p className="text-sm font-medium">No reviews in this range</p>
+              <p className="text-xs text-muted-foreground/80 mt-1.5 max-w-sm mx-auto">
+                Widen the date range above to see aspect data.
+              </p>
+            </div>
+          ) : canShowClassifyCta ? (
+            <div className="py-6 text-center">
+              <p className="text-sm font-medium">Reviews are being analyzed</p>
+              <p className="text-xs text-muted-foreground/80 mt-1.5 max-w-sm mx-auto">
+                {pendingCount} review{pendingCount === 1 ? "" : "s"} queued. Aspect data will appear once analysis completes.
+              </p>
+              <button
+                type="button"
+                onClick={handleClassify}
+                disabled={classifying}
+                className={cn(
+                  "mt-4 inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold",
+                  "bg-accent text-white hover:bg-accent/90 transition-colors",
+                  "disabled:opacity-60 disabled:cursor-not-allowed"
+                )}
+              >
+                {classifying ? (
+                  <>
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Classifying…
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-3 w-3" />
+                    Classify now ({pendingCount}) →
+                  </>
+                )}
+              </button>
             </div>
           ) : (
             <div className="py-6 text-center">
-              <p className="text-sm font-medium">
-                No reviews with aspect mentions
-              </p>
+              <p className="text-sm font-medium">No aspect mentions yet</p>
               <p className="text-xs text-muted-foreground/80 mt-1.5 max-w-sm mx-auto">
-                Aspects appear when reviews mention specific things like food,
-                service, performance, etc.
+                Aspects appear when reviews mention specific things like {exampleAspects}.
               </p>
             </div>
           )

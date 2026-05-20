@@ -10,8 +10,10 @@ import {
   MessageSquareText,
   Sparkles,
   Loader2,
+  Link2,
 } from "lucide-react";
 import type { ThemeAggregate } from "@/hooks/useAnalytics";
+import type { ConnectionState } from "@/lib/connection-state";
 
 interface ThemeMapCardProps {
   themes: ThemeAggregate[];
@@ -28,6 +30,10 @@ interface ThemeMapCardProps {
    * "No reviews in this range" empty-state variant.
    */
   hasReviewsInRange?: boolean;
+  /** All-time review count, used to branch "no reviews ever" empty state. */
+  totalReviewCount?: number;
+  /** Snapshot of the account's connection setup. */
+  connectionState?: ConnectionState;
   /**
    * Triggered when the user clicks the "Classify N pending" CTA. The card
    * shows an inline spinner while this resolves. Implemented in STEP 6.
@@ -57,11 +63,24 @@ export function ThemeMapCard({
   unclassifiedCount,
   pendingCount = 0,
   hasReviewsInRange = true,
+  totalReviewCount,
+  connectionState,
   onClassifyPending,
   loading,
 }: ThemeMapCardProps) {
   const shown = themes.slice(0, 10);
   const [classifying, setClassifying] = useState(false);
+  const hasAnyConnection = connectionState?.hasAnyConnection ?? true;
+  const oldestConnectionDaysAgo = connectionState?.oldestConnectionDaysAgo ?? null;
+  // For older API users who haven't been wired up with totalReviewCount yet,
+  // fall back to hasReviewsInRange as a soft proxy.
+  const totalReviewsKnown = typeof totalReviewCount === "number";
+  const hasAnyReviews = totalReviewsKnown
+    ? (totalReviewCount as number) > 0
+    : hasReviewsInRange;
+  // Classify CTA may only show when the user actually has a connection — no
+  // point offering classification to someone with nothing connected.
+  const canShowClassifyCta = hasAnyConnection && pendingCount > 0 && !!onClassifyPending;
 
   const handleClassify = async () => {
     if (!onClassifyPending || classifying) return;
@@ -77,7 +96,7 @@ export function ThemeMapCard({
   // still pending classifications. Lets the user incrementally process the
   // backlog by clicking again.
   const showHeaderClassifyBtn =
-    !loading && shown.length > 0 && pendingCount > 0 && !!onClassifyPending;
+    !loading && shown.length > 0 && canShowClassifyCta;
 
   return (
     <Card>
@@ -128,52 +147,82 @@ export function ThemeMapCard({
             ))}
           </div>
         ) : shown.length === 0 ? (
-          // Two empty-state variants:
-          //  (a) No reviews in selected range — guide the user to adjust range
-          //      or connect a source. No CTA (nothing to classify).
-          //  (b) Reviews exist but none classified — show CTA to trigger
-          //      on-demand classification (the in-product alternative to
-          //      running the backfill script over SSH).
-          !hasReviewsInRange ? (
+          // Empty-state ladder — five buckets, evaluated in order so the most
+          // specific message wins:
+          //   1. No connection           → onboarding CTA
+          //   2. Connection but 0 reviews ever → "no themes yet" + age-aware copy
+          //   3. Reviews exist but 0 in range  → "widen the range"
+          //   4. Reviews classifying           → "being analyzed" + Classify CTA
+          //   5. Reviews classified, no themes → "no clear themes yet"
+          !hasAnyConnection ? (
             <div className="py-6 text-center">
-              <p className="text-sm font-medium">No reviews in this range</p>
-              <p className="text-xs text-muted-foreground/80 mt-1.5 max-w-xs mx-auto">
-                Adjust the date range above or connect a source to start
-                seeing themes.
+              <p className="text-sm font-medium">Connect a source to see themes</p>
+              <p className="text-xs text-muted-foreground/80 mt-1.5 max-w-sm mx-auto">
+                Theme Map analyzes your reviews to surface what customers actually talk about.
               </p>
+              <Link
+                href="/dashboard/settings/connections"
+                className={cn(
+                  "mt-4 inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold",
+                  "bg-accent text-white hover:bg-accent/90 transition-colors"
+                )}
+              >
+                <Link2 className="h-3 w-3" />
+                Connect a source
+              </Link>
             </div>
-          ) : (
+          ) : !hasAnyReviews ? (
             <div className="py-6 text-center">
               <p className="text-sm font-medium">No themes to show yet</p>
               <p className="text-xs text-muted-foreground/80 mt-1.5 max-w-sm mx-auto">
-                Themes appear here once your reviews have been analyzed. If
-                you&apos;ve just connected a new source, classify your reviews
-                now to populate this view.
+                {oldestConnectionDaysAgo !== null && oldestConnectionDaysAgo < 1
+                  ? "Themes will appear once your first reviews sync. This usually takes a few minutes."
+                  : "Themes appear once your connected sources receive reviews."}
               </p>
-              {pendingCount > 0 && onClassifyPending && (
-                <button
-                  type="button"
-                  onClick={handleClassify}
-                  disabled={classifying}
-                  className={cn(
-                    "mt-4 inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold",
-                    "bg-accent text-white hover:bg-accent/90 transition-colors",
-                    "disabled:opacity-60 disabled:cursor-not-allowed"
-                  )}
-                >
-                  {classifying ? (
-                    <>
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                      Classifying…
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="h-3 w-3" />
-                      Classify pending reviews ({pendingCount}) →
-                    </>
-                  )}
-                </button>
-              )}
+            </div>
+          ) : !hasReviewsInRange ? (
+            <div className="py-6 text-center">
+              <p className="text-sm font-medium">No reviews in this range</p>
+              <p className="text-xs text-muted-foreground/80 mt-1.5 max-w-sm mx-auto">
+                Try widening the date range above (7d, 30d, 90d) to see more data.
+              </p>
+            </div>
+          ) : canShowClassifyCta ? (
+            <div className="py-6 text-center">
+              <p className="text-sm font-medium">Reviews are being analyzed</p>
+              <p className="text-xs text-muted-foreground/80 mt-1.5 max-w-sm mx-auto">
+                {pendingCount} review{pendingCount === 1 ? "" : "s"}{" "}
+                {pendingCount === 1 ? "is" : "are"} queued for analysis. This usually takes under a minute.
+              </p>
+              <button
+                type="button"
+                onClick={handleClassify}
+                disabled={classifying}
+                className={cn(
+                  "mt-4 inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold",
+                  "bg-accent text-white hover:bg-accent/90 transition-colors",
+                  "disabled:opacity-60 disabled:cursor-not-allowed"
+                )}
+              >
+                {classifying ? (
+                  <>
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Classifying…
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-3 w-3" />
+                    Classify now ({pendingCount}) →
+                  </>
+                )}
+              </button>
+            </div>
+          ) : (
+            <div className="py-6 text-center">
+              <p className="text-sm font-medium">No clear themes yet</p>
+              <p className="text-xs text-muted-foreground/80 mt-1.5 max-w-sm mx-auto">
+                Themes emerge once you have a handful of reviews. More reviews will reveal what customers care about most.
+              </p>
             </div>
           )
         ) : (

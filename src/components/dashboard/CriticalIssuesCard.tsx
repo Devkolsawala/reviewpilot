@@ -15,6 +15,17 @@ interface CriticalIssuesCardProps {
    * sites stay backward-compatible.
    */
   range?: AnalyticsRange;
+  /**
+   * Total reviews across the user's connections (all-time). When 0, the card
+   * suppresses itself entirely so a brand-new user doesn't get a misleading
+   * "All Clear ✓" reassurance before any reviews have synced.
+   */
+  totalReviewCount?: number;
+  /**
+   * Whether the account has any connections wired up. Combined with
+   * `totalReviewCount` to drive the "render nothing yet" branch.
+   */
+  hasAnyConnection?: boolean;
 }
 
 const RANGE_PHRASE: Record<AnalyticsRange, { trail: string; bare: string }> = {
@@ -53,6 +64,8 @@ export function CriticalIssuesCard({
   issues,
   loading,
   range = "7d",
+  totalReviewCount,
+  hasAnyConnection,
 }: CriticalIssuesCardProps) {
   const phrase = RANGE_PHRASE[range] ?? RANGE_PHRASE["7d"];
   if (loading) {
@@ -63,6 +76,19 @@ export function CriticalIssuesCard({
         </CardContent>
       </Card>
     );
+  }
+
+  // Hide the card entirely until the user has at least one review on file.
+  // Without this, brand-new accounts see a green "All Clear ✓" badge that
+  // technically applies (0 issues out of 0 reviews) but reads as reassuring
+  // when the user hasn't actually started syncing yet. The card reappears
+  // the moment the first review arrives. The undefined checks keep older
+  // call sites (without these props) on the legacy reassurance behavior.
+  if (
+    (hasAnyConnection === false) ||
+    (typeof totalReviewCount === "number" && totalReviewCount === 0)
+  ) {
+    return null;
   }
 
   // Empty state — reassurance variant (green/teal). Less visual weight.

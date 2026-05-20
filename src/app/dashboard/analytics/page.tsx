@@ -12,6 +12,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useAnalytics, type AnalyticsRange, RANGE_DAYS } from "@/hooks/useAnalytics";
 import { usePlan } from "@/hooks/usePlan";
 import { useTeamRole } from "@/hooks/useTeamRole";
+import { useConnections } from "@/hooks/useConnection";
+import { deriveConnectionState } from "@/lib/connection-state";
 import { cn } from "@/lib/utils";
 import { Zap, CheckCircle2, Clock, Info, Timer, TrendingUp, Bot, IndianRupee, Mail, X } from "lucide-react";
 import { UpgradeGate } from "@/components/dashboard/UpgradeGate";
@@ -113,6 +115,14 @@ function AnalyticsPageInner() {
   }
 
   const { analytics, loading, isMock, refetch } = useAnalytics(range);
+  const { connections } = useConnections();
+  const connectionState = deriveConnectionState(connections);
+  // In mock mode there are no real connections, so the helper would say
+  // "no connection ever". The mock dataset has 120 days of fake reviews, so
+  // skipping the empty-state branching for mock keeps the existing populated
+  // demo experience intact.
+  const totalReviewCountForEmpty = isMock ? 1 : analytics.totalReviewCountAllTime;
+  const hasAnyConnectionForEmpty = isMock ? true : connectionState.hasAnyConnection;
 
   // Triggered from <ThemeMapCard /> when the user clicks "Classify N pending
   // reviews →". Processes one batch (25) on the server, then refetches the
@@ -257,6 +267,8 @@ function AnalyticsPageInner() {
           issues={analytics.criticalIssues}
           loading={loading}
           range={range}
+          totalReviewCount={totalReviewCountForEmpty}
+          hasAnyConnection={hasAnyConnectionForEmpty}
         />
 
         {loading ? (
@@ -276,6 +288,7 @@ function AnalyticsPageInner() {
             previousAvgRating={analytics.previousPeriodTotals.avg_rating}
             previousResponseRate={analytics.previousPeriodTotals.response_rate}
             trend={analytics.trend}
+            oldestConnectionDaysAgo={analytics.connectionAgeDays}
           />
         )}
 
@@ -424,6 +437,9 @@ function AnalyticsPageInner() {
             sourceBreakdown={analytics.source_breakdown}
             ratingDistribution={analytics.distribution}
             replyRate={totals.response_rate ?? 0}
+            connectionState={isMock ? undefined : connectionState}
+            totalReviewCount={totalReviewCountForEmpty}
+            reviewCountInRange={analytics.reviewCountInRange}
           />
         </UpgradeGate>
 
@@ -434,6 +450,9 @@ function AnalyticsPageInner() {
           pendingCount={analytics.allUnclassifiedCount}
           onClassifyPending={handleClassifyPending}
           loading={loading}
+          totalReviewCount={totalReviewCountForEmpty}
+          reviewCountInRange={analytics.reviewCountInRange}
+          connectionState={isMock ? undefined : connectionState}
         />
 
         {/* Theme Map — moved up into the upper half of the page so it gets
@@ -445,6 +464,8 @@ function AnalyticsPageInner() {
           hasReviewsInRange={analytics.hasReviewsInRange}
           onClassifyPending={handleClassifyPending}
           loading={loading}
+          totalReviewCount={totalReviewCountForEmpty}
+          connectionState={isMock ? undefined : connectionState}
         />
 
         {/* Row 2 — Sentiment Analysis + Reply Rate + Source Breakdown */}
@@ -459,6 +480,9 @@ function AnalyticsPageInner() {
             nssTrend={analytics.nssTrend}
             nssCurrent={analytics.nssCurrent}
             nssDelta={analytics.nssDelta}
+            connectionState={isMock ? undefined : connectionState}
+            totalReviewCount={totalReviewCountForEmpty}
+            reviewCountInRange={analytics.reviewCountInRange}
           />
         </UpgradeGate>
       </div>
