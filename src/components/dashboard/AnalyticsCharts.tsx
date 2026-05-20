@@ -14,9 +14,13 @@ import {
  ReferenceLine,
  Area,
  AreaChart,
+ Line,
+ LineChart,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { ArrowUpRight, ArrowDownRight, Minus } from "lucide-react";
+import type { NssTrendPoint } from "@/hooks/useAnalytics";
 
 interface AnalyticsChartsProps {
  ratingTrend: { date: string; avg_rating: number; count: number }[];
@@ -24,6 +28,14 @@ interface AnalyticsChartsProps {
  sourceBreakdown: { name: string; value: number; color: string }[];
  ratingDistribution?: { star: number; count: number }[];
  replyRate?: number;
+ /**
+  * Phase 2 — Net Sentiment Score data for the redesigned sentiment card.
+  * `nssTrend` drives the sparkline; `nssCurrent` is the prominent number;
+  * `nssDelta` is the change vs the previous period.
+  */
+ nssTrend?: NssTrendPoint[];
+ nssCurrent?: number | null;
+ nssDelta?: number | null;
  /**
   * Optional render slot. Lets /dashboard/analytics page.tsx interleave the
   * ThemeMap card between rows.
@@ -65,6 +77,9 @@ export function AnalyticsCharts({
  sourceBreakdown,
  ratingDistribution,
  replyRate,
+ nssTrend = [],
+ nssCurrent = null,
+ nssDelta = null,
  slot,
 }: AnalyticsChartsProps) {
  const sentimentData = Object.entries(sentimentBreakdown).map(([name, value]) => ({
@@ -74,6 +89,38 @@ export function AnalyticsCharts({
  }));
 
  const sentimentTotal = sentimentData.reduce((sum, d) => sum + d.value, 0);
+ const sentimentPct = (key: string): number =>
+ sentimentTotal > 0
+ ? Math.round(((sentimentBreakdown[key] ?? 0) / sentimentTotal) * 100)
+ : 0;
+ const positivePct = sentimentPct("positive");
+ const neutralPct = sentimentPct("neutral");
+ const mixedPct = sentimentPct("mixed");
+ const negativePct = sentimentPct("negative");
+ const nssColor =
+ nssCurrent == null
+ ? "text-muted-foreground"
+ : nssCurrent > 5
+ ? "text-emerald-600 dark:text-emerald-400"
+ : nssCurrent < -5
+ ? "text-rose-600 dark:text-rose-400"
+ : "text-muted-foreground";
+ const deltaColor =
+ nssDelta == null || Math.abs(nssDelta) < 1
+ ? "text-muted-foreground"
+ : nssDelta > 0
+ ? "text-emerald-600 dark:text-emerald-400"
+ : "text-rose-600 dark:text-rose-400";
+ // recharts requires a continuous data series. We feed two series:
+ // posNss = max(nss, 0), negNss = min(nss, 0) so the line above 0 is green,
+ // below 0 is red. Achieved by drawing two lines and masking with the data
+ // (null where the value falls in the other half).
+ const nssChartData = nssTrend.map((p) => ({
+ date: p.date,
+ nss: p.nss,
+ posNss: p.nss >= 0 ? p.nss : null,
+ negNss: p.nss < 0 ? p.nss : null,
+ }));
 
  const sourceData = sourceBreakdown;
 
@@ -264,86 +311,164 @@ export function AnalyticsCharts({
  </>)}
 
  {showRow2 && (<>
- {/* Sentiment breakdown — donut.
-     Mobile (<sm): donut on top, legend below, Net Sentiment line under the
-     donut (never overlapping). Desktop: donut + legend side-by-side.
-     Net Sentiment always renders on its own row, never as an absolute
-     overlay (live testing showed the absolute version overlapping the
-     center number on narrow viewports). */}
+ {/* Sentiment card — Phase 2 redesign. Top half: horizontal stacked bar
+     with positive/neutral/mixed/negative segments + legend row.
+     Bottom half: Net Sentiment Score sparkline + prominent current NSS +
+     delta vs previous period. */}
  <Card>
  <CardHeader className="pb-2">
- <CardTitle className="text-base font-semibold">Sentiment Analysis</CardTitle>
+ <CardTitle className="text-base font-semibold">How customers feel</CardTitle>
+ <p className="text-[11px] text-muted-foreground/70 mt-0.5">Net sentiment over time</p>
  </CardHeader>
  <CardContent>
- <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-2">
- {/* Donut column */}
- <div className="w-full sm:w-1/2 flex flex-col items-center">
- <div className="relative w-full max-w-[220px]">
- <ResponsiveContainer width="100%" height={200}>
- <PieChart>
- <Pie
- data={sentimentData}
- cx="50%"
- cy="50%"
- innerRadius={55}
- outerRadius={80}
- paddingAngle={3}
- dataKey="value"
- strokeWidth={0}
- >
- {sentimentData.map((entry) => (
- <Cell key={entry.name} fill={entry.color} />
- ))}
- </Pie>
- <Tooltip contentStyle={tooltipStyle} />
- </PieChart>
- </ResponsiveContainer>
- {/* Only the centre count/label remain absolutely-positioned over the
-         donut — the Net Sentiment line moved out to its own row below. */}
- <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
- <div className="text-center">
- <p className="text-2xl font-bold font-sans tracking-tight">{sentimentTotal}</p>
- <p className="text-[10px] text-muted-foreground">reviews</p>
- </div>
- </div>
- </div>
- {/* Net Sentiment Score — own row, always below the donut, never inside */}
- {(() => {
- if (sentimentTotal === 0) return null;
- const pos = sentimentBreakdown.positive ?? 0;
- const neg = sentimentBreakdown.negative ?? 0;
- const nss = Math.round(((pos - neg) / sentimentTotal) * 100);
- // Near-zero band (|nss| ≤ 5) stays gray to avoid noisy color flips.
- const colorClass =
- nss > 5
- ? "text-emerald-600 dark:text-emerald-400"
- : nss < -5
- ? "text-rose-600 dark:text-rose-400"
- : "text-muted-foreground";
- const sign = nss > 0 ? "+" : "";
- return (
- <p className="mt-2 text-[11px] tabular-nums text-center">
- <span className="text-muted-foreground/70">Net sentiment: </span>
- <span className={cn("font-semibold", colorClass)}>
- {sign}{nss}
- </span>
+ {sentimentTotal === 0 ? (
+ <div className="py-6 text-center">
+ <p className="text-sm font-medium">Not enough reviews</p>
+ <p className="text-xs text-muted-foreground/80 mt-1.5 max-w-sm mx-auto">
+ Not enough reviews to compute sentiment for this period.
  </p>
- );
- })()}
  </div>
- {/* Legend column — full width on mobile, half-width on desktop */}
- <div className="w-full sm:w-1/2 space-y-3 sm:pl-4">
- {sentimentData.map((d) => (
- <div key={d.name} className="flex items-center gap-2">
- <div className="h-3 w-3 rounded-full shrink-0" style={{ backgroundColor: d.color }} />
- <span className="text-sm flex-1">{d.name}</span>
- <span className="text-sm font-medium">
- {sentimentTotal > 0 ? Math.round((d.value / sentimentTotal) * 100) : 0}%
+ ) : (
+ <>
+ {/* Stacked bar — full width. Segments use min-width so a 1–2% slice
+         still shows. */}
+ <div className="relative w-full h-7 rounded-md overflow-hidden bg-muted/30 flex">
+ {positivePct > 0 && (
+ <div
+ className="h-full flex items-center justify-center text-[10px] font-semibold text-white"
+ style={{ width: `${Math.max(positivePct, 2)}%`, backgroundColor: SENTIMENT_COLORS.positive }}
+ title={`Positive: ${positivePct}%`}
+ >
+ {positivePct >= 8 ? `${positivePct}%` : ""}
+ </div>
+ )}
+ {neutralPct > 0 && (
+ <div
+ className="h-full flex items-center justify-center text-[10px] font-semibold text-white"
+ style={{ width: `${Math.max(neutralPct, 2)}%`, backgroundColor: SENTIMENT_COLORS.neutral }}
+ title={`Neutral: ${neutralPct}%`}
+ >
+ {neutralPct >= 8 ? `${neutralPct}%` : ""}
+ </div>
+ )}
+ {mixedPct > 0 && (
+ <div
+ className="h-full flex items-center justify-center text-[10px] font-semibold text-white"
+ style={{ width: `${Math.max(mixedPct, 2)}%`, backgroundColor: SENTIMENT_COLORS.mixed }}
+ title={`Mixed: ${mixedPct}%`}
+ >
+ {mixedPct >= 8 ? `${mixedPct}%` : ""}
+ </div>
+ )}
+ {negativePct > 0 && (
+ <div
+ className="h-full flex items-center justify-center text-[10px] font-semibold text-white"
+ style={{ width: `${Math.max(negativePct, 2)}%`, backgroundColor: SENTIMENT_COLORS.negative }}
+ title={`Negative: ${negativePct}%`}
+ >
+ {negativePct >= 8 ? `${negativePct}%` : ""}
+ </div>
+ )}
+ </div>
+
+ {/* Legend row */}
+ <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground/80">
+ <span className="inline-flex items-center gap-1.5">
+ <span aria-hidden className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: SENTIMENT_COLORS.positive }} />
+ Positive <span className="tabular-nums font-medium text-foreground/80">{positivePct}%</span>
+ </span>
+ <span className="inline-flex items-center gap-1.5">
+ <span aria-hidden className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: SENTIMENT_COLORS.neutral }} />
+ Neutral <span className="tabular-nums font-medium text-foreground/80">{neutralPct}%</span>
+ </span>
+ <span className="inline-flex items-center gap-1.5">
+ <span aria-hidden className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: SENTIMENT_COLORS.mixed }} />
+ Mixed <span className="tabular-nums font-medium text-foreground/80">{mixedPct}%</span>
+ </span>
+ <span className="inline-flex items-center gap-1.5">
+ <span aria-hidden className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: SENTIMENT_COLORS.negative }} />
+ Negative <span className="tabular-nums font-medium text-foreground/80">{negativePct}%</span>
  </span>
  </div>
- ))}
+
+ {/* NSS sparkline + current/delta. Mobile stacks: sparkline full width,
+         NSS number + delta wrap below. Desktop: side-by-side. */}
+ <div className="mt-5 pt-4 border-t border-border/60">
+ <div className="flex items-center justify-between mb-2">
+ <p className="text-[11px] uppercase tracking-wider text-muted-foreground/70 font-medium">
+ Net Sentiment Score
+ </p>
+ <p className="text-[10px] text-muted-foreground/60 font-mono">positive % − negative %</p>
+ </div>
+ <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+ <div className="flex-1 h-[80px] min-w-0">
+ {nssChartData.length > 1 ? (
+ <ResponsiveContainer width="100%" height="100%">
+ <LineChart data={nssChartData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+ <YAxis domain={[-100, 100]} hide />
+ <XAxis dataKey="date" hide />
+ <ReferenceLine y={0} stroke="hsl(var(--muted-foreground))" strokeOpacity={0.5} strokeDasharray="3 3" />
+ <Tooltip
+ contentStyle={tooltipStyle}
+ labelFormatter={(v) => {
+ const d = new Date(v);
+ return isNaN(d.getTime())
+ ? String(v)
+ : d.toLocaleDateString("en", { month: "short", day: "numeric" });
+ }}
+ formatter={(val) => [`${val ?? "—"}`, "NSS"]}
+ />
+ <Line
+ type="monotone"
+ dataKey="posNss"
+ stroke={SENTIMENT_COLORS.positive}
+ strokeWidth={2}
+ dot={false}
+ isAnimationActive
+ animationDuration={500}
+ connectNulls={false}
+ name="NSS"
+ />
+ <Line
+ type="monotone"
+ dataKey="negNss"
+ stroke={SENTIMENT_COLORS.negative}
+ strokeWidth={2}
+ dot={false}
+ isAnimationActive
+ animationDuration={500}
+ connectNulls={false}
+ name="NSS"
+ />
+ </LineChart>
+ </ResponsiveContainer>
+ ) : (
+ <div className="h-full flex items-center text-[11px] text-muted-foreground/70">
+ Trend appears once there are at least two days of reviews.
+ </div>
+ )}
+ </div>
+ <div className="sm:w-32 shrink-0 sm:text-right">
+ <p className={cn("text-3xl font-bold font-sans tracking-tight tabular-nums", nssColor)}>
+ {nssCurrent == null ? "—" : `${nssCurrent > 0 ? "+" : ""}${nssCurrent}`}
+ </p>
+ {nssDelta != null && (
+ <p className={cn("mt-0.5 inline-flex items-center gap-0.5 text-[11px] font-medium tabular-nums sm:justify-end", deltaColor)}>
+ {Math.abs(nssDelta) < 1 ? (
+ <Minus className="h-3 w-3" />
+ ) : nssDelta > 0 ? (
+ <ArrowUpRight className="h-3 w-3" />
+ ) : (
+ <ArrowDownRight className="h-3 w-3" />
+ )}
+ {nssDelta > 0 ? "+" : ""}{nssDelta} vs previous period
+ </p>
+ )}
  </div>
  </div>
+ </div>
+ </>
+ )}
  </CardContent>
  </Card>
 
@@ -392,8 +517,10 @@ export function AnalyticsCharts({
  No reviews synced yet.
  </div>
  ) : (
- <div className="flex items-center gap-8">
- <div className="w-40 h-40 relative">
+ // Mobile (<sm): chart on top, single-column legend below (collision-free
+ // even at 348px). Desktop: side-by-side with a 2-col legend grid.
+ <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-8">
+ <div className="w-32 h-32 sm:w-40 sm:h-40 relative shrink-0 mx-auto sm:mx-0">
  <ResponsiveContainer width="100%" height="100%">
  <PieChart>
  <Pie
@@ -413,7 +540,7 @@ export function AnalyticsCharts({
  </PieChart>
  </ResponsiveContainer>
  </div>
- <div className="flex-1 grid grid-cols-2 gap-6">
+ <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-6">
  {sourceData.map((d) => (
  <div key={d.name} className="flex items-center gap-3">
  <div

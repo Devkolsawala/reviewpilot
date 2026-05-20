@@ -27,6 +27,11 @@ import { getDigestCcLimit } from "@/lib/plans";
 import { buildDigest, type DigestPeriod } from "./aggregate";
 import { renderDailyDigest } from "@/lib/email/templates/dailyDigest";
 import {
+  generateExecutiveSummary,
+  type ExecutiveSummary,
+  type ExecutiveSummaryMetrics,
+} from "@/lib/ai/generateExecutiveSummary";
+import {
   startOfTodayInTzAsUtc,
   mostRecentWeeklySlotAsUtc,
 } from "./tz";
@@ -194,6 +199,42 @@ export async function sendDigestForUser(opts: {
   // 6. Build payload
   const payload = await buildDigest(userId, period, now);
 
+  // 6b. AI executive summary — weekly only, behind DIGEST_EXECUTIVE_SUMMARY_ENABLED.
+  // Daily path is byte-identical to before Phase 2. Any failure here is
+  // swallowed — the digest must still send without the section.
+  let executiveSummary: ExecutiveSummary | null = null;
+  if (period === "weekly") {
+    try {
+      const metrics: ExecutiveSummaryMetrics = {
+        totalReviews: payload.totals.newReviews,
+        totalReviewsPrev: 0, // not currently aggregated; safe baseline
+        avgRating: payload.totals.avgRating ?? 0,
+        avgRatingPrev:
+          payload.totals.avgRating != null &&
+          payload.totals.avgRatingDelta != null
+            ? payload.totals.avgRating - payload.totals.avgRatingDelta
+            : 0,
+        responseRate: 0,
+        responseRatePrev: 0,
+        topThemes: [],
+        criticalCount: 0,
+        topNegativeAspect: null,
+        topPositiveAspect: null,
+      };
+      executiveSummary = await generateExecutiveSummary({
+        userId,
+        period: "weekly",
+        metrics,
+      });
+    } catch (err) {
+      console.error(
+        "[digest] exec summary failed for user",
+        userId,
+        err
+      );
+    }
+  }
+
   // 7. Skip-if-no-activity (real sends only)
   if (
     !isTest &&
@@ -225,6 +266,7 @@ export async function sendDigestForUser(opts: {
     includeLowestRated: prefs?.include_lowest_rated ?? true,
     includeTopKeywords: prefs?.include_top_keywords ?? true,
     includeQuotaUsage: prefs?.include_quota_usage ?? true,
+    executiveSummary,
   });
 
   // 10. Send. RFC 8058 one-click headers — Gmail/Apple Mail render a native

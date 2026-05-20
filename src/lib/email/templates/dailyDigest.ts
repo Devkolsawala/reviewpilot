@@ -125,6 +125,11 @@ export function renderDailyDigest(
     includeLowestRated?: boolean;
     includeTopKeywords?: boolean;
     includeQuotaUsage?: boolean;
+    // Phase 2 — Optional AI executive summary. Rendered ONLY when provided
+    // (which is weekly-period sends with DIGEST_EXECUTIVE_SUMMARY_ENABLED).
+    // When null/undefined the section is omitted entirely so daily and
+    // legacy weekly emails are byte-identical to before Phase 2.
+    executiveSummary?: { summary: string; topAction: string } | null;
   }
 ): { subject: string; html: string; text: string } {
   const subject = buildSubject(payload);
@@ -241,6 +246,27 @@ export function renderDailyDigest(
     </div>`
     : "";
 
+  // Phase 2 — Executive summary block. Rendered only when opts.executiveSummary
+  // is provided (weekly digest with flag on). Daily digest never sets this,
+  // so the daily email remains byte-identical to before Phase 2.
+  const executiveBlock = opts.executiveSummary
+    ? `
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f5f3ff;border-radius:12px;margin-bottom:24px;">
+      <tr>
+        <td style="padding:20px;">
+          <div style="font:600 11px ${FONT_STACK};color:#6b21a8;letter-spacing:1px;text-transform:uppercase;">YOUR WEEK IN REVIEW</div>
+          <p style="font:15px ${FONT_STACK};line-height:1.6;color:${NAVY};margin:8px 0 16px 0;">
+            ${escapeHtml(opts.executiveSummary.summary)}
+          </p>
+          <div style="font:600 11px ${FONT_STACK};color:#6b21a8;letter-spacing:1px;text-transform:uppercase;">RECOMMENDED ACTION</div>
+          <p style="font:14px ${FONT_STACK};line-height:1.5;color:${NAVY};margin:8px 0 0 0;font-weight:500;">
+            → ${escapeHtml(opts.executiveSummary.topAction)}
+          </p>
+        </td>
+      </tr>
+    </table>`
+    : "";
+
   const quietState = !payload.hasActivity
     ? `
     <div style="padding:24px;background:${WARM_WHITE};border:1px solid ${BORDER};border-radius:8px;text-align:center;margin-bottom:16px;">
@@ -271,6 +297,7 @@ export function renderDailyDigest(
           <tr>
             <td style="padding:8px 24px 24px 24px;">
               <div style="font:14px ${FONT_STACK};color:${NAVY};line-height:1.5;">Hi ${escapeHtml(opts.userName)},</div>
+              ${executiveBlock}
               ${quietState}
               ${payload.hasActivity ? heroStats : ""}
               ${payload.hasActivity ? avgRatingBlock : ""}

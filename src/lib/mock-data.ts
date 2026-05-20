@@ -19,6 +19,7 @@ export const MOCK_REVIEWS: Review[] = [
     ai_urgency: "high",
     ai_sentiment: "negative",
     ai_insights_classified_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+    ai_aspects: { performance: "negative", bugs: "negative" },
   },
   {
     id: "mock-2",
@@ -38,6 +39,7 @@ export const MOCK_REVIEWS: Review[] = [
     ai_urgency: "low",
     ai_sentiment: "positive",
     ai_insights_classified_at: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
+    ai_aspects: { ui_ux: "positive", features: "positive" },
   },
   {
     id: "mock-3",
@@ -57,6 +59,7 @@ export const MOCK_REVIEWS: Review[] = [
     ai_urgency: "medium",
     ai_sentiment: "neutral",
     ai_insights_classified_at: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
+    ai_aspects: { food: "positive", wait_time: "negative", staff: "positive" },
   },
   {
     id: "mock-4",
@@ -76,6 +79,7 @@ export const MOCK_REVIEWS: Review[] = [
     ai_urgency: "medium",
     ai_sentiment: "negative",
     ai_insights_classified_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+    ai_aspects: { ads: "negative", ui_ux: "negative" },
   },
   {
     id: "mock-5",
@@ -97,6 +101,7 @@ export const MOCK_REVIEWS: Review[] = [
     ai_urgency: "low",
     ai_sentiment: "positive",
     ai_insights_classified_at: new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString(),
+    ai_aspects: { staff: "positive", cleanliness: "positive", service: "positive" },
   },
   {
     id: "mock-6",
@@ -174,6 +179,7 @@ export const MOCK_REVIEWS: Review[] = [
     ai_urgency: "low",
     ai_sentiment: "positive",
     ai_insights_classified_at: new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString(),
+    ai_aspects: { food: "positive", ambience: "positive", pricing: "negative" },
   },
   {
     id: "mock-10",

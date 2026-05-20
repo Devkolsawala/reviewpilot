@@ -17,6 +17,7 @@ import { Zap, CheckCircle2, Clock, Info, Timer, TrendingUp, Bot, IndianRupee, Ma
 import { UpgradeGate } from "@/components/dashboard/UpgradeGate";
 import { ThemeMapCard } from "@/components/dashboard/ThemeMapCard";
 import { CriticalIssuesCard } from "@/components/dashboard/CriticalIssuesCard";
+import { AspectSentimentCard } from "@/components/dashboard/AspectSentimentCard";
 import { toast } from "@/components/ui/use-toast";
 
 const DIGEST_BANNER_DISMISS_KEY = "reviewpilot_digest_banner_dismissed";
@@ -426,6 +427,15 @@ function AnalyticsPageInner() {
           />
         </UpgradeGate>
 
+        {/* Aspect-Based Sentiment — Phase 2. Available on ALL plans. Sits
+            between the rating row and the Theme Map. */}
+        <AspectSentimentCard
+          aspects={analytics.aspectAggregates}
+          pendingCount={analytics.allUnclassifiedCount}
+          onClassifyPending={handleClassifyPending}
+          loading={loading}
+        />
+
         {/* Theme Map — moved up into the upper half of the page so it gets
             seen. Full width, prominent. Available on ALL plans. */}
         <ThemeMapCard
@@ -446,6 +456,9 @@ function AnalyticsPageInner() {
             sourceBreakdown={analytics.source_breakdown}
             ratingDistribution={analytics.distribution}
             replyRate={totals.response_rate ?? 0}
+            nssTrend={analytics.nssTrend}
+            nssCurrent={analytics.nssCurrent}
+            nssDelta={analytics.nssDelta}
           />
         </UpgradeGate>
       </div>

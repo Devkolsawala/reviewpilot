@@ -46,6 +46,25 @@ export interface CriticalIssue {
   ai_emotion: string | null;
 }
 
+// Phase 2 — Aspect-Based Sentiment Analysis aggregate per aspect across the
+// selected range. `net` = ((positive - negative) / total) * 100, rounded.
+export interface AspectAggregate {
+  aspect: string;
+  positive: number;
+  neutral: number;
+  negative: number;
+  total: number;
+  net: number;
+}
+
+// Phase 2 — Net Sentiment Score trend point. NSS = positive% − negative% on
+// the bucket's reviews. Used by the redesigned Sentiment card sparkline.
+export interface NssTrendPoint {
+  date: string;
+  nss: number;
+  total: number;
+}
+
 export interface Analytics {
   totals: AnalyticsTotals;
   previousPeriodTotals: AnalyticsTotals;
@@ -71,6 +90,18 @@ export interface Analytics {
   hasReviewsInRange: boolean;
   // Critical Issues card (STEP 8) — last 7 days only, independent of range.
   criticalIssues: CriticalIssue[];
+  // Phase 2 — Aspect sentiment aggregates over the selected range.
+  // Filtered to aspects with ≥3 mentions to suppress noise. Sorted by total
+  // mentions descending.
+  aspectAggregates: AspectAggregate[];
+  // Phase 2 — Day-by-day (or hourly for 1d, weekly for 90d) NSS series for
+  // the sentiment card sparkline.
+  nssTrend: NssTrendPoint[];
+  // Phase 2 — Current NSS for the selected range and the delta vs the same
+  // length previous period. null when there isn't enough data.
+  nssCurrent: number | null;
+  nssPrevious: number | null;
+  nssDelta: number | null;
 }
 
 const EMPTY_TOTALS: AnalyticsTotals = {
@@ -97,6 +128,11 @@ const EMPTY_ANALYTICS: Analytics = {
   allUnclassifiedCount: 0,
   hasReviewsInRange: false,
   criticalIssues: [],
+  aspectAggregates: [],
+  nssTrend: [],
+  nssCurrent: null,
+  nssPrevious: null,
+  nssDelta: null,
 };
 
 const SOURCE_META: Record<string, { name: string; color: string }> = {
@@ -129,6 +165,7 @@ type MockReview = {
   ai_urgency: AiUrgency | null;
   ai_sentiment: AiSentimentLabel | null;
   ai_insights_classified_at: string | null;
+  ai_aspects: Record<string, AiSentimentLabel> | null;
 };
 
 const KEYWORDS = [
@@ -147,23 +184,42 @@ const MOCK_THEMES: Array<{
   ratingRange: [number, number];
   weight: number;
   texts: string[];
+  // Phase 2 — aspect signature for the theme. The mock dataset assigns these
+  // ai_aspects values so the AspectSentimentCard has realistic data.
+  // Aspect keys vary by source; the generator picks PS- or GBP-flavored sets
+  // depending on the review's chosen source.
+  appAspects?: Record<string, AiSentimentLabel>;
+  gbpAspects?: Record<string, AiSentimentLabel>;
 }> = [
   { theme: "camera crashes", sentiment: "negative", emotion: "frustrated", ratingRange: [1, 2], weight: 5,
-    texts: ["Camera crashes every time I open it.", "App keeps closing on the camera screen, please fix."] },
+    texts: ["Camera crashes every time I open it.", "App keeps closing on the camera screen, please fix."],
+    appAspects: { performance: "negative", bugs: "negative", features: "negative" },
+    gbpAspects: { service: "negative" } },
   { theme: "slow checkout", sentiment: "negative", emotion: "frustrated", ratingRange: [1, 3], weight: 4,
-    texts: ["Checkout is so slow, takes forever.", "Payment screen lag is unbearable."] },
+    texts: ["Checkout is so slow, takes forever.", "Payment screen lag is unbearable."],
+    appAspects: { performance: "negative", ui_ux: "negative" },
+    gbpAspects: { service: "negative", wait_time: "negative" } },
   { theme: "great support", sentiment: "positive", emotion: "delighted", ratingRange: [4, 5], weight: 4,
-    texts: ["Support team helped me in minutes.", "Loved how quickly support replied!"] },
+    texts: ["Support team helped me in minutes.", "Loved how quickly support replied!"],
+    appAspects: { customer_support: "positive" },
+    gbpAspects: { service: "positive", staff: "positive" } },
   { theme: "polite staff", sentiment: "positive", emotion: "satisfied", ratingRange: [4, 5], weight: 3,
-    texts: ["Staff was very polite and helpful.", "Friendly and patient staff, will return."] },
+    texts: ["Staff was very polite and helpful.", "Friendly and patient staff, will return."],
+    appAspects: { customer_support: "positive" },
+    gbpAspects: { staff: "positive", service: "positive" } },
   { theme: "long wait time", sentiment: "negative", emotion: "disappointed", ratingRange: [1, 3], weight: 3,
-    texts: ["Waited 45 minutes for service.", "Wait time was way too long."] },
+    texts: ["Waited 45 minutes for service.", "Wait time was way too long."],
+    appAspects: { performance: "negative" },
+    gbpAspects: { wait_time: "negative", service: "negative" } },
   { theme: "good food quality", sentiment: "positive", emotion: "satisfied", ratingRange: [4, 5], weight: 3,
-    texts: ["Food quality was excellent.", "Tasted great, fresh ingredients."] },
+    texts: ["Food quality was excellent.", "Tasted great, fresh ingredients."],
+    gbpAspects: { food: "positive", ambience: "positive" } },
   { theme: "dark mode missing", sentiment: "neutral", emotion: "hopeful", ratingRange: [3, 4], weight: 2,
-    texts: ["Please add dark mode!", "Would love a dark theme option."] },
+    texts: ["Please add dark mode!", "Would love a dark theme option."],
+    appAspects: { features: "neutral", ui_ux: "neutral" } },
   { theme: "too many ads", sentiment: "negative", emotion: "frustrated", ratingRange: [1, 2], weight: 3,
-    texts: ["Ads after every action, ridiculous.", "Too many ads, ruins the experience."] },
+    texts: ["Ads after every action, ridiculous.", "Too many ads, ruins the experience."],
+    appAspects: { ads: "negative", ui_ux: "negative" } },
 ];
 
 // Theme-weighted picker for the mock dataset.
@@ -215,6 +271,8 @@ function buildMockDataset(): MockReview[] {
       }
       const author_name = MOCK_NAMES[Math.floor(rand() * MOCK_NAMES.length)];
       const review_text = themeMeta.texts[Math.floor(rand() * themeMeta.texts.length)];
+      const aspectsForRow =
+        source === "play_store" ? themeMeta.appAspects : themeMeta.gbpAspects;
       reviews.push({
         id: `mock-an-${d}-${i}`,
         rating,
@@ -232,6 +290,7 @@ function buildMockDataset(): MockReview[] {
           themeMeta.sentiment === "negative" && rating <= 2 ? "high" : "low",
         ai_sentiment: themeMeta.sentiment,
         ai_insights_classified_at: created.toISOString(),
+        ai_aspects: aspectsForRow ?? null,
       });
     }
   }
@@ -257,6 +316,7 @@ function buildMockDataset(): MockReview[] {
     ai_urgency: "critical",
     ai_sentiment: "negative",
     ai_insights_classified_at: new Date(now - 2 * 86400000).toISOString(),
+    ai_aspects: { customer_support: "negative", features: "negative" },
   });
   reviews.push({
     id: "mock-an-critical-old",
@@ -275,6 +335,7 @@ function buildMockDataset(): MockReview[] {
     ai_urgency: "critical",
     ai_sentiment: "negative",
     ai_insights_classified_at: new Date(now - 20 * 86400000).toISOString(),
+    ai_aspects: { food: "negative", cleanliness: "negative" },
   });
 
   MOCK_CACHE = reviews;
@@ -298,6 +359,7 @@ type MinReview = {
   ai_urgency?: AiUrgency | string | null;
   ai_sentiment?: AiSentimentLabel | string | null;
   ai_insights_classified_at?: string | null;
+  ai_aspects?: Record<string, string> | null;
 };
 
 function computeTotals(rows: MinReview[], monthStart: Date): AnalyticsTotals {
@@ -445,6 +507,112 @@ function computeThemes(
   return { themes: themes.slice(0, 12), unclassifiedCount };
 }
 
+// Net Sentiment Score for a set of reviews. Considers only rows with a
+// non-mixed sentiment label. Returns null if there are no qualifying rows.
+function nssFor(rows: MinReview[]): { nss: number | null; total: number } {
+  let pos = 0;
+  let neg = 0;
+  let total = 0;
+  for (const r of rows) {
+    if (r.sentiment === "positive") {
+      pos++;
+      total++;
+    } else if (r.sentiment === "negative") {
+      neg++;
+      total++;
+    } else if (r.sentiment === "neutral" || r.sentiment === "mixed") {
+      total++;
+    }
+  }
+  if (total === 0) return { nss: null, total: 0 };
+  return {
+    nss: Math.round(((pos - neg) / total) * 100),
+    total,
+  };
+}
+
+function computeNssTrend(
+  rows: MinReview[],
+  range: AnalyticsRange
+): NssTrendPoint[] {
+  const useHourly = range === "1d";
+  const useWeekly = range === "90d";
+  const buckets: Record<string, { pos: number; neg: number; total: number }> =
+    {};
+  for (const r of rows) {
+    const d = new Date(r.review_created_at);
+    if (isNaN(d.getTime())) continue;
+    const key = useHourly
+      ? `${d.toISOString().slice(0, 13)}:00`
+      : useWeekly
+      ? isoWeekStart(d)
+      : d.toISOString().split("T")[0];
+    if (!buckets[key]) buckets[key] = { pos: 0, neg: 0, total: 0 };
+    if (r.sentiment === "positive") {
+      buckets[key].pos++;
+      buckets[key].total++;
+    } else if (r.sentiment === "negative") {
+      buckets[key].neg++;
+      buckets[key].total++;
+    } else if (r.sentiment === "neutral" || r.sentiment === "mixed") {
+      buckets[key].total++;
+    }
+  }
+  return Object.entries(buckets)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, b]) => ({
+      date,
+      nss:
+        b.total === 0
+          ? 0
+          : Math.round(((b.pos - b.neg) / b.total) * 100),
+      total: b.total,
+    }));
+}
+
+function computeAspectAggregates(rows: MinReview[]): AspectAggregate[] {
+  const map = new Map<
+    string,
+    { positive: number; neutral: number; negative: number }
+  >();
+  for (const r of rows) {
+    const a = r.ai_aspects;
+    if (!a || typeof a !== "object") continue;
+    for (const [aspect, sentiment] of Object.entries(a)) {
+      if (!aspect) continue;
+      if (
+        sentiment !== "positive" &&
+        sentiment !== "neutral" &&
+        sentiment !== "negative"
+      )
+        continue;
+      const current = map.get(aspect) ?? {
+        positive: 0,
+        neutral: 0,
+        negative: 0,
+      };
+      current[sentiment as "positive" | "neutral" | "negative"]++;
+      map.set(aspect, current);
+    }
+  }
+  return Array.from(map.entries())
+    .map(([aspect, counts]) => {
+      const total = counts.positive + counts.neutral + counts.negative;
+      return {
+        aspect,
+        ...counts,
+        total,
+        net:
+          total > 0
+            ? Math.round(((counts.positive - counts.negative) / total) * 100)
+            : 0,
+      };
+    })
+    // Hide noise — only aspects with at least 3 mentions are surfaced.
+    .filter((a) => a.total >= 3)
+    .sort((a, b) => b.total - a.total);
+}
+
 function computeCriticalIssues(
   all: MinReview[],
   now: Date,
@@ -582,7 +750,7 @@ export function useAnalytics(range: AnalyticsRange = "30d") {
         const { data, error } = await supabase
           .from("reviews")
           .select(
-            "id, rating, reply_status, sentiment, keywords, review_created_at, source, is_auto_replied, author_name, review_text, ai_theme, ai_emotion, ai_urgency, ai_sentiment, ai_insights_classified_at"
+            "id, rating, reply_status, sentiment, keywords, review_created_at, source, is_auto_replied, author_name, review_text, ai_theme, ai_emotion, ai_urgency, ai_sentiment, ai_insights_classified_at, ai_aspects"
           )
           .in("connection_id", connections.map((c) => c.id))
           .order("review_created_at", { ascending: false })
@@ -629,6 +797,13 @@ export function useAnalytics(range: AnalyticsRange = "30d") {
     // matches the page's range selector so the card copy ("today" / "last
     // 7/30/90 days") and the rows agree.
     const criticalIssues = computeCriticalIssues(rows, now, range);
+    const aspectAggregates = computeAspectAggregates(currentRows);
+
+    const { nss: nssCurrent } = nssFor(currentRows);
+    const { nss: nssPrevious } = nssFor(previousRows);
+    const nssDelta =
+      nssCurrent != null && nssPrevious != null ? nssCurrent - nssPrevious : null;
+    const nssTrend = computeNssTrend(currentRows, range);
 
     // Across the WHOLE fetched dataset (not range-filtered) — drives the
     // user-facing "Classify N pending" CTA. We count rows where the AI hasn't
@@ -648,6 +823,11 @@ export function useAnalytics(range: AnalyticsRange = "30d") {
       allUnclassifiedCount,
       hasReviewsInRange,
       criticalIssues,
+      aspectAggregates,
+      nssTrend,
+      nssCurrent,
+      nssPrevious,
+      nssDelta,
     };
   }, [rows, range, connectionAgeDays]);
 

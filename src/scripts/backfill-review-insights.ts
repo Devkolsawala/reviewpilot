@@ -1,19 +1,22 @@
 /**
- * One-time backfill — classify every existing review that hasn't been
- * tagged with ai_theme / ai_emotion / ai_urgency / ai_sentiment yet.
+ * One-time backfill — classify reviews that haven't been tagged with
+ * ai_theme / ai_emotion / ai_urgency / ai_sentiment / ai_aspects yet.
  *
- * After this completes, NEW reviews remain unclassified until either
- *  (a) the Cloudflare Worker is updated to POST /api/internal/classify-insights
- *      after each sync, or
- *  (b) a Vercel cron is added in a future phase.
+ * After this completes, NEW reviews are auto-classified by the post-sync
+ * kickoff in /api/reviews/fetch (guarded by AUTO_CLASSIFY_ON_SYNC). The
+ * Theme Map / Critical Issues / Aspect Sentiment UI must therefore handle
+ * reviews with ai_theme IS NULL or ai_aspects IS NULL gracefully.
  *
- * The Theme Map / Critical Issues UI must therefore gracefully handle reviews
- * with ai_theme IS NULL (they're excluded from aggregates; counted in the
- * "N reviews not yet classified" footer).
- *
- * Run from repo root:
+ * Usage:
  *   npx tsx --env-file=.env.local src/scripts/backfill-review-insights.ts
+ *     — classify all unclassified reviews (full insights)
+ *   npx tsx --env-file=.env.local src/scripts/backfill-review-insights.ts --aspects-only
+ *     — fill aspects for Phase-1-classified reviews (overwrites theme/emotion/
+ *       urgency/sentiment with the same values; aspect backfill is one-time)
  *   npx tsx --env-file=.env.local src/scripts/backfill-review-insights.ts --dry-run
+ *     — count only, no API calls
+ *   npx tsx --env-file=.env.local src/scripts/backfill-review-insights.ts --aspects-only --dry-run
+ *     — count of Phase-1-classified reviews still missing aspects
  *
  * Requires CRON_SECRET and NEXT_PUBLIC_APP_URL (or NEXT_PUBLIC_SITE_URL or
  * VERCEL_URL) in .env.local. Falls back to http://localhost:3000.
@@ -34,6 +37,7 @@ const MAX_NETWORK_FAILURES = 5;
 
 const args = process.argv.slice(2);
 const DRY_RUN = args.includes("--dry-run");
+const ASPECTS_ONLY = args.includes("--aspects-only");
 
 if (!CRON_SECRET) {
   console.error(
@@ -53,10 +57,18 @@ async function dryRunCount(): Promise<number> {
   }
   const { createClient } = await import("@supabase/supabase-js");
   const supabase = createClient(url, key);
-  const { count, error } = await supabase
+  let query = supabase
     .from("reviews")
-    .select("id", { count: "exact", head: true })
-    .is("ai_insights_classified_at", null);
+    .select("id", { count: "exact", head: true });
+  if (ASPECTS_ONLY) {
+    // Phase-1-classified reviews that haven't had aspects filled yet.
+    query = query
+      .not("ai_insights_classified_at", "is", null)
+      .is("ai_aspects_classified_at", null);
+  } else {
+    query = query.is("ai_insights_classified_at", null);
+  }
+  const { count, error } = await query;
   if (error) {
     console.error("[backfill] dry-run query failed:", error.message);
     process.exit(1);
@@ -80,7 +92,10 @@ async function processBatch(): Promise<BatchResult> {
       "Content-Type": "application/json",
       Authorization: `Bearer ${CRON_SECRET}`,
     },
-    body: JSON.stringify({ batchSize: BATCH_SIZE }),
+    body: JSON.stringify({
+      batchSize: BATCH_SIZE,
+      aspectsOnly: ASPECTS_ONLY,
+    }),
   });
   if (!res.ok) {
     const text = await res.text().catch(() => "");
@@ -101,10 +116,15 @@ async function sleep(ms: number) {
 
 async function main() {
   console.log(`[backfill] App URL: ${APP_URL}`);
+  console.log(`[backfill] Mode: ${ASPECTS_ONLY ? "aspects-only" : "full insights"}`);
 
   if (DRY_RUN) {
     const count = await dryRunCount();
-    console.log(`[backfill] DRY RUN — ${count} reviews pending classification.`);
+    console.log(
+      `[backfill] DRY RUN — ${count} reviews pending ${
+        ASPECTS_ONLY ? "aspect classification" : "classification"
+      }.`
+    );
     console.log(
       `[backfill] At batch size ${BATCH_SIZE} and ${PAUSE_MS}ms pause, expect ~${
         Math.ceil(count / BATCH_SIZE) * (PAUSE_MS / 1000)
@@ -156,8 +176,6 @@ async function main() {
       console.log(
         `[batch ${batchNum}] no pending reviews returned (empty cycle ${emptyCycles}/1).`
       );
-      // One empty cycle is sufficient — the endpoint returns 0 when the
-      // ai_insights_classified_at IS NULL set is empty.
       console.log(
         `[backfill] Done. Total processed: ${totalProcessed}, total failed: ${totalFailed}.`
       );

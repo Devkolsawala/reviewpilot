@@ -6,6 +6,11 @@ import { GBP_ENABLED, GBP_COMING_SOON_MESSAGE } from "@/lib/feature-flags";
 import { extractCountryFromLocale } from "@/lib/utils/locale-to-country";
 import type { AppContext } from "@/types/database";
 
+// Hobby plan: opt into the 60s function budget. The Worker-triggered sync can
+// take time when there are many new reviews to draft + publish — 10s default
+// is too tight for the full pipeline.
+export const maxDuration = 60;
+
 export async function POST(request: Request) {
   const supabase = createClient();
   const {
@@ -263,8 +268,58 @@ export async function POST(request: Request) {
     .update(connectionUpdate)
     .eq("id", connectionId);
 
+  // ── Step 5: Fire-and-forget auto-classification kickoff ─────────────────────
+  // Runs ONLY at the end of the handler, AFTER all critical sync work. Feature-
+  // flagged off by default so the code ships dark. Uses `void fetch(...)` so
+  // Vercel keeps the function alive just long enough to send the request, but
+  // we never wait for it — classification runs in a separate function
+  // invocation with its own 60s budget and self-chains for large batches.
+  //
+  // CRITICAL: under no circumstances may this block alter the response shape
+  // returned to the Cloudflare Worker, add latency, or surface errors.
+  const AUTO_CLASSIFY_ENABLED = process.env.AUTO_CLASSIFY_ON_SYNC === "true";
+  const isMockMode = process.env.NEXT_PUBLIC_USE_MOCK === "true";
+  const shouldKickClassify =
+    AUTO_CLASSIFY_ENABLED && !isMockMode && newUnansweredCount > 0;
+
+  if (shouldKickClassify) {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+    const cronSecret = process.env.CRON_SECRET;
+    if (appUrl && cronSecret) {
+      try {
+        void fetch(`${appUrl}/api/internal/classify-insights`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${cronSecret}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            batchSize: 15,
+            userId: connection.user_id,
+            chainCount: 0,
+          }),
+        })
+          .then((res) => {
+            if (!res.ok) {
+              console.error(
+                "[auto_classify_kickoff] non-ok response",
+                res.status
+              );
+            }
+          })
+          .catch((err) =>
+            console.error("[auto_classify_kickoff] failed", err)
+          );
+      } catch (err) {
+        // Defense-in-depth — `void fetch` shouldn't throw synchronously, but
+        // if anything does we swallow it so the sync response is unaffected.
+        console.error("[auto_classify_kickoff] threw", err);
+      }
+    }
+  }
+
   console.log(
-    `[play_store_sync] connection=${connectionId} reviews_seen=${fetchedReviews.length} new=${newUnansweredCount} updated=${updatedCount} auto_drafted=${autoDrafted} auto_published=${autoPublished}`
+    `[play_store_sync] connection=${connectionId} reviews_seen=${fetchedReviews.length} new=${newUnansweredCount} updated=${updatedCount} auto_drafted=${autoDrafted} auto_published=${autoPublished} auto_classify_kicked=${shouldKickClassify ? "yes" : "no"}`
   );
 
   // Return sync error only if nothing was processed at all

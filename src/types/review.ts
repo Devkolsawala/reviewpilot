@@ -42,6 +42,11 @@ export interface Review {
   ai_urgency?: "low" | "medium" | "high" | "critical" | null;
   ai_sentiment?: "positive" | "neutral" | "negative" | null;
   ai_insights_classified_at?: string | null;
+  // Phase 2 — Aspect-Based Sentiment Analysis. Maps aspect name (e.g. "food",
+  // "performance") to that aspect's sentiment in the review. Only aspects the
+  // review explicitly mentions are present.
+  ai_aspects?: Record<string, "positive" | "neutral" | "negative"> | null;
+  ai_aspects_classified_at?: string | null;
 }
 
 export interface ReviewFilter {

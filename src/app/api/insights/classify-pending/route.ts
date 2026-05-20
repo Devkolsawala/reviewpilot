@@ -32,12 +32,14 @@ const SAFE_DEFAULTS: ReviewInsights = {
   emotion: "neutral",
   urgency: "low",
   sentiment: "neutral",
+  aspects: {},
 };
 
 interface PendingReview {
   id: string;
   review_text: string | null;
   rating: number | null;
+  source: string | null;
   connection_id: string | null;
   app_contexts?:
     | { description: string | null }
@@ -110,7 +112,7 @@ export async function POST(_request: NextRequest) { // eslint-disable-line @type
 
   const { data: pending, error: fetchErr } = await admin
     .from("reviews")
-    .select("id, review_text, rating, connection_id, app_contexts(description)")
+    .select("id, review_text, rating, source, connection_id, app_contexts(description)")
     .in("connection_id", connectionIds)
     .is("ai_insights_classified_at", null)
     .order("created_at", { ascending: false })
@@ -132,16 +134,19 @@ export async function POST(_request: NextRequest) { // eslint-disable-line @type
     rows.map(async (row) => {
       const text = (row.review_text || "").trim();
       const rating = row.rating ?? 3;
+      const source = row.source || "unknown";
       const insights: ReviewInsights | null =
         text.length === 0
           ? SAFE_DEFAULTS
           : await classifyReviewInsights({
               text,
               rating,
+              source,
               appContext: pickAppContextDescription(row),
             });
 
       const toWrite = insights ?? SAFE_DEFAULTS;
+      const nowIso = new Date().toISOString();
       const { error: updateErr } = await admin
         .from("reviews")
         .update({
@@ -149,7 +154,9 @@ export async function POST(_request: NextRequest) { // eslint-disable-line @type
           ai_emotion: toWrite.emotion,
           ai_urgency: toWrite.urgency,
           ai_sentiment: toWrite.sentiment,
-          ai_insights_classified_at: new Date().toISOString(),
+          ai_aspects: toWrite.aspects,
+          ai_insights_classified_at: nowIso,
+          ai_aspects_classified_at: nowIso,
         })
         .eq("id", row.id);
 
