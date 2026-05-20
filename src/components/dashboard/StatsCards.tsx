@@ -53,7 +53,7 @@ export function StatsCards({
   const inboxZero = pendingCount === 0;
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
       {/* Total Reviews */}
       <KpiCard
         label="Total Reviews"

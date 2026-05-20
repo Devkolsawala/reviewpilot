@@ -60,6 +60,15 @@ export interface Analytics {
   // Number of reviews in the selected range with ai_theme IS NULL (or
   // "general feedback"). Shown as a small footer count in the card.
   themesUnclassifiedCount: number;
+  // Number of reviews across the FULL fetched dataset (not range-filtered)
+  // with ai_insights_classified_at IS NULL. Drives the "Classify N pending"
+  // CTA in the Theme Map empty state and header button. Separate from
+  // themesUnclassifiedCount so the user-facing classifier batch is sized
+  // against all unclassified reviews, not just those in the selected range.
+  allUnclassifiedCount: number;
+  // Whether the selected range has any reviews at all. Drives the second
+  // empty-state variant (no reviews) vs the "no themes but reviews exist".
+  hasReviewsInRange: boolean;
   // Critical Issues card (STEP 8) — last 7 days only, independent of range.
   criticalIssues: CriticalIssue[];
 }
@@ -85,6 +94,8 @@ const EMPTY_ANALYTICS: Analytics = {
   connectionAgeDays: null,
   themes: [],
   themesUnclassifiedCount: 0,
+  allUnclassifiedCount: 0,
+  hasReviewsInRange: false,
   criticalIssues: [],
 };
 
@@ -434,13 +445,27 @@ function computeThemes(
   return { themes: themes.slice(0, 12), unclassifiedCount };
 }
 
-function computeCriticalIssues(all: MinReview[], now: Date): CriticalIssue[] {
-  const sevenDaysAgo = now.getTime() - 7 * 86400000;
+function computeCriticalIssues(
+  all: MinReview[],
+  now: Date,
+  range: AnalyticsRange
+): CriticalIssue[] {
+  // Critical Issues honors the page's range selector. "1d" = since start of
+  // today in local time (calendar-day semantics — what a user expects when
+  // they pick "Today"). Other ranges = rolling N-day window.
+  let from: number;
+  if (range === "1d") {
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    from = start.getTime();
+  } else {
+    const days = RANGE_DAYS[range];
+    from = now.getTime() - days * 86400000;
+  }
   return all
     .filter((r) => {
       if (r.ai_urgency !== "critical") return false;
       const t = new Date(r.review_created_at).getTime();
-      return !isNaN(t) && t >= sevenDaysAgo;
+      return !isNaN(t) && t >= from;
     })
     .sort(
       (a, b) =>
@@ -517,6 +542,9 @@ export function useAnalytics(range: AnalyticsRange = "30d") {
   const [loading, setLoading] = useState(true);
   const [isMock, setIsMock] = useState(false);
   const [connectionAgeDays, setConnectionAgeDays] = useState<number | null>(null);
+  // Incremented by callers to force a re-fetch (e.g. after the user clicks
+  // "Classify N pending reviews" on the Theme Map card).
+  const [refreshTick, setRefreshTick] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -578,7 +606,9 @@ export function useAnalytics(range: AnalyticsRange = "30d") {
     return () => {
       cancelled = true;
     };
-  }, []);
+    // refreshTick is intentionally a dep so callers can force a re-fetch.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshTick]);
 
   const analytics = useMemo<Analytics>(() => {
     if (!rows) return EMPTY_ANALYTICS;
@@ -595,9 +625,18 @@ export function useAnalytics(range: AnalyticsRange = "30d") {
     const prevTotals = computeTotals(previousRows, monthStart);
     const agg = computeAggregates(currentRows, range);
     const { themes, unclassifiedCount } = computeThemes(currentRows, previousRows);
-    // Critical issues use the WHOLE dataset filtered to last 7 days — they
-    // are independent of the selected `range` (always "last 7d" semantics).
-    const criticalIssues = computeCriticalIssues(rows, now);
+    // Critical issues use the WHOLE dataset filtered to the selected range —
+    // matches the page's range selector so the card copy ("today" / "last
+    // 7/30/90 days") and the rows agree.
+    const criticalIssues = computeCriticalIssues(rows, now, range);
+
+    // Across the WHOLE fetched dataset (not range-filtered) — drives the
+    // user-facing "Classify N pending" CTA. We count rows where the AI hasn't
+    // touched them yet.
+    const allUnclassifiedCount = rows.filter(
+      (r) => !r.ai_insights_classified_at
+    ).length;
+    const hasReviewsInRange = currentRows.length > 0;
 
     return {
       totals,
@@ -606,9 +645,12 @@ export function useAnalytics(range: AnalyticsRange = "30d") {
       connectionAgeDays,
       themes,
       themesUnclassifiedCount: unclassifiedCount,
+      allUnclassifiedCount,
+      hasReviewsInRange,
       criticalIssues,
     };
   }, [rows, range, connectionAgeDays]);
 
-  return { analytics, loading, isMock, range };
+  const refetch = () => setRefreshTick((t) => t + 1);
+  return { analytics, loading, isMock, range, refetch };
 }

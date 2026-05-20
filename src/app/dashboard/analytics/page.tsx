@@ -17,6 +17,7 @@ import { Zap, CheckCircle2, Clock, Info, Timer, TrendingUp, Bot, IndianRupee, Ma
 import { UpgradeGate } from "@/components/dashboard/UpgradeGate";
 import { ThemeMapCard } from "@/components/dashboard/ThemeMapCard";
 import { CriticalIssuesCard } from "@/components/dashboard/CriticalIssuesCard";
+import { toast } from "@/components/ui/use-toast";
 
 const DIGEST_BANNER_DISMISS_KEY = "reviewpilot_digest_banner_dismissed";
 
@@ -110,7 +111,60 @@ function AnalyticsPageInner() {
     router.replace(`/dashboard/analytics?${params.toString()}`, { scroll: false });
   }
 
-  const { analytics, loading, isMock } = useAnalytics(range);
+  const { analytics, loading, isMock, refetch } = useAnalytics(range);
+
+  // Triggered from <ThemeMapCard /> when the user clicks "Classify N pending
+  // reviews →". Processes one batch (25) on the server, then refetches the
+  // analytics data so the UI re-renders with new themes.
+  async function handleClassifyPending() {
+    try {
+      const res = await fetch("/api/insights/classify-pending", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      if (res.status === 429) {
+        toast({
+          title: "Please wait a moment before trying again.",
+        });
+        return;
+      }
+      if (!res.ok) {
+        toast({
+          title: "Something went wrong. Try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+      const data = (await res.json()) as {
+        processed?: number;
+        remaining?: number;
+        mockMode?: boolean;
+      };
+      if (data.mockMode) {
+        toast({
+          title: "Mock mode — classification disabled",
+          description:
+            "Disable NEXT_PUBLIC_USE_MOCK to classify real reviews.",
+        });
+        return;
+      }
+      const processed = data.processed ?? 0;
+      const remaining = data.remaining ?? 0;
+      toast({
+        title: `Classified ${processed} review${processed === 1 ? "" : "s"}.`,
+        description:
+          remaining > 0
+            ? `${remaining} remaining — click again to continue.`
+            : "All reviews classified.",
+      });
+      refetch();
+    } catch {
+      toast({
+        title: "Something went wrong. Try again.",
+        variant: "destructive",
+      });
+    }
+  }
   const { planId } = usePlan();
   const isAgency = planId === "agency";
   const periodDays = RANGE_DAYS[range];
@@ -201,10 +255,11 @@ function AnalyticsPageInner() {
         <CriticalIssuesCard
           issues={analytics.criticalIssues}
           loading={loading}
+          range={range}
         />
 
         {loading ? (
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
             {[0, 1, 2, 3].map((i) => (
               <Skeleton key={i} className="h-[160px] w-full rounded-xl" />
             ))}
@@ -359,8 +414,10 @@ function AnalyticsPageInner() {
           </Card>
         </UpgradeGate>
 
+        {/* Row 1 — Rating Trend + Rating Distribution */}
         <UpgradeGate feature="analytics_advanced">
           <AnalyticsCharts
+            slot="row1"
             ratingTrend={analytics.trend}
             sentimentBreakdown={analytics.sentiment_breakdown}
             sourceBreakdown={analytics.source_breakdown}
@@ -369,13 +426,28 @@ function AnalyticsPageInner() {
           />
         </UpgradeGate>
 
-        {/* Theme Map — available on ALL plans (no UpgradeGate). Replaces the
-            old Top Keywords pill row. Sentiment intelligence Phase 1. */}
+        {/* Theme Map — moved up into the upper half of the page so it gets
+            seen. Full width, prominent. Available on ALL plans. */}
         <ThemeMapCard
           themes={analytics.themes}
           unclassifiedCount={analytics.themesUnclassifiedCount}
+          pendingCount={analytics.allUnclassifiedCount}
+          hasReviewsInRange={analytics.hasReviewsInRange}
+          onClassifyPending={handleClassifyPending}
           loading={loading}
         />
+
+        {/* Row 2 — Sentiment Analysis + Reply Rate + Source Breakdown */}
+        <UpgradeGate feature="analytics_advanced">
+          <AnalyticsCharts
+            slot="row2"
+            ratingTrend={analytics.trend}
+            sentimentBreakdown={analytics.sentiment_breakdown}
+            sourceBreakdown={analytics.source_breakdown}
+            ratingDistribution={analytics.distribution}
+            replyRate={totals.response_rate ?? 0}
+          />
+        </UpgradeGate>
       </div>
     </PageTransition>
   );

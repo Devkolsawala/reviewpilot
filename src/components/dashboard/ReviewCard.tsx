@@ -1,6 +1,7 @@
 "use client";
 
-import { Star, Globe, Smartphone, MessageCircle, Zap } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Star, Globe, Smartphone, MessageCircle, Zap, AlertOctagon } from "lucide-react";
 
 const WHATSAPP_GREEN = "#25D366";
 import { Badge } from "@/components/ui/badge";
@@ -70,6 +71,7 @@ const statusDot: Record<string, string> = {
 };
 
 export function ReviewCard({ review, selected, onClick, compact }: ReviewCardProps) {
+ const router = useRouter();
  const initials = review.author_name
  .split(" ")
  .map((n) => n[0])
@@ -79,6 +81,19 @@ export function ReviewCard({ review, selected, onClick, compact }: ReviewCardPro
 
  const firstLetter = review.author_name[0]?.toUpperCase() || "A";
  const avatarGradient = AVATAR_COLORS[firstLetter] || "from-[#6366f1] via-[#8b5cf6] to-[#d946ef]";
+
+ const aiTheme = (review.ai_theme || "").trim();
+ const showThemeChip = aiTheme.length > 0 && aiTheme.toLowerCase() !== "general feedback";
+ const isCritical = review.ai_urgency === "critical";
+
+ // Theme chip click navigates to the inbox with the theme filter applied.
+ // It's rendered as a role=button span (not a nested <button>) because the
+ // parent row is already a <button>. stopPropagation prevents the row click.
+ const handleThemeChipClick = (e: React.MouseEvent | React.KeyboardEvent) => {
+ e.preventDefault();
+ e.stopPropagation();
+ router.push(`/dashboard/inbox?theme=${encodeURIComponent(aiTheme.toLowerCase())}`);
+ };
 
  return (
  <button
@@ -119,11 +134,25 @@ export function ReviewCard({ review, selected, onClick, compact }: ReviewCardPro
  </span>
  </div>
  </div>
- <div className="flex items-center gap-2 mt-1">
+ <div className="flex items-center gap-2 mt-1 flex-wrap">
  {review.source === "whatsapp" || review.rating == null ? (
- <span className="text-[10px] text-muted-foreground">—</span>
+ <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
+ {isCritical && (
+ <AlertOctagon
+ className="h-3 w-3 text-rose-600 dark:text-rose-400"
+ aria-label="Critical urgency"
+ />
+ )}
+ —
+ </span>
  ) : (
- <div className="flex gap-0.5">
+ <div className="flex items-center gap-0.5">
+ {isCritical && (
+ <AlertOctagon
+ className="h-3 w-3 text-rose-600 dark:text-rose-400 mr-0.5"
+ aria-label="Critical urgency"
+ />
+ )}
  {[1, 2, 3, 4, 5].map((i) => (
  <Star
  key={i}
@@ -167,6 +196,28 @@ export function ReviewCard({ review, selected, onClick, compact }: ReviewCardPro
  {review.is_auto_replied && (
  <span className="inline-flex items-center gap-0.5 rounded-full bg-accent/10 dark:bg-accent/10 px-1.5 py-0 text-[10px] font-medium text-accent dark:text-accent">
  <Zap className="h-2.5 w-2.5" /> Auto
+ </span>
+ )}
+ {showThemeChip && (
+ // Rendered as role=button span (not <button>) so it can sit inside
+ // the parent row <button> without invalid nesting. stopPropagation
+ // keeps the row click from firing when the chip is tapped.
+ <span
+ role="button"
+ tabIndex={0}
+ onClick={handleThemeChipClick}
+ onKeyDown={(e) => {
+ if (e.key === "Enter" || e.key === " ") handleThemeChipClick(e);
+ }}
+ className={cn(
+ "inline-flex items-center rounded-full bg-muted px-1.5 py-0 text-[10px] font-medium lowercase",
+ "text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors",
+ "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1"
+ )}
+ title={`Filter inbox by theme: ${aiTheme}`}
+ aria-label={`Filter inbox by theme: ${aiTheme}`}
+ >
+ {aiTheme}
  </span>
  )}
  </div>

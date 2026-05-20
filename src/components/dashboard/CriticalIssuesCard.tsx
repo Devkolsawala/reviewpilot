@@ -4,12 +4,25 @@ import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { ShieldAlert, CheckCircle2, ArrowRight } from "lucide-react";
-import type { CriticalIssue } from "@/hooks/useAnalytics";
+import type { AnalyticsRange, CriticalIssue } from "@/hooks/useAnalytics";
 
 interface CriticalIssuesCardProps {
   issues: CriticalIssue[];
   loading?: boolean;
+  /**
+   * Current analytics page range. Drives the dynamic copy ("today" /
+   * "in the last N days"). Defaults to "7d" if omitted so older call
+   * sites stay backward-compatible.
+   */
+  range?: AnalyticsRange;
 }
+
+const RANGE_PHRASE: Record<AnalyticsRange, { trail: string; bare: string }> = {
+  "1d": { trail: "today", bare: "today" },
+  "7d": { trail: "in the last 7 days", bare: "in the last 7 days" },
+  "30d": { trail: "in the last 30 days", bare: "in the last 30 days" },
+  "90d": { trail: "in the last 90 days", bare: "in the last 90 days" },
+};
 
 const SOURCE_LABEL: Record<string, string> = {
   google_business: "GBP",
@@ -36,7 +49,12 @@ function timeAgo(iso: string): string {
   return `${days}d ago`;
 }
 
-export function CriticalIssuesCard({ issues, loading }: CriticalIssuesCardProps) {
+export function CriticalIssuesCard({
+  issues,
+  loading,
+  range = "7d",
+}: CriticalIssuesCardProps) {
+  const phrase = RANGE_PHRASE[range] ?? RANGE_PHRASE["7d"];
   if (loading) {
     return (
       <Card className="border-border/60">
@@ -60,7 +78,7 @@ export function CriticalIssuesCard({ issues, loading }: CriticalIssuesCardProps)
               All Clear
             </p>
             <p className="text-[11px] text-emerald-700/80 dark:text-emerald-300/70">
-              No critical issues flagged in the last 7 days.
+              No critical issues flagged {phrase.bare}.
             </p>
           </div>
         </CardContent>
@@ -80,7 +98,9 @@ export function CriticalIssuesCard({ issues, loading }: CriticalIssuesCardProps)
               Critical Issues
             </p>
             <p className="text-[11px] text-rose-700/80 dark:text-rose-300/70">
-              Reviews flagged as urgent in the last 7 days
+              {range === "1d"
+                ? "Reviews flagged as urgent today"
+                : `Reviews flagged as urgent ${phrase.trail}`}
             </p>
           </div>
           <span className="rounded-full bg-rose-600 text-white text-[10px] font-semibold px-2 py-0.5 tabular-nums">
@@ -97,7 +117,9 @@ export function CriticalIssuesCard({ issues, loading }: CriticalIssuesCardProps)
             return (
               <li key={iss.id || iss.created_at}>
                 <Link
-                  href={iss.id ? `/dashboard/inbox/${iss.id}` : "/dashboard/inbox"}
+                  href={iss.id ? `/dashboard/inbox?reviewId=${encodeURIComponent(iss.id)}` : "/dashboard/inbox"}
+                  // Mobile: full vertical stack (preview → metadata → CTA).
+                  // Desktop: preview+metadata flex left, CTA right.
                   className="group flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 py-2.5 hover:bg-rose-100/40 dark:hover:bg-rose-950/20 transition-colors rounded-md px-1 -mx-1"
                 >
                   <div className="flex-1 min-w-0">
@@ -129,7 +151,10 @@ export function CriticalIssuesCard({ issues, loading }: CriticalIssuesCardProps)
                   <span
                     className={cn(
                       "inline-flex items-center gap-1 text-xs font-semibold text-rose-700 dark:text-rose-300",
-                      "opacity-80 group-hover:opacity-100 transition-opacity shrink-0"
+                      "opacity-80 group-hover:opacity-100 transition-opacity",
+                      // Mobile: own row (no shrink-0, left-aligned by parent column flow).
+                      // Desktop: pinned right, doesn't shrink.
+                      "self-start sm:self-auto sm:shrink-0"
                     )}
                   >
                     Open in Inbox

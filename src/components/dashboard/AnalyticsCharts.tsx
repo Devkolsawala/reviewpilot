@@ -24,6 +24,14 @@ interface AnalyticsChartsProps {
  sourceBreakdown: { name: string; value: number; color: string }[];
  ratingDistribution?: { star: number; count: number }[];
  replyRate?: number;
+ /**
+  * Optional render slot. Lets /dashboard/analytics page.tsx interleave the
+  * ThemeMap card between rows.
+  *   "row1" = Rating Trend + Rating Distribution (2-up)
+  *   "row2" = Sentiment Analysis + Reply Rate (2-up) + Source Breakdown (full)
+  * Omit to render everything in a single grid (legacy behavior).
+  */
+ slot?: "row1" | "row2";
 }
 
 const SENTIMENT_COLORS: Record<string, string> = {
@@ -57,6 +65,7 @@ export function AnalyticsCharts({
  sourceBreakdown,
  ratingDistribution,
  replyRate,
+ slot,
 }: AnalyticsChartsProps) {
  const sentimentData = Object.entries(sentimentBreakdown).map(([name, value]) => ({
  name: name.charAt(0).toUpperCase() + name.slice(1),
@@ -74,8 +83,15 @@ export function AnalyticsCharts({
  ? Math.round((ratedTrend.reduce((s, d) => s + d.avg_rating, 0) / ratedTrend.length) * 10) / 10
  : 0;
 
+ // Slot-scoped flags. When `slot` is set, only that pair of cards renders.
+ // `slot === undefined` falls back to the legacy single-grid behavior so any
+ // remaining caller without the prop still works.
+ const showRow1 = slot === undefined || slot === "row1";
+ const showRow2 = slot === undefined || slot === "row2";
+
  return (
  <div className="grid gap-6 lg:grid-cols-2">
+ {showRow1 && (<>
  {/* Rating trend — gradient area chart, animated draw on mount */}
  <Card>
  <CardHeader className="pb-2 flex flex-row items-start justify-between">
@@ -245,15 +261,24 @@ export function AnalyticsCharts({
  </CardContent>
  </Card>
  )}
+ </>)}
 
- {/* Sentiment breakdown — donut */}
+ {showRow2 && (<>
+ {/* Sentiment breakdown — donut.
+     Mobile (<sm): donut on top, legend below, Net Sentiment line under the
+     donut (never overlapping). Desktop: donut + legend side-by-side.
+     Net Sentiment always renders on its own row, never as an absolute
+     overlay (live testing showed the absolute version overlapping the
+     center number on narrow viewports). */}
  <Card>
  <CardHeader className="pb-2">
  <CardTitle className="text-base font-semibold">Sentiment Analysis</CardTitle>
  </CardHeader>
  <CardContent>
- <div className="h-64 flex items-center">
- <div className="w-1/2 relative">
+ <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-2">
+ {/* Donut column */}
+ <div className="w-full sm:w-1/2 flex flex-col items-center">
+ <div className="relative w-full max-w-[220px]">
  <ResponsiveContainer width="100%" height={200}>
  <PieChart>
  <Pie
@@ -273,16 +298,22 @@ export function AnalyticsCharts({
  <Tooltip contentStyle={tooltipStyle} />
  </PieChart>
  </ResponsiveContainer>
+ {/* Only the centre count/label remain absolutely-positioned over the
+         donut — the Net Sentiment line moved out to its own row below. */}
  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
  <div className="text-center">
  <p className="text-2xl font-bold font-sans tracking-tight">{sentimentTotal}</p>
  <p className="text-[10px] text-muted-foreground">reviews</p>
+ </div>
+ </div>
+ </div>
+ {/* Net Sentiment Score — own row, always below the donut, never inside */}
  {(() => {
  if (sentimentTotal === 0) return null;
  const pos = sentimentBreakdown.positive ?? 0;
  const neg = sentimentBreakdown.negative ?? 0;
  const nss = Math.round(((pos - neg) / sentimentTotal) * 100);
- // Near-zero band (|nss| ≤ 5) shown gray to avoid noisy red/green flips.
+ // Near-zero band (|nss| ≤ 5) stays gray to avoid noisy color flips.
  const colorClass =
  nss > 5
  ? "text-emerald-600 dark:text-emerald-400"
@@ -291,7 +322,7 @@ export function AnalyticsCharts({
  : "text-muted-foreground";
  const sign = nss > 0 ? "+" : "";
  return (
- <p className="text-[10px] mt-1 tabular-nums">
+ <p className="mt-2 text-[11px] tabular-nums text-center">
  <span className="text-muted-foreground/70">Net sentiment: </span>
  <span className={cn("font-semibold", colorClass)}>
  {sign}{nss}
@@ -300,9 +331,8 @@ export function AnalyticsCharts({
  );
  })()}
  </div>
- </div>
- </div>
- <div className="w-1/2 space-y-3 pl-4">
+ {/* Legend column — full width on mobile, half-width on desktop */}
+ <div className="w-full sm:w-1/2 space-y-3 sm:pl-4">
  {sentimentData.map((d) => (
  <div key={d.name} className="flex items-center gap-2">
  <div className="h-3 w-3 rounded-full shrink-0" style={{ backgroundColor: d.color }} />
@@ -403,6 +433,7 @@ export function AnalyticsCharts({
  )}
  </CardContent>
  </Card>
+ </>)}
  </div>
  );
 }

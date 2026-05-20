@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, useCallback, Suspense } from "react";
+import React, { useState, useMemo, useEffect, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ReviewCard } from "@/components/dashboard/ReviewCard";
 import { AIReplyGenerator } from "@/components/dashboard/AIReplyGenerator";
@@ -45,10 +45,28 @@ function InboxPageInner() {
  // Theme filter is URL-driven (?theme=<theme> from ThemeMapCard links). The
  // chip above the filter groups lets the user clear it.
  const themeFilter = (searchParams?.get("theme") || "").trim().toLowerCase();
+ // Deep link from the Critical Issues card on /dashboard/analytics
+ // (?reviewId=<id>). Coexists with ?theme=, but selecting the review never
+ // clears an active theme filter.
+ const reviewIdFromUrl = (searchParams?.get("reviewId") || "").trim();
+ // Brief ring animation after deep-link arrival so the user can locate
+ // the row in a long list. Cleared after ~2.5s.
+ const [highlightedId, setHighlightedId] = useState<string | null>(null);
 
  const clearThemeFilter = useCallback(() => {
  const params = new URLSearchParams(Array.from(searchParams?.entries() ?? []));
  params.delete("theme");
+ // Per spec: clearing a filter chip also drops the reviewId deep-link
+ // so the URL doesn't carry stale state into the post-filter view.
+ params.delete("reviewId");
+ const qs = params.toString();
+ router.replace(`/dashboard/inbox${qs ? `?${qs}` : ""}`, { scroll: false });
+ }, [router, searchParams]);
+
+ const clearReviewIdFromUrl = useCallback(() => {
+ const params = new URLSearchParams(Array.from(searchParams?.entries() ?? []));
+ if (!params.has("reviewId")) return;
+ params.delete("reviewId");
  const qs = params.toString();
  router.replace(`/dashboard/inbox${qs ? `?${qs}` : ""}`, { scroll: false });
  }, [router, searchParams]);
@@ -77,6 +95,36 @@ function InboxPageInner() {
  }
  setDeepLinkApplied(true);
  }, [searchParams, localReviews, deepLinkApplied]);
+
+ // Deep link: /dashboard/inbox?reviewId=<id> from the Critical Issues card.
+ // Re-runs when reviewIdFromUrl changes so a second click on a different
+ // critical review from analytics works. Selecting the review never clears
+ // an active ?theme= filter (per spec — they coexist).
+ const reviewIdDeepLinkRef = React.useRef<string | null>(null);
+ useEffect(() => {
+ if (!reviewIdFromUrl) return;
+ if (localReviews.length === 0) return;
+ // Don't re-apply for the same id (prevents re-running after the user
+ // selects something else and we cleaned up the URL on their behalf).
+ if (reviewIdDeepLinkRef.current === reviewIdFromUrl) return;
+ reviewIdDeepLinkRef.current = reviewIdFromUrl;
+
+ const found = localReviews.find((r) => r.id === reviewIdFromUrl);
+ if (found) {
+ setSelectedId(found.id);
+ setHighlightedId(found.id);
+ // Clear the ring after a beat — short enough not to feel sticky.
+ const t = setTimeout(() => setHighlightedId(null), 2500);
+ return () => clearTimeout(t);
+ }
+ // Not in the loaded set (older than 5000-row cap, or different user).
+ toast({
+ title: "Review not found in current view",
+ description:
+ "It may be outside the loaded review window. Try clearing filters or syncing again.",
+ });
+ clearReviewIdFromUrl();
+ }, [reviewIdFromUrl, localReviews, clearReviewIdFromUrl]);
 
  // Auto-reload when auto-reply finishes generating replies
  useEffect(() => {
@@ -504,12 +552,27 @@ function InboxPageInner() {
  )
  ) : (
  filteredReviews.map((review) => (
- <ReviewCard
+ <div
  key={review.id}
+ className={cn(
+ "relative transition-shadow",
+ highlightedId === review.id &&
+ "ring-2 ring-accent rounded-md shadow-[0_0_0_4px_rgba(99,102,241,0.15)]"
+ )}
+ >
+ <ReviewCard
  review={review}
  selected={selectedId === review.id}
- onClick={() => setSelectedId(review.id)}
+ onClick={() => {
+ setSelectedId(review.id);
+ // Manual selection of a different row → drop the deep-link
+ // param so the URL doesn't lie about what's open.
+ if (reviewIdFromUrl && reviewIdFromUrl !== review.id) {
+ clearReviewIdFromUrl();
+ }
+ }}
  />
+ </div>
  ))
  )}
  </div>
