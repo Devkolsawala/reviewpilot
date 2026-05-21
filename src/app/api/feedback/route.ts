@@ -80,8 +80,8 @@ async function sendFeedbackEmail(params: {
           'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
         },
         body: JSON.stringify({
-          from: 'ReviewPilot Feedback <onboarding@resend.dev>',
-          to: ['hello@reviewpilot.co.in'],
+          from: 'ReviewPilot Feedback <noreply@reviewpilot.co.in>',
+          to: ['dev.kolsawala45@gmail.com'],
           subject: `[ReviewPilot Feedback] ${params.type} from ${params.userName}`,
           html: `
             <div style="font-family: sans-serif; max-width: 600px;">
