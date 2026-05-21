@@ -22,7 +22,7 @@ import {
   Link2,
   Bot,
   Star,
-  ArrowRight,
+  ChevronRight,
   Zap,
   Info,
   RefreshCw,
@@ -363,11 +363,16 @@ export default function DashboardPage() {
           <Card className="lg:col-span-2">
             <CardHeader className="flex flex-row items-center justify-between pb-3">
               <CardTitle className="text-sm font-semibold">Recent Reviews</CardTitle>
-              <Button variant="ghost" size="sm" asChild className="text-accent hover:text-accent -mr-2">
-                <Link href="/dashboard/inbox">
-                  View all <ArrowRight className="ml-1 h-3 w-3" />
-                </Link>
-              </Button>
+              <Link
+                href="/dashboard/inbox"
+                className="group -mr-2 inline-flex items-center gap-1 rounded-md px-2 py-1 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent/40 hover:text-foreground"
+              >
+                View all
+                <ChevronRight
+                  className="h-4 w-4 transition-transform group-hover:translate-x-0.5"
+                  aria-hidden
+                />
+              </Link>
             </CardHeader>
             <CardContent className="p-0">
               {reviews.length === 0 && !isMock ? (

@@ -23,8 +23,22 @@ const FEEDBACK_TYPES = [
 
 type FeedbackType = (typeof FEEDBACK_TYPES)[number]["value"];
 
-export function FeedbackDialog({ collapsed }: { collapsed?: boolean }) {
- const [open, setOpen] = useState(false);
+export function FeedbackDialog({
+ collapsed,
+ open: controlledOpen,
+ onOpenChange,
+}: {
+ collapsed?: boolean;
+ open?: boolean;
+ onOpenChange?: (open: boolean) => void;
+}) {
+ const isControlled = controlledOpen !== undefined;
+ const [internalOpen, setInternalOpen] = useState(false);
+ const open = isControlled ? controlledOpen : internalOpen;
+ const setOpen = (v: boolean) => {
+  if (onOpenChange) onOpenChange(v);
+  if (!isControlled) setInternalOpen(v);
+ };
  const [type, setType] = useState<FeedbackType>("general");
  const [rating, setRating] = useState(0);
  const [hoverRating, setHoverRating] = useState(0);
@@ -73,6 +87,7 @@ export function FeedbackDialog({ collapsed }: { collapsed?: boolean }) {
 
  return (
  <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) reset(); }}>
+ {!isControlled && (
  <DialogTrigger asChild>
  {collapsed ? (
  <button
@@ -88,6 +103,7 @@ export function FeedbackDialog({ collapsed }: { collapsed?: boolean }) {
  </button>
  )}
  </DialogTrigger>
+ )}
  <DialogContent className="sm:max-w-md">
  {status === "success" ? (
  <div className="flex flex-col items-center justify-center py-8 gap-3">

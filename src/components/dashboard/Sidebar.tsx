@@ -19,6 +19,7 @@ import {
   Sparkles,
   HelpCircle,
   BookOpen,
+  MessageSquare,
   PanelLeftClose,
   PanelLeftOpen,
 } from "lucide-react";
@@ -157,6 +158,7 @@ export function Sidebar({
   const [settingsOpen, setSettingsOpen] = useState(
     pathname.startsWith("/dashboard/settings")
   );
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
 
   const visibleSettingsNav = SETTINGS_NAV.filter((item) => {
     if (item.href === "/dashboard/settings/connections" && !canManageConnections) return false;
@@ -371,6 +373,34 @@ export function Sidebar({
             </div>
           </>
         )}
+
+        {/* Feedback — opens FeedbackDialog. Lives in the Settings section as a first-class nav item. */}
+        {isCollapsed ? (
+          <Tooltip delayDuration={200}>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                onClick={() => setFeedbackOpen(true)}
+                aria-label="Feedback"
+                className="group relative flex w-full items-center justify-center rounded-lg px-2 py-2 text-sm text-muted-foreground hover:bg-accent/20 hover:text-foreground transition-colors duration-150"
+              >
+                <MessageSquare className="h-[18px] w-[18px] shrink-0" aria-hidden />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="right" className="font-medium text-xs">
+              Feedback
+            </TooltipContent>
+          </Tooltip>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setFeedbackOpen(true)}
+            className="group relative flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-accent/20 hover:text-foreground transition-colors duration-150"
+          >
+            <MessageSquare className="h-[18px] w-[18px] shrink-0" aria-hidden />
+            <span className="flex-1 truncate text-left">Feedback</span>
+          </button>
+        )}
       </nav>
 
       {/* Plan footer */}
@@ -463,12 +493,6 @@ export function Sidebar({
               </Tooltip>
               <Tooltip delayDuration={200}>
                 <TooltipTrigger asChild>
-                  <div><FeedbackDialog collapsed /></div>
-                </TooltipTrigger>
-                <TooltipContent side="right" className="text-xs">Share feedback</TooltipContent>
-              </Tooltip>
-              <Tooltip delayDuration={200}>
-                <TooltipTrigger asChild>
                   <button
                     onClick={() => {
                       document.dispatchEvent(new KeyboardEvent("keydown", { key: "?", bubbles: true }));
@@ -503,7 +527,6 @@ export function Sidebar({
             <>
               <div className="flex items-center gap-0.5">
                 <ThemeToggle />
-                <FeedbackDialog collapsed />
                 <button
                   onClick={() => {
                     document.dispatchEvent(new KeyboardEvent("keydown", { key: "?", bubbles: true }));
@@ -530,6 +553,8 @@ export function Sidebar({
           )}
         </div>
       </div>
+
+      <FeedbackDialog open={feedbackOpen} onOpenChange={setFeedbackOpen} />
     </motion.aside>
   );
 }
