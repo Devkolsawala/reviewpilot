@@ -63,8 +63,9 @@ const SAFE_DEFAULTS: ReviewInsights = {
 // xAI hard timeout per call. Each call must not hang — the auto-classify
 // kickoff in /api/reviews/fetch fires up to 15 concurrent classifications and
 // can't risk a single stuck call holding the whole batch open past Vercel's
-// 60s function budget.
-const CALL_TIMEOUT_MS = 12_000;
+// 60s function budget. 15s × at most one transient-error retry = 30s worst
+// case per row, well under budget at any realistic concurrency.
+const CALL_TIMEOUT_MS = 15_000;
 
 // ── Aspect dictionary by source ───────────────────────────────────────────────
 // The model is asked to identify only aspects from the source's dictionary so
@@ -214,6 +215,16 @@ function buildUserMessage(input: ClassifyReviewInsightsInput): string {
   return `${ctxLine}Rating: ${input.rating}/5\nReview: ${text}`;
 }
 
+function isTransientXaiError(err: unknown): boolean {
+  const e = err as { name?: string; status?: number; message?: string };
+  if (e?.name === "APITimeoutError") return true;
+  if (e?.name === "APIConnectionTimeoutError") return true;
+  if (e?.name === "APIConnectionError") return true;
+  if (typeof e?.status === "number" && e.status >= 500) return true;
+  if (/timed?\s*out/i.test(e?.message ?? "")) return true;
+  return false;
+}
+
 async function callOnce(
   client: ReturnType<typeof getXaiClient>,
   model: string,
@@ -221,24 +232,40 @@ async function callOnce(
   user: string
 ): Promise<string> {
   if (!client) return "";
-  await waitForRateLimit();
-  const completion = await retryWithBackoff(
-    () =>
-      client.chat.completions.create(
-        {
-          model,
-          messages: [
-            { role: "system", content: system },
-            { role: "user", content: user },
-          ],
-          reasoning_effort: "low",
-          max_completion_tokens: 180,
-        },
-        { timeout: CALL_TIMEOUT_MS }
-      ),
-    "classifyReviewInsights"
-  );
-  return completion.choices[0]?.message?.content?.trim() || "";
+
+  // One retry on transient xAI errors (timeout / connection drop / 5xx).
+  // 429s are still handled by retryWithBackoff with its own backoff schedule.
+  let lastErr: unknown;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await waitForRateLimit();
+    try {
+      const completion = await retryWithBackoff(
+        () =>
+          client.chat.completions.create(
+            {
+              model,
+              messages: [
+                { role: "system", content: system },
+                { role: "user", content: user },
+              ],
+              reasoning_effort: "low",
+              max_completion_tokens: 180,
+            },
+            { timeout: CALL_TIMEOUT_MS }
+          ),
+        "classifyReviewInsights"
+      );
+      return completion.choices[0]?.message?.content?.trim() || "";
+    } catch (err: unknown) {
+      lastErr = err;
+      if (!isTransientXaiError(err) || attempt === 1) throw err;
+      const e = err as { name?: string; status?: number };
+      console.warn(
+        `[classifyReviewInsights] transient xAI error (${e?.name ?? e?.status}) — retrying once`
+      );
+    }
+  }
+  throw lastErr;
 }
 
 interface RawInsights {
