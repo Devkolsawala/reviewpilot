@@ -37,7 +37,6 @@ interface PendingReview {
   rating: number | null;
   source: string | null;
   connection_id: string | null;
-  app_contexts?: { description: string | null } | { description: string | null }[] | null;
 }
 
 const SAFE_DEFAULTS: ReviewInsights = {
@@ -59,12 +58,6 @@ const CHAIN_CAP = 30;
 // SQL query is idempotent on `ai_insights_classified_at IS NULL`).
 const recentRuns = new Map<string, number>();
 
-function pickAppContextDescription(row: PendingReview): string | undefined {
-  const ctx = row.app_contexts;
-  if (!ctx) return undefined;
-  const obj = Array.isArray(ctx) ? ctx[0] : ctx;
-  return obj?.description?.trim() || undefined;
-}
 
 export async function POST(request: NextRequest) {
   const startedAt = Date.now();
@@ -164,7 +157,7 @@ export async function POST(request: NextRequest) {
 
   let query = supabase
     .from("reviews")
-    .select("id, review_text, rating, source, connection_id, app_contexts(description)")
+    .select("id, review_text, rating, source, connection_id")
     .order("created_at", { ascending: false })
     .limit(batchSize);
 
@@ -201,6 +194,37 @@ export async function POST(request: NextRequest) {
     });
   }
 
+  // Fetch app_contexts in a separate query and build a connection_id -> description
+  // map. We can't embed app_contexts(description) in the reviews SELECT because
+  // there is no direct FK between reviews and app_contexts — they share
+  // connection_id as a sibling FK to connections, and PostgREST refuses to embed
+  // without a direct relationship (error PGRST200).
+  const rowConnectionIds = Array.from(
+    new Set(
+      rows
+        .map((r) => r.connection_id)
+        .filter((id): id is string => typeof id === "string" && id.length > 0)
+    )
+  );
+  const contextByConnection = new Map<string, string>();
+  if (rowConnectionIds.length > 0) {
+    const { data: ctxRows, error: ctxErr } = await supabase
+      .from("app_contexts")
+      .select("connection_id, description")
+      .in("connection_id", rowConnectionIds);
+    if (ctxErr) {
+      // Non-fatal: classifier just runs without a business-context hint.
+      console.error("[classify_insights] fetch_contexts failed", ctxErr.message);
+    } else {
+      for (const c of ctxRows || []) {
+        const desc = (c.description || "").trim();
+        if (c.connection_id && desc) {
+          contextByConnection.set(c.connection_id, desc);
+        }
+      }
+    }
+  }
+
   let processed = 0;
   let failed = 0;
 
@@ -211,6 +235,9 @@ export async function POST(request: NextRequest) {
       const text = (row.review_text || "").trim();
       const rating = row.rating ?? 3;
       const source = row.source || "unknown";
+      const appContext = row.connection_id
+        ? contextByConnection.get(row.connection_id)
+        : undefined;
       // If the review has no text at all, skip the AI call entirely.
       const insights: ReviewInsights | null =
         text.length === 0
@@ -219,7 +246,7 @@ export async function POST(request: NextRequest) {
               text,
               rating,
               source,
-              appContext: pickAppContextDescription(row),
+              appContext,
             });
 
       // Whether insights succeeded or returned null, mark the row classified

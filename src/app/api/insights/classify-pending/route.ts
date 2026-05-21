@@ -41,17 +41,6 @@ interface PendingReview {
   rating: number | null;
   source: string | null;
   connection_id: string | null;
-  app_contexts?:
-    | { description: string | null }
-    | { description: string | null }[]
-    | null;
-}
-
-function pickAppContextDescription(row: PendingReview): string | undefined {
-  const ctx = row.app_contexts;
-  if (!ctx) return undefined;
-  const obj = Array.isArray(ctx) ? ctx[0] : ctx;
-  return obj?.description?.trim() || undefined;
 }
 
 interface PgErrLike {
@@ -131,7 +120,7 @@ export async function POST(_request: NextRequest) { // eslint-disable-line @type
 
     const { data: pending, error: fetchErr } = await admin
       .from("reviews")
-      .select("id, review_text, rating, source, connection_id, app_contexts(description)")
+      .select("id, review_text, rating, source, connection_id")
       .in("connection_id", connectionIds)
       .is("ai_insights_classified_at", null)
       .order("created_at", { ascending: false })
@@ -156,11 +145,49 @@ export async function POST(_request: NextRequest) { // eslint-disable-line @type
       return NextResponse.json({ ok: true, processed: 0, remaining: 0 });
     }
 
+    // Fetch app_contexts in a separate query and build a connection_id -> description
+    // map. We can't embed app_contexts(description) in the reviews SELECT because
+    // there is no direct FK between reviews and app_contexts — they share
+    // connection_id as a sibling FK to connections, and PostgREST refuses to embed
+    // without a direct relationship (error PGRST200).
+    const rowConnectionIds = Array.from(
+      new Set(
+        rows
+          .map((r) => r.connection_id)
+          .filter((id): id is string => typeof id === "string" && id.length > 0)
+      )
+    );
+    const contextByConnection = new Map<string, string>();
+    if (rowConnectionIds.length > 0) {
+      const { data: ctxRows, error: ctxErr } = await admin
+        .from("app_contexts")
+        .select("connection_id, description")
+        .in("connection_id", rowConnectionIds);
+      if (ctxErr) {
+        // Non-fatal: classifier just runs without a business-context hint.
+        console.error("[classify-pending]", {
+          step: "fetch_contexts",
+          ...pgErrFields(ctxErr),
+        });
+      } else {
+        for (const c of ctxRows || []) {
+          const desc = (c.description || "").trim();
+          if (c.connection_id && desc) {
+            contextByConnection.set(c.connection_id, desc);
+          }
+        }
+      }
+    }
+
     const results = await Promise.allSettled(
       rows.map(async (row) => {
         const text = (row.review_text || "").trim();
         const rating = row.rating ?? 3;
         const source = row.source || "unknown";
+
+        const appContext = row.connection_id
+          ? contextByConnection.get(row.connection_id)
+          : undefined;
 
         let insights: ReviewInsights | null;
         try {
@@ -171,7 +198,7 @@ export async function POST(_request: NextRequest) { // eslint-disable-line @type
                   text,
                   rating,
                   source,
-                  appContext: pickAppContextDescription(row),
+                  appContext,
                 });
         } catch (classifierThrown) {
           // classifyReviewInsights has its own try/catch and should return
