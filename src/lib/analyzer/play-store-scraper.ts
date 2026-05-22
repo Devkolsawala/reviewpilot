@@ -12,18 +12,24 @@
 // try/catch that returns null instead of throwing. Callers must treat null
 // as a graceful "Try again in a few minutes" signal, never as a 500.
 
-import gplay from "google-play-scraper";
+// Lazy-loaded because google-play-scraper@10+ ships as ESM-only (no CJS
+// entry point). A top-level `import gplay from "google-play-scraper"` works
+// fine for tsc and `next dev`, but Vercel bundles API routes as CommonJS and
+// the resulting `require()` of an ESM-only module crashes at runtime with
+// ERR_REQUIRE_ESM. Deferring to a dynamic import sidesteps the bundling
+// issue entirely — Node loads the ESM module via its native loader at the
+// first call, and we memoize the promise so subsequent calls are free.
+let gplayModulePromise:
+  | Promise<typeof import("google-play-scraper")>
+  | null = null;
+function loadGplay() {
+  if (!gplayModulePromise) {
+    gplayModulePromise = import("google-play-scraper");
+  }
+  return gplayModulePromise;
+}
 
 const SCRAPE_TIMEOUT_MS = 10_000;
-
-// The package's d.ts `declare enum sort` is not exported, so `gplay.sort.NEWEST`
-// isn't visible on the typed surface even though it exists at runtime. Narrow
-// once here rather than scattering casts.
-const SORT = gplay.sort as unknown as {
-  NEWEST: number;
-  RATING: number;
-  HELPFULNESS: number;
-};
 
 export interface AppMetadata {
   packageId: string;
@@ -66,6 +72,7 @@ export async function getAppMetadata(
   packageId: string
 ): Promise<AppMetadata | null> {
   try {
+    const gplay = (await loadGplay()).default;
     const data = await withTimeout(
       gplay.app({ appId: packageId, lang: "en", country: "in" }),
       SCRAPE_TIMEOUT_MS,
@@ -105,6 +112,16 @@ export async function getRecentReviews(
   count = 150
 ): Promise<PublicReview[]> {
   try {
+    const gplay = (await loadGplay()).default;
+    // The package's d.ts `declare enum sort` is not exported, so
+    // gplay.sort.NEWEST is invisible on the typed surface even though it
+    // exists at runtime. Narrow at the callsite rather than at module level
+    // (we no longer have a module-level gplay binding to attach SORT to).
+    const SORT = gplay.sort as unknown as {
+      NEWEST: number;
+      RATING: number;
+      HELPFULNESS: number;
+    };
     const result = await withTimeout(
       gplay.reviews({
         appId: packageId,
