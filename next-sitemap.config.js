@@ -65,6 +65,7 @@ module.exports = {
       '/tools/play-store-character-counter': 0.8,
       '/tools/ai-review-reply-generator': 0.8,
       '/tools/app-rating-calculator': { priority: 0.9, changefreq: 'monthly' },
+      '/tools/play-store-analyzer': 0.85,
       // Other
       '/about': 0.7,
       '/demo': 0.8,
