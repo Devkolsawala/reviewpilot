@@ -48,14 +48,39 @@ export interface ReserveResult {
   needsEmail?: boolean;
 }
 
+// Resolve the real client IP from the request, preferring headers that
+// identify the originating client over headers that identify the most-recent
+// proxy hop.
+//
+// Order matters because reviewpilot.co.in is fronted by Cloudflare:
+//   1. cf-connecting-ip       — Cloudflare's purpose-built header carrying
+//                                the real end-client IP. Stable across the
+//                                rotating Cloudflare edge pool.
+//   2. x-real-ip              — set by some proxies to the originating IP.
+//   3. x-forwarded-for[0]     — first entry is the client; subsequent
+//                                entries are intermediate proxies. Behind
+//                                Cloudflare, this is the Cloudflare edge
+//                                IP (rotates per request), which is why
+//                                we deliberately consult it LAST.
+//
+// Hashing the rotating Cloudflare edge IP was producing a different
+// ipHash for every request from the same browser, defeating the daily
+// rate-limit entirely. Diagnostic logging on six consecutive requests
+// from one machine showed cf-connecting-ip stable while x-forwarded-for
+// rotated across 172.70.x.x edges — hence the reorder.
 export function getClientIp(req: Request): string {
+  const cfIp = req.headers.get("cf-connecting-ip");
+  if (cfIp && cfIp.trim()) return cfIp.trim();
+
+  const realIp = req.headers.get("x-real-ip");
+  if (realIp && realIp.trim()) return realIp.trim();
+
   const xff = req.headers.get("x-forwarded-for");
-  if (xff) {
+  if (xff && xff.trim()) {
     const first = xff.split(",")[0];
-    if (first) return first.trim();
+    if (first && first.trim()) return first.trim();
   }
-  const real = req.headers.get("x-real-ip");
-  if (real) return real.trim();
+
   return "unknown";
 }
 
@@ -65,30 +90,12 @@ export function hashIp(ip: string): string {
   return createHash("sha256").update(`${ip}|${salt}`).digest("hex");
 }
 
-// ── TEMPORARY DIAGNOSTIC — remove once IP-hash inconsistency is diagnosed ───
-// Behaviorally identical to `hashIp(getClientIp(req))`. The only difference is
-// a one-line [rate-limit-debug] log emission with the full request-routing
-// context (every IP-bearing header Vercel/CF can expose, plus salt-shape and
-// hash prefix) so we can correlate why two requests from the same browser
-// produce different ipHash values. NO secrets are logged — salt is reported
-// as a length only, and only the first 8 chars of the hash are emitted.
+// One-call helper used by every analyzer API route to resolve the client
+// IP and hash it in one go. Name retained from the prior diagnostic commit
+// so call sites do not need to churn alongside this fix — the diagnostic
+// header/hash log block that previously lived here has been removed.
 export function debugHashIp(req: Request): string {
-  const ip = getClientIp(req);
-  const dayString = new Date().toISOString().slice(0, 10);
-  const saltSourceLength =
-    (process.env.SUPABASE_SERVICE_ROLE_KEY ?? "").length + 1 + dayString.length;
-  const hash = hashIp(ip);
-  console.log("[rate-limit-debug]", {
-    rawIpUsed: ip,
-    xForwardedFor: req.headers.get("x-forwarded-for"),
-    xRealIp: req.headers.get("x-real-ip"),
-    cfConnectingIp: req.headers.get("cf-connecting-ip"),
-    vercelForwardedFor: req.headers.get("x-vercel-forwarded-for"),
-    saltSourceShape: saltSourceLength,
-    dayUsed: dayString,
-    finalHashPrefix: hash.slice(0, 8),
-  });
-  return hash;
+  return hashIp(getClientIp(req));
 }
 
 function today(): string {
