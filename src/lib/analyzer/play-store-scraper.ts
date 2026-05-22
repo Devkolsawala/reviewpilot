@@ -8,9 +8,11 @@
 // modules must remain separate.
 //
 // Scraping public pages is brittle (Google can change markup, Vercel IPs can
-// get rate-limited). Every call here is wrapped with a hard timeout and a
-// try/catch that returns null instead of throwing. Callers must treat null
-// as a graceful "Try again in a few minutes" signal, never as a 500.
+// get rate-limited). getAppMetadata returns a discriminated result so the
+// caller can distinguish a genuine "app does not exist" 404 (user typo'd the
+// package id) from a transient scraper crash (Google rate-limit, network
+// blip, parse error). getRecentReviews keeps returning [] on any failure —
+// an app with zero reviews is a valid empty result, not an error.
 
 // Lazy-loaded because google-play-scraper@10+ ships as ESM-only (no CJS
 // entry point). A top-level `import gplay from "google-play-scraper"` works
@@ -56,6 +58,10 @@ export interface PublicReview {
   version: string | null;
 }
 
+export type AppMetadataResult =
+  | { ok: true; data: AppMetadata }
+  | { ok: false; reason: "not_found" | "crashed" };
+
 function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
   return Promise.race([
     p,
@@ -68,9 +74,21 @@ function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
   ]);
 }
 
+// google-play-scraper throws a plain Error whose message includes the HTTP
+// status when the public Play Store page returns 404. The lib doesn't expose
+// a typed error class, so we match on the well-known message shape. Keep this
+// permissive: the upstream lib has changed the exact wording at least once
+// across major versions ("Response code 404 (Not Found)" vs. "App not
+// found"), so match any of them.
+function isAppNotFoundError(err: unknown): boolean {
+  const msg = (err as { message?: unknown })?.message;
+  if (typeof msg !== "string") return false;
+  return /\b404\b|app not found|not found \(404\)/i.test(msg);
+}
+
 export async function getAppMetadata(
   packageId: string
-): Promise<AppMetadata | null> {
+): Promise<AppMetadataResult> {
   try {
     const gplay = (await loadGplay()).default;
     const data = await withTimeout(
@@ -80,30 +98,41 @@ export async function getAppMetadata(
     );
     const hist = data.histogram || { "1": 0, "2": 0, "3": 0, "4": 0, "5": 0 };
     return {
-      packageId,
-      appName: data.title || packageId,
-      iconUrl: data.icon || "",
-      developer: data.developer || "",
-      score: typeof data.score === "number" ? data.score : 0,
-      ratingCount: typeof data.ratings === "number" ? data.ratings : 0,
-      reviewCount: typeof data.reviews === "number" ? data.reviews : 0,
-      histogram: {
-        "1": Number(hist["1"] || 0),
-        "2": Number(hist["2"] || 0),
-        "3": Number(hist["3"] || 0),
-        "4": Number(hist["4"] || 0),
-        "5": Number(hist["5"] || 0),
+      ok: true,
+      data: {
+        packageId,
+        appName: data.title || packageId,
+        iconUrl: data.icon || "",
+        developer: data.developer || "",
+        score: typeof data.score === "number" ? data.score : 0,
+        ratingCount: typeof data.ratings === "number" ? data.ratings : 0,
+        reviewCount: typeof data.reviews === "number" ? data.reviews : 0,
+        histogram: {
+          "1": Number(hist["1"] || 0),
+          "2": Number(hist["2"] || 0),
+          "3": Number(hist["3"] || 0),
+          "4": Number(hist["4"] || 0),
+          "5": Number(hist["5"] || 0),
+        },
+        description: (data.description || "").slice(0, 2000),
+        genre: data.genre || "",
       },
-      description: (data.description || "").slice(0, 2000),
-      genre: data.genre || "",
     };
   } catch (err) {
+    if (isAppNotFoundError(err)) {
+      console.warn(
+        "[play-store-scraper] app not found",
+        packageId,
+        (err as Error).message
+      );
+      return { ok: false, reason: "not_found" };
+    }
     console.error(
       "[play-store-scraper] getAppMetadata failed",
       packageId,
       (err as Error).message
     );
-    return null;
+    return { ok: false, reason: "crashed" };
   }
 }
 

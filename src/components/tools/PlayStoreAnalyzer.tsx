@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   Loader2,
@@ -42,6 +42,14 @@ interface AnalysisPayload {
   reviewCount: number;
 }
 
+interface UsageInfo {
+  freshUsedToday: number;
+  freshLimitToday: number;
+  emailUnlocked: boolean;
+  uniquePackageCount: number;
+  cached: boolean;
+}
+
 interface AnalysisResult {
   packageId: string;
   app: {
@@ -54,23 +62,54 @@ interface AnalysisResult {
   analysis: AnalysisPayload;
   cached: boolean;
   insightUrl: string;
+  usage?: UsageInfo;
 }
 
 interface ApiError {
   error: string;
   code: string;
   needsEmail?: boolean;
+  usage?: UsageInfo;
 }
 
 const PLAY_URL_RE = /^https?:\/\/play\.google\.com\/store\/apps\/details\?id=[a-zA-Z0-9_.]+/;
 const BARE_PKG_RE = /^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+$/i;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+const DEFAULT_COPY = "Free for 3 fresh analyses per day. Cached results are unlimited.";
+
+// Map server error codes to the user-facing copy. Unknown codes fall through
+// to the generic UNKNOWN message so we never show "undefined" or a raw stack.
+function friendlyError(code: string, fallback: string): string {
+  switch (code) {
+    case "INVALID_URL":
+      return "That does not look like a Play Store URL. It should look like https://play.google.com/store/apps/details?id=YOUR_APP_ID";
+    case "APP_NOT_FOUND":
+      return "We could not find that app on Play Store. Double-check the package ID in the URL — for example, the correct ID for Swiggy is in.swiggy.android, not com.swiggy.consumer.";
+    case "SCRAPER_FAILED":
+      return "Play Store is temporarily unreachable. Please try again in a minute.";
+    case "TIMEOUT":
+      return "That took longer than expected. Please try again in a minute.";
+    case "ANON_QUOTA":
+      return "You have used all 3 free analyses today. Enter your email below to unlock 5 more and get a PDF report.";
+    case "EMAIL_QUOTA":
+      return "You have used all 8 free analyses today. Start a 7-day free trial to analyze unlimited apps.";
+    case "UNIQUE_CAP":
+      return "You have hit today's hard cap of 20 different apps. Please come back tomorrow.";
+    case "DB_ERROR":
+      return "Service is temporarily unavailable. Please try again shortly.";
+    case "BAD_JSON":
+    case "UNKNOWN":
+    default:
+      return fallback || "Something unexpected happened. Please try again in a moment.";
+  }
+}
+
 function validateInput(url: string): string | null {
   const trimmed = url.trim();
   if (!trimmed) return "Please paste a Play Store URL.";
   if (!PLAY_URL_RE.test(trimmed) && !BARE_PKG_RE.test(trimmed)) {
-    return "That does not look like a Play Store URL. Example: https://play.google.com/store/apps/details?id=com.example.app";
+    return friendlyError("INVALID_URL", "");
   }
   return null;
 }
@@ -82,12 +121,55 @@ function extractPackageId(url: string): string | null {
   return m && m[1] ? m[1] : null;
 }
 
+// Single source of truth for the usage-aware copy under the input field.
+function getUsageCopy(usage: UsageInfo | null): string {
+  if (!usage) return DEFAULT_COPY;
+  const { freshUsedToday, freshLimitToday, emailUnlocked, cached } = usage;
+  const left = Math.max(0, freshLimitToday - freshUsedToday);
+
+  if (cached) {
+    return `Cached result — did not count toward your daily limit. ${left} fresh ${
+      left === 1 ? "analysis" : "analyses"
+    } left today.`;
+  }
+
+  if (freshUsedToday === 0) return DEFAULT_COPY;
+
+  if (left > 0) {
+    return `${left} fresh ${
+      left === 1 ? "analysis" : "analyses"
+    } left today. Cached results are unlimited.`;
+  }
+
+  if (emailUnlocked) {
+    return "You have used all 8 analyses today. Start a free trial to analyze unlimited apps.";
+  }
+  return "You have used all 3 free analyses today. Cached results are still unlimited — or unlock 5 more with your email.";
+}
+
 export function PlayStoreAnalyzer() {
   const [url, setUrl] = useState("");
   const [validation, setValidation] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
   const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [usage, setUsage] = useState<UsageInfo | null>(null);
+
+  // Fetch baseline usage on mount so the copy under the input is accurate
+  // even before the user runs anything. No quota consumed.
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/tools/analyze-app/usage")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((body) => {
+        if (cancelled || !body?.usage) return;
+        setUsage(body.usage as UsageInfo);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   async function runAnalyze(targetUrl: string): Promise<void> {
     setLoading(true);
@@ -103,20 +185,23 @@ export function PlayStoreAnalyzer() {
         | ApiError
         | null;
 
+      // Update usage from whatever the server returned, success or failure,
+      // as long as it included a usage block.
+      const usageFromBody =
+        body && "usage" in body && body.usage ? (body.usage as UsageInfo) : null;
+      if (usageFromBody) setUsage(usageFromBody);
+
       if (!res.ok || !body) {
         const err: ApiError =
           body && "error" in body
             ? body
-            : { error: "Something went wrong. Please try again.", code: "unknown" };
+            : { error: "", code: "UNKNOWN" };
         setError(err);
         return;
       }
       setResult(body as AnalysisResult);
     } catch {
-      setError({
-        error: "Could not reach the analyzer. Check your connection and try again.",
-        code: "network",
-      });
+      setError({ error: "", code: "UNKNOWN" });
     } finally {
       setLoading(false);
     }
@@ -131,16 +216,15 @@ export function PlayStoreAnalyzer() {
     await runAnalyze(url);
   }
 
-  // Triggered by the email gate after a successful unlock — re-runs the
-  // original URL the user was trying to analyze when they hit the limit.
   async function handleUnlockRetry() {
     if (!url) return;
     await runAnalyze(url);
   }
 
   const showEmailGate =
-    !loading && error?.code === "anon_quota" && error?.needsEmail === true;
-  const showTrialCta = !loading && error?.code === "email_quota";
+    !loading && error?.code === "ANON_QUOTA" && error?.needsEmail === true;
+  const showTrialCta = !loading && error?.code === "EMAIL_QUOTA";
+  const usageCopy = getUsageCopy(usage);
 
   return (
     <div className="rounded-2xl border border-border/60 bg-card/40 p-5 backdrop-blur-sm sm:p-6">
@@ -191,10 +275,7 @@ export function PlayStoreAnalyzer() {
             {validation}
           </p>
         )}
-        <p className="text-xs text-muted-foreground">
-          Free for 3 analyses per day. Cached results from other users are
-          unlimited.
-        </p>
+        <p className="text-xs text-muted-foreground">{usageCopy}</p>
       </form>
 
       {loading && <LoadingSkeleton />}
@@ -212,8 +293,7 @@ export function PlayStoreAnalyzer() {
           role="alert"
         >
           <p className="text-sm text-foreground">
-            You have used all 8 free analyses for today. Come back tomorrow, or
-            try ReviewPilot for unlimited audits.
+            {friendlyError("EMAIL_QUOTA", "")}
           </p>
           <Link
             href="/pricing"
@@ -232,7 +312,9 @@ export function PlayStoreAnalyzer() {
           <div className="flex items-start gap-3">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
             <div className="flex-1">
-              <p className="text-sm text-foreground">{error.error}</p>
+              <p className="text-sm text-foreground">
+                {friendlyError(error.code, error.error)}
+              </p>
             </div>
           </div>
         </div>
@@ -282,7 +364,6 @@ function EmailGate({
         );
         return;
       }
-      // Unlock succeeded — retry the original analysis automatically.
       await onUnlocked();
     } catch {
       setErr("Network error. Please try again.");
@@ -463,9 +544,6 @@ function ResultView({ result }: { result: AnalysisResult }) {
   );
 }
 
-// Optional post-result PDF request — fires the email-report endpoint with the
-// now-cached packageId so the route attaches the actual PDF (vs. just sending
-// the "unlocked" confirmation it would send from the gate flow).
 function EmailPdfButton({ packageId }: { packageId: string }) {
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");

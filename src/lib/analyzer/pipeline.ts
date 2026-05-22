@@ -333,20 +333,25 @@ async function writeCachedAnalysis(
 // ── Orchestrator ─────────────────────────────────────────────────────────────
 
 export type RunAnalysisError =
-  | { ok: false; code: "scrape_failed" | "scrape_empty" }
-  | { ok: false; code: "internal" };
+  | { ok: false; code: "app_not_found" | "scrape_failed" | "internal" };
 export type RunAnalysisOk = { ok: true; result: AnalysisResult };
 export type RunAnalysisOutcome = RunAnalysisOk | RunAnalysisError;
 
 export async function runFreshAnalysis(
   packageId: string
 ): Promise<RunAnalysisOutcome> {
-  const [app, reviews] = await Promise.all([
+  const [appResult, reviews] = await Promise.all([
     getAppMetadata(packageId),
     getRecentReviews(packageId, 150),
   ]);
 
-  if (!app) return { ok: false, code: "scrape_failed" };
+  if (!appResult.ok) {
+    return {
+      ok: false,
+      code: appResult.reason === "not_found" ? "app_not_found" : "scrape_failed",
+    };
+  }
+  const app = appResult.data;
 
   if (reviews.length === 0) {
     // App exists but has no reviews — return a minimal payload so the page

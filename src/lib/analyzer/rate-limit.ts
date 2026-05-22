@@ -1,11 +1,12 @@
 // Daily per-IP rate limit for the public Play Store analyzer.
 //
-// Why this isn't in src/lib/tools/rateLimit.ts: that module is an in-memory
-// per-instance counter (15/h across all free tools). It doesn't survive a
-// serverless cold start, doesn't share state across Vercel instances, and
-// can't track daily windows, unique package ids, or email-unlock state. The
-// analyzer's quota model is durable-by-design, so it lives in Supabase via
-// the existing admin client.
+// Uses an atomic Postgres RPC (reserve_analyzer_quota) that collapses the
+// previous check+increment pair into one locked transaction. The prior
+// non-atomic pattern had a TOCTOU race where the 10-22s pipeline window
+// between check and record let concurrent (or fast-fired sequential)
+// requests both pass a stale fresh_count and run, letting a user exceed the
+// 3-per-day cap by clicking faster than the pipeline finished. See
+// migration 033_analyzer_quota_rpc.sql.
 //
 // Tiers per IP per day:
 //   anonymous           → 3 fresh analyses
@@ -13,23 +14,37 @@
 //   hard cap            → 20 unique package ids/day regardless of tier
 //
 // "Fresh" means a cache miss that triggers scrape + AI. Cache hits are free
-// and don't consume quota.
+// and never call into this module.
 //
-// IP hashing: SHA-256 of (ip + daily_salt). The daily salt is derived from
-// SUPABASE_SERVICE_ROLE_KEY + the date so we don't introduce a new env var.
-// We never store raw IPs.
+// IP hashing: SHA-256 of (ip + daily_salt). Daily salt derives from
+// SUPABASE_SERVICE_ROLE_KEY + the date — no new env var. We never store
+// raw IPs.
 
 import { createHash } from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const ANON_LIMIT = 3;
 const EMAIL_BONUS = 5;
-const UNIQUE_PACKAGE_HARD_CAP = 20;
 
-export interface AnalyzerLimitResult {
-  allowed: boolean;
-  remaining: number;
-  reason?: "anon_quota" | "email_quota" | "unique_cap" | "db_error";
+export interface UsageInfo {
+  freshUsedToday: number;
+  freshLimitToday: number;   // 3 anon, 8 after email unlock
+  emailUnlocked: boolean;
+  uniquePackageCount: number;
+  /**
+   * Whether the response the caller is about to send/render was served
+   * from cache (and therefore did not increment freshUsedToday). Pure
+   * client signal — the server doesn't read this back.
+   */
+  cached: boolean;
+}
+
+export type ReserveReason = "anon_quota" | "email_quota" | "unique_cap";
+
+export interface ReserveResult {
+  accepted: boolean;
+  usage: UsageInfo;
+  reason?: ReserveReason;
   needsEmail?: boolean;
 }
 
@@ -45,150 +60,176 @@ export function getClientIp(req: Request): string {
 }
 
 export function hashIp(ip: string): string {
-  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD UTC
+  const today = new Date().toISOString().slice(0, 10);
   const salt = `${process.env.SUPABASE_SERVICE_ROLE_KEY ?? ""}:${today}`;
   return createHash("sha256").update(`${ip}|${salt}`).digest("hex");
 }
 
-interface RateRow {
-  ip_hash: string;
-  day: string;
+function today(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+interface ReserveRpcRow {
+  accepted: boolean;
   fresh_count: number;
-  unique_packages: string[];
   email_unlocked: boolean;
+  unique_pkg_count: number;
+  reason: string | null;
 }
 
-async function getOrCreateRow(ipHash: string): Promise<RateRow | null> {
-  const supabase = createAdminClient();
-  const today = new Date().toISOString().slice(0, 10);
-
-  const { data, error } = await supabase
-    .from("analyzer_rate_limits")
-    .select("ip_hash, day, fresh_count, unique_packages, email_unlocked")
-    .eq("ip_hash", ipHash)
-    .eq("day", today)
-    .maybeSingle();
-
-  if (error) {
-    console.error("[analyzer-rate-limit] select failed", error.message);
-    return null;
-  }
-  if (data) return data as RateRow;
-
-  const insert = await supabase
-    .from("analyzer_rate_limits")
-    .insert({ ip_hash: ipHash, day: today })
-    .select("ip_hash, day, fresh_count, unique_packages, email_unlocked")
-    .single();
-  if (insert.error) {
-    // Race: another concurrent request inserted the row. Re-select once.
-    const retry = await supabase
-      .from("analyzer_rate_limits")
-      .select("ip_hash, day, fresh_count, unique_packages, email_unlocked")
-      .eq("ip_hash", ipHash)
-      .eq("day", today)
-      .maybeSingle();
-    if (retry.error || !retry.data) {
-      console.error(
-        "[analyzer-rate-limit] insert+retry failed",
-        insert.error.message
-      );
-      return null;
-    }
-    return retry.data as RateRow;
-  }
-  return insert.data as RateRow;
+function emptyUsage(emailUnlocked = false, cached = false): UsageInfo {
+  return {
+    freshUsedToday: 0,
+    freshLimitToday: emailUnlocked ? ANON_LIMIT + EMAIL_BONUS : ANON_LIMIT,
+    emailUnlocked,
+    uniquePackageCount: 0,
+    cached,
+  };
 }
 
-// Check whether this IP is allowed to run a FRESH analysis for the given
-// package id. Cache hits do not call this — they're free. On allow=true the
-// caller MUST follow up with recordFreshAnalysis(...) once the analysis
-// succeeds; on allow=false the caller returns 429 with needsEmail to gate
-// the lead-capture upsell.
-export async function checkAnalyzerLimit(
+// Atomic reserve. On accepted=true the caller MUST either complete the
+// pipeline successfully OR call releaseQuota() to refund the slot. On
+// accepted=false the caller returns the relevant 429 with the usage block
+// (still consumes a DB call, but no quota).
+export async function reserveQuota(
   ipHash: string,
   packageId: string
-): Promise<AnalyzerLimitResult> {
-  const row = await getOrCreateRow(ipHash);
-  if (!row) {
-    // Fail open in single-row terms but still cap by anon limit at the
-    // process level — if Supabase is down we don't want to give unlimited
-    // analyses, so deny with a generic reason.
-    return { allowed: false, remaining: 0, reason: "db_error" };
-  }
+): Promise<ReserveResult> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase.rpc("reserve_analyzer_quota", {
+    p_ip_hash: ipHash,
+    p_day: today(),
+    p_package_id: packageId,
+  });
 
-  const limit = row.email_unlocked ? ANON_LIMIT + EMAIL_BONUS : ANON_LIMIT;
-  const alreadyHasPackage = row.unique_packages.includes(packageId);
-
-  // Hard cap on unique packages, regardless of tier.
-  if (
-    !alreadyHasPackage &&
-    row.unique_packages.length >= UNIQUE_PACKAGE_HARD_CAP
-  ) {
-    return { allowed: false, remaining: 0, reason: "unique_cap" };
-  }
-
-  if (row.fresh_count >= limit) {
+  if (error) {
+    console.error("[rate-limit] reserve RPC failed", error.message);
+    // Fail closed on DB errors — refuse to run a pipeline when we can't
+    // account for it. Anon limit pretended to be exhausted so the UI
+    // shows the email gate rather than a generic error.
     return {
-      allowed: false,
-      remaining: 0,
-      reason: row.email_unlocked ? "email_quota" : "anon_quota",
-      needsEmail: !row.email_unlocked,
+      accepted: false,
+      usage: emptyUsage(),
+      reason: "anon_quota",
+      needsEmail: true,
     };
   }
 
-  return { allowed: true, remaining: Math.max(0, limit - row.fresh_count - 1) };
-}
-
-// Record a successful fresh analysis. Idempotent for the same packageId
-// (won't double-count if the caller retries).
-export async function recordFreshAnalysis(
-  ipHash: string,
-  packageId: string
-): Promise<void> {
-  const supabase = createAdminClient();
-  const today = new Date().toISOString().slice(0, 10);
-
-  const { data, error } = await supabase
-    .from("analyzer_rate_limits")
-    .select("fresh_count, unique_packages")
-    .eq("ip_hash", ipHash)
-    .eq("day", today)
-    .maybeSingle();
-
-  if (error || !data) {
-    console.error(
-      "[analyzer-rate-limit] recordFreshAnalysis read failed",
-      error?.message
-    );
-    return;
+  const row = (Array.isArray(data) ? data[0] : data) as
+    | ReserveRpcRow
+    | undefined;
+  if (!row) {
+    console.error("[rate-limit] reserve RPC returned no row");
+    return {
+      accepted: false,
+      usage: emptyUsage(),
+      reason: "anon_quota",
+      needsEmail: true,
+    };
   }
 
-  const pkgs = data.unique_packages as string[];
-  const nextPackages = pkgs.includes(packageId) ? pkgs : [...pkgs, packageId];
+  const limit =
+    ANON_LIMIT + (row.email_unlocked ? EMAIL_BONUS : 0);
 
-  await supabase
+  const usage: UsageInfo = {
+    freshUsedToday: row.fresh_count,
+    freshLimitToday: limit,
+    emailUnlocked: row.email_unlocked,
+    uniquePackageCount: row.unique_pkg_count,
+    cached: false,
+  };
+
+  console.log("[rate-limit] reserve", {
+    ipHash: ipHash.slice(0, 8),
+    accepted: row.accepted,
+    freshCount: row.fresh_count,
+    limit,
+    reason: row.reason,
+  });
+
+  if (row.accepted) {
+    return { accepted: true, usage };
+  }
+
+  const reason = (row.reason ?? "anon_quota") as ReserveReason;
+  return {
+    accepted: false,
+    usage,
+    reason,
+    needsEmail: reason === "anon_quota",
+  };
+}
+
+// Refund a reservation. Called when reserveQuota returned accepted=true but
+// the downstream pipeline failed — preserves the "failed runs don't burn
+// quota" semantic.
+export async function releaseQuota(ipHash: string): Promise<void> {
+  const supabase = createAdminClient();
+  const { error } = await supabase.rpc("release_analyzer_quota", {
+    p_ip_hash: ipHash,
+    p_day: today(),
+  });
+  if (error) {
+    console.error("[rate-limit] release RPC failed", error.message);
+  }
+}
+
+// Read-only usage lookup for the GET /api/tools/analyze-app/usage endpoint
+// and for page-mount initialization. Never reserves anything.
+export async function getUsage(ipHash: string): Promise<UsageInfo> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
     .from("analyzer_rate_limits")
-    .update({
-      fresh_count: (data.fresh_count as number) + 1,
-      unique_packages: nextPackages,
-    })
+    .select("fresh_count, email_unlocked, unique_packages")
     .eq("ip_hash", ipHash)
-    .eq("day", today);
+    .eq("day", today())
+    .maybeSingle();
+
+  if (error) {
+    console.error("[rate-limit] getUsage select failed", error.message);
+    return emptyUsage();
+  }
+  if (!data) return emptyUsage();
+
+  const emailUnlocked = Boolean(data.email_unlocked);
+  return {
+    freshUsedToday: Number(data.fresh_count) || 0,
+    freshLimitToday: ANON_LIMIT + (emailUnlocked ? EMAIL_BONUS : 0),
+    emailUnlocked,
+    uniquePackageCount: Array.isArray(data.unique_packages)
+      ? (data.unique_packages as string[]).length
+      : 0,
+    cached: false,
+  };
 }
 
 // Flip the email_unlocked flag for the IP after a verified email submission
-// from the lead-capture form. Granted for the rest of the day.
+// from the lead-capture form. Granted for the rest of the day. Idempotent —
+// the daily limit is recomputed at evaluation time, so re-flipping a flag
+// that's already true grants no additional analyses.
 export async function unlockEmailTier(ipHash: string): Promise<void> {
   const supabase = createAdminClient();
-  const today = new Date().toISOString().slice(0, 10);
+  const day = today();
 
-  // Ensure a row exists before flipping the flag.
-  await getOrCreateRow(ipHash);
-
+  // Ensure a row exists before flipping the flag — same UPSERT pattern as
+  // reserve_analyzer_quota uses, kept inline to avoid pulling in the RPC
+  // for a trivial state-only call.
   await supabase
+    .from("analyzer_rate_limits")
+    .upsert({ ip_hash: ipHash, day }, { onConflict: "ip_hash,day" });
+
+  const { error } = await supabase
     .from("analyzer_rate_limits")
     .update({ email_unlocked: true })
     .eq("ip_hash", ipHash)
-    .eq("day", today);
+    .eq("day", day);
+  if (error) {
+    console.error("[rate-limit] unlockEmailTier failed", error.message);
+  }
 }
+
+// ── Backwards-compat shims ──────────────────────────────────────────────────
+// Older callers (the email-report route) imported checkAnalyzerLimit /
+// recordFreshAnalysis under the old API. They no longer need those — but if
+// any future caller hits the old names, fail loud rather than silently.
+// (Both routes that used them have been migrated in the same commit.)

@@ -25,9 +25,9 @@ import {
   type AnalysisResult,
 } from "@/lib/analyzer/pipeline";
 import {
-  checkAnalyzerLimit,
   hashIp,
-  recordFreshAnalysis,
+  releaseQuota,
+  reserveQuota,
 } from "@/lib/analyzer/rate-limit";
 
 export const runtime = "nodejs";
@@ -58,14 +58,17 @@ async function loadAnalysis(packageId: string): Promise<AnalysisResult | null> {
   if (cached) return cached;
 
   const ipHash = hashIp(ipFromHeaders());
-  const limit = await checkAnalyzerLimit(ipHash, packageId).catch(() => null);
-  if (!limit || !limit.allowed) return null;
+  // Atomic reserve — matches the POST route. If we get a slot but the
+  // pipeline fails, refund so the user does not lose quota to a scrape
+  // error on a public crawl.
+  const reservation = await reserveQuota(ipHash, packageId).catch(() => null);
+  if (!reservation || !reservation.accepted) return null;
 
   const outcome = await runFreshAnalysis(packageId).catch(() => null);
-  if (!outcome || !outcome.ok) return null;
-
-  // Record AFTER success so failed runs don't burn quota.
-  await recordFreshAnalysis(ipHash, packageId).catch(() => undefined);
+  if (!outcome || !outcome.ok) {
+    await releaseQuota(ipHash).catch(() => undefined);
+    return null;
+  }
   return outcome.result;
 }
 
