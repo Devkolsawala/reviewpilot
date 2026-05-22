@@ -12,6 +12,10 @@ import {
   Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  EMAIL_RE as STRICT_EMAIL_RE,
+  suggestEmailCorrection,
+} from "@/lib/analyzer/email-validation";
 
 interface TopicCluster {
   label: string;
@@ -74,9 +78,41 @@ interface ApiError {
 
 const PLAY_URL_RE = /^https?:\/\/play\.google\.com\/store\/apps\/details\?id=[a-zA-Z0-9_.]+/;
 const BARE_PKG_RE = /^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+$/i;
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Stricter email regex — requires plausible TLD. Mirrors the server check
+// in src/lib/analyzer/email-validation.ts so client/server reject the same
+// strings without a round trip.
+const EMAIL_RE = STRICT_EMAIL_RE;
 
-const DEFAULT_COPY = "Free for 3 fresh analyses per day. Cached results are unlimited.";
+// Maps server-side error codes from /api/tools/analyze-app/email-report
+// to user-facing copy. EMAIL_TYPO_SUSPECTED is handled separately (it
+// drives a "Did you mean ...?" suggestion UI rather than a flat error).
+function mapEmailReportError(
+  code: string | undefined,
+  fallback: string | undefined
+): string {
+  switch (code) {
+    case "INVALID_EMAIL_FORMAT":
+    case "INVALID_EMAIL":
+      return "Please enter a valid email address.";
+    case "DISPOSABLE_EMAIL":
+      return "Please use a permanent email address. Temporary email services aren't supported.";
+    case "EMAIL_DOMAIN_INVALID":
+      return "We couldn't verify that email domain. Please try a different address.";
+    case "EMAIL_SUBMISSION_LIMIT":
+      return (
+        fallback ||
+        "You've reached today's limit for email reports. Start a free trial for unlimited reports."
+      );
+    case "MISSING_PACKAGE":
+      return "Missing app id — please paste the Play Store URL again.";
+    case "SEND_FAILED":
+      return "We couldn't send the email. Please double-check the address and try again.";
+    default:
+      return fallback || "Couldn't submit. Please try again.";
+  }
+}
+
+const DEFAULT_COPY = "3 free analyses today. Cached results don't count.";
 
 // ── Cooldown ────────────────────────────────────────────────────────────────
 // Pure client-side UX guard: when the analyze API returns a true failure
@@ -136,25 +172,26 @@ function clearStoredCooldown() {
 function friendlyError(code: string, fallback: string): string {
   switch (code) {
     case "INVALID_URL":
-      return "That does not look like a Play Store URL. It should look like https://play.google.com/store/apps/details?id=YOUR_APP_ID";
+      return "That doesn't look like a Play Store URL. It should look like https://play.google.com/store/apps/details?id=YOUR_APP_ID";
     case "APP_NOT_FOUND":
-      return "We could not find that app on Play Store. Double-check the package ID in the URL — it should look like com.example.app and match the id parameter in the original Play Store link.";
+      return "We couldn't find that app on Play Store. Double-check the package ID in the URL — it should look like com.example.app and match the id parameter in the original Play Store link.";
     case "SCRAPER_FAILED":
-      return "Play Store is temporarily unreachable. Please try again in a minute.";
+      return "Play Store is being a bit slow right now. Give it a minute and try again.";
     case "TIMEOUT":
-      return "That took longer than expected. Please try again in a minute.";
+    case "XAI_TIMEOUT":
+      return "Our AI took a bit longer than expected. Refresh the page and try once more — your analysis won't count against today's limit if it failed.";
     case "ANON_QUOTA":
-      return "You have used all 3 free analyses today. Enter your email below to unlock 5 more and get a PDF report.";
+      return "You've used all 3 free analyses today. Drop your email below for 5 more and a PDF of this report.";
     case "EMAIL_QUOTA":
-      return "You have used all 8 free analyses today. Start a 7-day free trial to analyze unlimited apps.";
+      return "You've used all 8 free analyses today. Start a free trial to keep going.";
     case "UNIQUE_CAP":
-      return "You have hit today's hard cap of 20 different apps. Please come back tomorrow.";
+      return "You've hit today's hard cap of 20 different apps. Please come back tomorrow.";
     case "DB_ERROR":
       return "Service is temporarily unavailable. Please try again shortly.";
     case "BAD_JSON":
     case "UNKNOWN":
     default:
-      return fallback || "Something unexpected happened. Please try again in a moment.";
+      return fallback || "Something unexpected happened. Refresh and try again.";
   }
 }
 
@@ -180,24 +217,25 @@ function getUsageCopy(usage: UsageInfo | null): string {
   const { freshUsedToday, freshLimitToday, emailUnlocked, cached } = usage;
   const left = Math.max(0, freshLimitToday - freshUsedToday);
 
-  if (cached) {
-    return `Cached result — did not count toward your daily limit. ${left} fresh ${
+  if (cached && left > 0) {
+    return `Cached result — didn't count toward today's limit. ${left} fresh ${
+      left === 1 ? "analysis" : "analyses"
+    } left.`;
+  }
+
+  if (emailUnlocked) {
+    if (left === 0) {
+      return "Free analyses done for today. Start a trial for unlimited.";
+    }
+    return `${left} fresh ${
       left === 1 ? "analysis" : "analyses"
     } left today.`;
   }
 
-  if (freshUsedToday === 0) return DEFAULT_COPY;
-
-  if (left > 0) {
-    return `${left} fresh ${
-      left === 1 ? "analysis" : "analyses"
-    } left today. Cached results are unlimited.`;
-  }
-
-  if (emailUnlocked) {
-    return "You have used all 8 analyses today. Start a free trial to analyze unlimited apps.";
-  }
-  return "You have used all 3 free analyses today. Cached results are still unlimited — or unlock 5 more with your email.";
+  if (left === 3) return DEFAULT_COPY;
+  if (left === 2) return "2 fresh analyses left today. Cached results stay free.";
+  if (left === 1) return "1 fresh analysis left today. Cached results stay free.";
+  return "Out of free analyses for today. Get the PDF — and 5 more — below.";
 }
 
 export function PlayStoreAnalyzer() {
@@ -401,14 +439,18 @@ export function PlayStoreAnalyzer() {
           className="mt-6 rounded-xl border border-border/60 bg-background/40 p-4"
           role="alert"
         >
-          <p className="text-sm text-foreground">
-            {friendlyError("EMAIL_QUOTA", "")}
+          <p className="text-sm font-medium text-foreground">
+            You&rsquo;ve got the bug, we like that
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            You&rsquo;ve used all 8 free analyses today. Start a 7-day trial
+            for unlimited analyses on your own apps.
           </p>
           <Link
-            href="/pricing"
+            href="/signup"
             className="mt-3 inline-flex items-center justify-center rounded-lg border border-border/60 bg-card/60 px-4 py-2 text-sm font-medium text-foreground hover:bg-card/80"
           >
-            See pricing
+            Start 7-day free trial
           </Link>
         </div>
       )}
@@ -446,6 +488,27 @@ function EmailGate({
   const [email, setEmail] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [typoSuggestion, setTypoSuggestion] = useState<string | null>(null);
+
+  function handleBlur() {
+    const trimmed = email.trim();
+    if (!trimmed) return;
+    if (!EMAIL_RE.test(trimmed)) {
+      setErr("Please enter a valid email address.");
+      return;
+    }
+    const sug = suggestEmailCorrection(trimmed.toLowerCase());
+    if (sug && sug !== trimmed.toLowerCase()) {
+      setTypoSuggestion(sug);
+    }
+  }
+
+  function applyTypoSuggestion() {
+    if (!typoSuggestion) return;
+    setEmail(typoSuggestion);
+    setTypoSuggestion(null);
+    setErr(null);
+  }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -465,12 +528,16 @@ function EmailGate({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: email.trim(), packageId }),
       });
-      const body = await res.json().catch(() => null);
+      const body = (await res.json().catch(() => null)) as
+        | { error?: string; code?: string; suggestion?: string }
+        | null;
       if (!res.ok) {
-        setErr(
-          (body as { error?: string } | null)?.error ||
-            "Could not unlock. Please try again."
-        );
+        if (body?.code === "EMAIL_TYPO_SUSPECTED" && body.suggestion) {
+          setTypoSuggestion(body.suggestion);
+          setErr(null);
+          return;
+        }
+        setErr(mapEmailReportError(body?.code, body?.error));
         return;
       }
       await onUnlocked();
@@ -490,11 +557,12 @@ function EmailGate({
         <Mail className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
         <div className="flex-1">
           <p className="text-sm font-medium text-foreground">
-            Daily free limit reached
+            You&rsquo;re on a roll &mdash; keep going
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
-            Enter your email to unlock 5 more analyses today and we will email
-            you the PDF report of this analysis when it completes.
+            Drop your email and we&rsquo;ll send you a polished PDF of this
+            report. As a thank-you, you&rsquo;ll get 5 more analyses on the
+            house today.
           </p>
         </div>
       </div>
@@ -508,7 +576,9 @@ function EmailGate({
           onChange={(e) => {
             setEmail(e.target.value);
             if (err) setErr(null);
+            if (typoSuggestion) setTypoSuggestion(null);
           }}
+          onBlur={handleBlur}
           className="flex-1 rounded-lg border border-border/60 bg-background/60 px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/60 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
           disabled={submitting}
           aria-invalid={err ? "true" : "false"}
@@ -517,13 +587,26 @@ function EmailGate({
           {submitting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Unlocking
+              Sending
             </>
           ) : (
-            "Unlock 5 more"
+            "Send me the report"
           )}
         </Button>
       </div>
+      {typoSuggestion && (
+        <p className="mt-2 text-xs text-muted-foreground" role="status">
+          Did you mean{" "}
+          <button
+            type="button"
+            onClick={applyTypoSuggestion}
+            className="font-medium text-accent underline underline-offset-2"
+          >
+            {typoSuggestion}
+          </button>
+          ?
+        </p>
+      )}
       {err && (
         <p className="mt-2 text-xs text-destructive" role="alert">
           {err}
@@ -659,13 +742,34 @@ function EmailPdfButton({ packageId }: { packageId: string }) {
   const [submitting, setSubmitting] = useState(false);
   const [sent, setSent] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [typoSuggestion, setTypoSuggestion] = useState<string | null>(null);
+
+  function handleBlur() {
+    const trimmed = email.trim();
+    if (!trimmed) return;
+    if (!EMAIL_RE.test(trimmed)) {
+      setErr("Please enter a valid email address.");
+      return;
+    }
+    const sug = suggestEmailCorrection(trimmed.toLowerCase());
+    if (sug && sug !== trimmed.toLowerCase()) {
+      setTypoSuggestion(sug);
+    }
+  }
+
+  function applyTypoSuggestion() {
+    if (!typoSuggestion) return;
+    setEmail(typoSuggestion);
+    setTypoSuggestion(null);
+    setErr(null);
+  }
 
   if (sent) {
     return (
       <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/5 p-4">
         <div className="flex items-center gap-2 text-sm text-foreground">
           <Check className="h-4 w-4 text-emerald-500" />
-          PDF report on its way to your inbox.
+          Sent! Check your inbox in a minute.
         </div>
       </div>
     );
@@ -679,7 +783,7 @@ function EmailPdfButton({ packageId }: { packageId: string }) {
         className="inline-flex items-center gap-2 rounded-lg border border-border/60 bg-card/60 px-4 py-2 text-sm font-medium text-foreground hover:bg-card/80"
       >
         <Mail className="h-4 w-4" />
-        Email me the PDF report
+        Email me this report (PDF)
       </button>
     );
   }
@@ -698,12 +802,16 @@ function EmailPdfButton({ packageId }: { packageId: string }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: email.trim(), packageId }),
       });
-      const body = await res.json().catch(() => null);
+      const body = (await res.json().catch(() => null)) as
+        | { error?: string; code?: string; suggestion?: string }
+        | null;
       if (!res.ok) {
-        setErr(
-          (body as { error?: string } | null)?.error ||
-            "Could not send. Please try again."
-        );
+        if (body?.code === "EMAIL_TYPO_SUSPECTED" && body.suggestion) {
+          setTypoSuggestion(body.suggestion);
+          setErr(null);
+          return;
+        }
+        setErr(mapEmailReportError(body?.code, body?.error));
         return;
       }
       setSent(true);
@@ -720,7 +828,7 @@ function EmailPdfButton({ packageId }: { packageId: string }) {
       className="rounded-xl border border-border/60 bg-card/40 p-4"
     >
       <p className="text-sm font-medium text-foreground">
-        Email me the PDF report
+        Email me this report (PDF)
       </p>
       <div className="mt-3 flex flex-col gap-2 sm:flex-row">
         <input
@@ -732,7 +840,9 @@ function EmailPdfButton({ packageId }: { packageId: string }) {
           onChange={(e) => {
             setEmail(e.target.value);
             if (err) setErr(null);
+            if (typoSuggestion) setTypoSuggestion(null);
           }}
+          onBlur={handleBlur}
           className="flex-1 rounded-lg border border-border/60 bg-background/60 px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/60 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
           disabled={submitting}
         />
@@ -747,6 +857,19 @@ function EmailPdfButton({ packageId }: { packageId: string }) {
           )}
         </Button>
       </div>
+      {typoSuggestion && (
+        <p className="mt-2 text-xs text-muted-foreground" role="status">
+          Did you mean{" "}
+          <button
+            type="button"
+            onClick={applyTypoSuggestion}
+            className="font-medium text-accent underline underline-offset-2"
+          >
+            {typoSuggestion}
+          </button>
+          ?
+        </p>
+      )}
       {err && (
         <p className="mt-2 text-xs text-destructive" role="alert">
           {err}

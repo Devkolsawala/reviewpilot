@@ -61,7 +61,7 @@ export async function POST(req: Request) {
   const packageId = parsePackageId(url);
   if (!packageId) {
     return jsonError(
-      "That does not look like a Play Store URL.",
+      "That doesn't look like a Play Store URL. It should look like https://play.google.com/store/apps/details?id=YOUR_APP_ID",
       "INVALID_URL",
       400
     );
@@ -105,8 +105,8 @@ export async function POST(req: Request) {
     }
     return jsonError(
       reason === "anon_quota"
-        ? "You have used all 3 free analyses today."
-        : "You have used all 8 analyses today.",
+        ? "You've used all 3 free analyses today. Drop your email below for 5 more and a PDF of this report."
+        : "You've used all 8 free analyses today. Start a free trial to keep going.",
       reason === "anon_quota" ? "ANON_QUOTA" : "EMAIL_QUOTA",
       429,
       { usage: reservation.usage, needsEmail: !!reservation.needsEmail }
@@ -132,7 +132,7 @@ export async function POST(req: Request) {
     const msg = (err as Error).message || "";
     if (msg === "pipeline_timeout") {
       return jsonError(
-        "Analysis took too long. Please try again in a minute.",
+        "Our AI took a bit longer than expected. Refresh the page and try once more — your analysis won't count against today's limit if it failed.",
         "TIMEOUT",
         504,
         { usage: refreshedUsage }
@@ -140,7 +140,7 @@ export async function POST(req: Request) {
     }
     console.error("[analyze-app] pipeline crashed", msg);
     return jsonError(
-      "Something unexpected happened. Please try again in a moment.",
+      "Something unexpected happened. Refresh and try again.",
       "UNKNOWN",
       500,
       { usage: refreshedUsage }
@@ -152,7 +152,7 @@ export async function POST(req: Request) {
     const refreshedUsage = await getUsage(ipHash);
     if (outcome.code === "app_not_found") {
       return jsonError(
-        "We could not find that app on Play Store. Double-check the package ID in the URL — it should look like com.example.app and match the id parameter in the original Play Store link.",
+        "We couldn't find that app on Play Store. Double-check the package ID in the URL — it should look like com.example.app and match the id parameter in the original Play Store link.",
         "APP_NOT_FOUND",
         404,
         { usage: refreshedUsage }
@@ -160,14 +160,14 @@ export async function POST(req: Request) {
     }
     if (outcome.code === "scrape_failed") {
       return jsonError(
-        "Play Store is temporarily unreachable. Please try again in a minute.",
+        "Play Store is being a bit slow right now. Give it a minute and try again.",
         "SCRAPER_FAILED",
         502,
         { usage: refreshedUsage }
       );
     }
     return jsonError(
-      "Something unexpected happened. Please try again in a moment.",
+      "Something unexpected happened. Refresh and try again.",
       "UNKNOWN",
       500,
       { usage: refreshedUsage }
