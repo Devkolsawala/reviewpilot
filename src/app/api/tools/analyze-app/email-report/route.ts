@@ -29,11 +29,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/resend";
 import { readCachedAnalysis } from "@/lib/analyzer/pipeline";
 import { generatePdfReport } from "@/lib/analyzer/pdf-report";
-import {
-  getClientIp,
-  hashIp,
-  unlockEmailTier,
-} from "@/lib/analyzer/rate-limit";
+import { debugHashIp, unlockEmailTier } from "@/lib/analyzer/rate-limit";
 import { validateEmail } from "@/lib/analyzer/email-validation";
 
 export const runtime = "nodejs";
@@ -83,7 +79,7 @@ export async function POST(req: Request) {
     return jsonError("Missing packageId.", "MISSING_PACKAGE");
   }
 
-  const ipHash = hashIp(getClientIp(req));
+  const ipHash = debugHashIp(req);
   const supabase = createAdminClient();
   const todayStart = startOfTodayIso();
 

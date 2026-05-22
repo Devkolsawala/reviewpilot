@@ -24,9 +24,8 @@ import {
   runFreshAnalysis,
 } from "@/lib/analyzer/pipeline";
 import {
-  getClientIp,
+  debugHashIp,
   getUsage,
-  hashIp,
   releaseQuota,
   reserveQuota,
   type UsageInfo,
@@ -74,7 +73,7 @@ export async function POST(req: Request) {
   try {
     const cached = await readCachedAnalysis(packageId);
     if (cached) {
-      const ipHashCached = hashIp(getClientIp(req));
+      const ipHashCached = debugHashIp(req);
       const usage = await getUsage(ipHashCached);
       return NextResponse.json(
         { ...cached, usage: { ...usage, cached: true } },
@@ -88,8 +87,7 @@ export async function POST(req: Request) {
     );
   }
 
-  const ip = getClientIp(req);
-  const ipHash = hashIp(ip);
+  const ipHash = debugHashIp(req);
 
   // Atomic reserve — locks the row, evaluates limits, and increments
   // fresh_count in one transaction. On accepted=false no increment happens.

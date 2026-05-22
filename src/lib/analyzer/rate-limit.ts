@@ -65,6 +65,32 @@ export function hashIp(ip: string): string {
   return createHash("sha256").update(`${ip}|${salt}`).digest("hex");
 }
 
+// ── TEMPORARY DIAGNOSTIC — remove once IP-hash inconsistency is diagnosed ───
+// Behaviorally identical to `hashIp(getClientIp(req))`. The only difference is
+// a one-line [rate-limit-debug] log emission with the full request-routing
+// context (every IP-bearing header Vercel/CF can expose, plus salt-shape and
+// hash prefix) so we can correlate why two requests from the same browser
+// produce different ipHash values. NO secrets are logged — salt is reported
+// as a length only, and only the first 8 chars of the hash are emitted.
+export function debugHashIp(req: Request): string {
+  const ip = getClientIp(req);
+  const dayString = new Date().toISOString().slice(0, 10);
+  const saltSourceLength =
+    (process.env.SUPABASE_SERVICE_ROLE_KEY ?? "").length + 1 + dayString.length;
+  const hash = hashIp(ip);
+  console.log("[rate-limit-debug]", {
+    rawIpUsed: ip,
+    xForwardedFor: req.headers.get("x-forwarded-for"),
+    xRealIp: req.headers.get("x-real-ip"),
+    cfConnectingIp: req.headers.get("cf-connecting-ip"),
+    vercelForwardedFor: req.headers.get("x-vercel-forwarded-for"),
+    saltSourceShape: saltSourceLength,
+    dayUsed: dayString,
+    finalHashPrefix: hash.slice(0, 8),
+  });
+  return hash;
+}
+
 function today(): string {
   return new Date().toISOString().slice(0, 10);
 }

@@ -6,13 +6,13 @@
 // for a single read of the IP's row.
 
 import { NextResponse } from "next/server";
-import { getClientIp, getUsage, hashIp } from "@/lib/analyzer/rate-limit";
+import { debugHashIp, getUsage } from "@/lib/analyzer/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
-  const ipHash = hashIp(getClientIp(req));
+  const ipHash = debugHashIp(req);
   const usage = await getUsage(ipHash);
   // Mark as "not cached" — this endpoint isn't tied to any analysis
   // response, the cached signal only makes sense in the POST flow.
