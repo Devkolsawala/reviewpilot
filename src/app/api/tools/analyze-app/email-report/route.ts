@@ -13,8 +13,14 @@
 //      had 5 unlocked has no effect because the limit is computed as
 //      ANON_LIMIT + EMAIL_BONUS when the flag is true).
 //
-// Both modes always: validate email, persist lead row, unlock IP. Only the
-// PDF generation+attachment is conditional on cache presence.
+// Three validation layers (in order of cheapness):
+//   L1 — format regex (validateEmail)
+//   L2 — disposable-domain blocklist (validateEmail)
+//   L3 — per-IP submission cap: max 3 distinct emails/day from one IP
+//
+// Plus idempotency: if a row already exists in analyzer_leads for this
+// (email, ip_hash, today) tuple, we still send the email but skip the
+// unlock flip — so repeat submissions don't grant 10 extras instead of 5.
 //
 // Service-side only; never throws — all errors are mapped to structured JSON.
 
@@ -28,19 +34,26 @@ import {
   hashIp,
   unlockEmailTier,
 } from "@/lib/analyzer/rate-limit";
+import { validateEmail } from "@/lib/analyzer/email-validation";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MAX_DISTINCT_EMAILS_PER_IP_PER_DAY = 3;
 
 interface EmailReportBody {
   email?: unknown;
   packageId?: unknown;
 }
 
-function bad(message: string, code: string, status = 400) {
+function jsonError(message: string, code: string, status = 400) {
   return NextResponse.json({ error: message, code }, { status });
+}
+
+function startOfTodayIso(): string {
+  const d = new Date();
+  d.setUTCHours(0, 0, 0, 0);
+  return d.toISOString();
 }
 
 export async function POST(req: Request) {
@@ -48,21 +61,66 @@ export async function POST(req: Request) {
   try {
     body = (await req.json()) as EmailReportBody;
   } catch {
-    return bad("Invalid JSON body.", "bad_json");
+    return jsonError("Invalid JSON body.", "BAD_JSON");
   }
 
-  const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
+  // L1 + L2 — format + disposable.
+  const validated = validateEmail(body.email);
+  if (!validated.ok) {
+    if (validated.reason === "disposable") {
+      return jsonError(
+        "Please use a permanent email address. Temporary email services are not supported.",
+        "DISPOSABLE_EMAIL"
+      );
+    }
+    return jsonError("Please enter a valid email address.", "INVALID_EMAIL");
+  }
+  const email = validated.email;
+
   const packageId =
     typeof body.packageId === "string" ? body.packageId.trim() : "";
-
-  if (!email || !EMAIL_RE.test(email) || email.length > 254) {
-    return bad("Please enter a valid email address.", "bad_email");
-  }
   if (!packageId) {
-    return bad("Missing packageId.", "bad_package");
+    return jsonError("Missing packageId.", "MISSING_PACKAGE");
   }
 
-  // Try to load cached analysis. May be null if this is the quota-gate flow.
+  const ipHash = hashIp(getClientIp(req));
+  const supabase = createAdminClient();
+  const todayStart = startOfTodayIso();
+
+  // L3 — per-IP submission cap. Count DISTINCT emails this IP has submitted
+  // today. We allow re-submission of an email already on today's list
+  // (idempotency for the same person retrying), but new emails beyond the
+  // cap are refused.
+  const { data: priorRows, error: priorError } = await supabase
+    .from("analyzer_leads")
+    .select("email")
+    .eq("ip_hash", ipHash)
+    .gte("created_at", todayStart);
+
+  if (priorError) {
+    console.error(
+      "[email-report] prior-leads read failed (continuing fail-open)",
+      priorError.message
+    );
+  }
+
+  const distinctEmailsToday = new Set(
+    (priorRows ?? []).map((r) => (r.email as string).toLowerCase())
+  );
+  const alreadySubmittedToday = distinctEmailsToday.has(email);
+
+  if (
+    !alreadySubmittedToday &&
+    distinctEmailsToday.size >= MAX_DISTINCT_EMAILS_PER_IP_PER_DAY
+  ) {
+    return jsonError(
+      "You have reached today's limit for email reports from this network. Start a free trial for unlimited reports.",
+      "EMAIL_SUBMISSION_LIMIT",
+      429
+    );
+  }
+
+  // Try to load cached analysis. May be null in the quota-gate flow.
   const cached = await readCachedAnalysis(packageId).catch(() => null);
 
   let pdf: Buffer | null = null;
@@ -70,7 +128,6 @@ export async function POST(req: Request) {
     try {
       pdf = await generatePdfReport(cached);
     } catch (err) {
-      // PDF failure shouldn't block the unlock — log and continue without it.
       console.error(
         "[email-report] PDF generation failed (continuing without attachment)",
         (err as Error).message
@@ -132,51 +189,48 @@ export async function POST(req: Request) {
 
   if (!sendResult.success) {
     console.error("[email-report] Resend failed", sendResult.error);
-    return bad(
-      "We couldn't send the email. Please double-check the address and try again.",
-      "send_failed",
+    return jsonError(
+      "We could not send the email. Please double-check the address and try again.",
+      "SEND_FAILED",
       502
     );
   }
 
-  const ipHash = hashIp(getClientIp(req));
-
   // Persist the lead. Composite PK (email, package_id) makes this idempotent
-  // for repeated requests by the same person for the same app.
-  const supabase = createAdminClient();
+  // for the same (email, app) pair.
   const { error: insertError } = await supabase
     .from("analyzer_leads")
     .upsert(
-      {
-        email,
-        package_id: packageId,
-        ip_hash: ipHash,
-      },
+      { email, package_id: packageId, ip_hash: ipHash },
       { onConflict: "email,package_id" }
     );
   if (insertError) {
-    // Non-fatal — the user already got the PDF. Log for monitoring.
     console.error(
       "[email-report] analyzer_leads upsert failed (non-fatal)",
       insertError.message
     );
   }
 
-  // Unlock +5 analyses for the rest of the day. Idempotent: flipping the
-  // flag a second time has no effect, since the limit is computed as
-  // ANON_LIMIT + EMAIL_BONUS when email_unlocked is true regardless of how
-  // many times the unlock was triggered.
-  try {
-    await unlockEmailTier(ipHash);
-  } catch (err) {
-    console.error(
-      "[email-report] unlockEmailTier failed (non-fatal)",
-      (err as Error).message
-    );
+  // Idempotent unlock: only flip the flag if this is genuinely the first
+  // submission from this IP today. Re-submitting the same email later in
+  // the day must not grant another +5.
+  if (!alreadySubmittedToday) {
+    try {
+      await unlockEmailTier(ipHash);
+    } catch (err) {
+      console.error(
+        "[email-report] unlockEmailTier failed (non-fatal)",
+        (err as Error).message
+      );
+    }
   }
 
   return NextResponse.json(
-    { ok: true, emailId: sendResult.id, unlockedAdditional: 5 },
+    {
+      ok: true,
+      emailId: sendResult.id,
+      unlockedAdditional: alreadySubmittedToday ? 0 : 5,
+    },
     { status: 200 }
   );
 }

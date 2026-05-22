@@ -154,7 +154,7 @@ export async function POST(req: Request) {
     const refreshedUsage = await getUsage(ipHash);
     if (outcome.code === "app_not_found") {
       return jsonError(
-        "We could not find that app on Play Store. Double-check the package ID — for example, the correct ID for Swiggy is in.swiggy.android, not com.swiggy.consumer.",
+        "We could not find that app on Play Store. Double-check the package ID in the URL — it should look like com.example.app and match the id parameter in the original Play Store link.",
         "APP_NOT_FOUND",
         404,
         { usage: refreshedUsage }

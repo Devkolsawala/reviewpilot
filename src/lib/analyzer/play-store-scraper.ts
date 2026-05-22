@@ -4,7 +4,7 @@
 // the authenticated Play Developer API (googleapis + service account) and only
 // works on apps the customer has connected via Play Console. This module is
 // for the public free tool — it scrapes the public Play Store HTML for ANY
-// app id, including ones we don't own (e.g. com.swiggy.consumer). The two
+// app id, including ones we don't own (e.g. com.example.app). The two
 // modules must remain separate.
 //
 // Scraping public pages is brittle (Google can change markup, Vercel IPs can
@@ -187,15 +187,15 @@ export async function getRecentReviews(
 
 // Parse a Play Store URL and return the package id, or null if the URL is not
 // a recognizable Play Store app URL. Accepts:
-//   https://play.google.com/store/apps/details?id=com.swiggy.consumer
+//   https://play.google.com/store/apps/details?id=com.example.app
 //   https://play.google.com/store/apps/details?id=com.x&hl=en&gl=in
 //   market://details?id=com.x
-// Also accepts a bare package id (com.swiggy.consumer) for convenience.
+// Also accepts a bare package id (com.example.app) for convenience.
 export function parsePackageId(input: string): string | null {
   if (!input || typeof input !== "string") return null;
   const trimmed = input.trim();
 
-  // Bare package id like "com.swiggy.consumer"
+  // Bare package id like "com.example.app"
   if (/^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+$/i.test(trimmed)) return trimmed;
 
   // URL forms — pull id= query param without constructing URL to tolerate

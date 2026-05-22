@@ -24,12 +24,12 @@ const FAQS = [
   {
     question: "Is this really free? Do I need to sign up?",
     answer:
-      "Yes, completely free with no signup. You get 3 fresh analyses per day per IP. Cached results from other users are unlimited — if someone analyzed Swiggy yesterday, you can view the cached report instantly without spending quota.",
+      "Yes, completely free with no signup. You get 3 fresh analyses per day per IP. Cached results from other users are unlimited — if another visitor analyzed the same app recently, you can view the cached report instantly without spending quota.",
   },
   {
     question: "Does it work on any Play Store app?",
     answer:
-      "Yes. It works on any publicly listed app on the Indian Play Store — you don't need to own the app or connect Play Console. Paste the URL or the bare package id (e.g. com.swiggy.consumer) and you'll get an analysis.",
+      "Yes. It works on any publicly listed app on the Indian Play Store — you don't need to own the app or connect Play Console. Paste the URL or the bare package id (e.g. com.example.app) and you'll get an analysis.",
   },
   {
     question: "What data does the analyzer read?",

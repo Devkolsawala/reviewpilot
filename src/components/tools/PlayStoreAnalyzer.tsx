@@ -78,6 +78,59 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const DEFAULT_COPY = "Free for 3 fresh analyses per day. Cached results are unlimited.";
 
+// ── Cooldown ────────────────────────────────────────────────────────────────
+// Pure client-side UX guard: when the analyze API returns a true failure
+// (scraper crash, timeout, generic 5xx), disable the button for 30s so a
+// user mashing it does not pile up identical failing requests against an
+// already-strained upstream. Quota-rejection codes (ANON_QUOTA/EMAIL_QUOTA)
+// have their own UI and never trigger this; INVALID_URL/APP_NOT_FOUND are
+// user typos and should let them retype immediately. Persists in
+// sessionStorage so a refresh mid-cooldown continues the countdown.
+
+const COOLDOWN_MS = 30_000;
+const COOLDOWN_STORAGE_KEY = "rp:analyzer:cooldown-until";
+const COOLDOWN_TRIGGER_CODES: ReadonlySet<string> = new Set([
+  "SCRAPER_FAILED",
+  "TIMEOUT",
+  "XAI_TIMEOUT",
+  "UNKNOWN",
+  "DB_ERROR",
+]);
+
+function readStoredCooldown(): number | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.sessionStorage.getItem(COOLDOWN_STORAGE_KEY);
+    if (!raw) return null;
+    const v = Number(raw);
+    if (!Number.isFinite(v) || v <= Date.now()) {
+      window.sessionStorage.removeItem(COOLDOWN_STORAGE_KEY);
+      return null;
+    }
+    return v;
+  } catch {
+    return null;
+  }
+}
+
+function storeCooldown(until: number) {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.setItem(COOLDOWN_STORAGE_KEY, String(until));
+  } catch {
+    /* sessionStorage disabled — cooldown is in-memory only, acceptable. */
+  }
+}
+
+function clearStoredCooldown() {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.removeItem(COOLDOWN_STORAGE_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
 // Map server error codes to the user-facing copy. Unknown codes fall through
 // to the generic UNKNOWN message so we never show "undefined" or a raw stack.
 function friendlyError(code: string, fallback: string): string {
@@ -85,7 +138,7 @@ function friendlyError(code: string, fallback: string): string {
     case "INVALID_URL":
       return "That does not look like a Play Store URL. It should look like https://play.google.com/store/apps/details?id=YOUR_APP_ID";
     case "APP_NOT_FOUND":
-      return "We could not find that app on Play Store. Double-check the package ID in the URL — for example, the correct ID for Swiggy is in.swiggy.android, not com.swiggy.consumer.";
+      return "We could not find that app on Play Store. Double-check the package ID in the URL — it should look like com.example.app and match the id parameter in the original Play Store link.";
     case "SCRAPER_FAILED":
       return "Play Store is temporarily unreachable. Please try again in a minute.";
     case "TIMEOUT":
@@ -154,6 +207,8 @@ export function PlayStoreAnalyzer() {
   const [error, setError] = useState<ApiError | null>(null);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [usage, setUsage] = useState<UsageInfo | null>(null);
+  const [cooldownEndsAt, setCooldownEndsAt] = useState<number | null>(null);
+  const [secondsLeft, setSecondsLeft] = useState(0);
 
   // Fetch baseline usage on mount so the copy under the input is accurate
   // even before the user runs anything. No quota consumed.
@@ -171,6 +226,36 @@ export function PlayStoreAnalyzer() {
     };
   }, []);
 
+  // Restore any in-flight cooldown from sessionStorage so a refresh
+  // mid-cooldown continues the countdown rather than letting the user mash
+  // the button again immediately.
+  useEffect(() => {
+    const stored = readStoredCooldown();
+    if (stored) setCooldownEndsAt(stored);
+  }, []);
+
+  // Ticker — drives the visible countdown and clears the cooldown when it
+  // expires. Interval only runs while a cooldown is active.
+  useEffect(() => {
+    if (!cooldownEndsAt) {
+      setSecondsLeft(0);
+      return;
+    }
+    const tick = () => {
+      const ms = cooldownEndsAt - Date.now();
+      if (ms <= 0) {
+        setCooldownEndsAt(null);
+        clearStoredCooldown();
+        setSecondsLeft(0);
+      } else {
+        setSecondsLeft(Math.ceil(ms / 1000));
+      }
+    };
+    tick();
+    const id = window.setInterval(tick, 1000);
+    return () => window.clearInterval(id);
+  }, [cooldownEndsAt]);
+
   async function runAnalyze(targetUrl: string): Promise<void> {
     setLoading(true);
     setError(null);
@@ -185,8 +270,6 @@ export function PlayStoreAnalyzer() {
         | ApiError
         | null;
 
-      // Update usage from whatever the server returned, success or failure,
-      // as long as it included a usage block.
       const usageFromBody =
         body && "usage" in body && body.usage ? (body.usage as UsageInfo) : null;
       if (usageFromBody) setUsage(usageFromBody);
@@ -197,11 +280,23 @@ export function PlayStoreAnalyzer() {
             ? body
             : { error: "", code: "UNKNOWN" };
         setError(err);
+        // Trigger cooldown on true failures (5xx, scraper crashes, timeouts,
+        // anything generic). User-typo paths and quota rejections do NOT
+        // trigger — they have their own UI affordances.
+        if (COOLDOWN_TRIGGER_CODES.has(err.code) || res.status >= 500) {
+          const until = Date.now() + COOLDOWN_MS;
+          storeCooldown(until);
+          setCooldownEndsAt(until);
+        }
         return;
       }
       setResult(body as AnalysisResult);
     } catch {
       setError({ error: "", code: "UNKNOWN" });
+      // Network error / fetch crash — same backoff signal as a 5xx.
+      const until = Date.now() + COOLDOWN_MS;
+      storeCooldown(until);
+      setCooldownEndsAt(until);
     } finally {
       setLoading(false);
     }
@@ -209,6 +304,7 @@ export function PlayStoreAnalyzer() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (cooldownEndsAt && Date.now() < cooldownEndsAt) return;
     setResult(null);
     const v = validateInput(url);
     setValidation(v);
@@ -221,6 +317,7 @@ export function PlayStoreAnalyzer() {
     await runAnalyze(url);
   }
 
+  const cooldownActive = cooldownEndsAt !== null && secondsLeft > 0;
   const showEmailGate =
     !loading && error?.code === "ANON_QUOTA" && error?.needsEmail === true;
   const showTrialCta = !loading && error?.code === "EMAIL_QUOTA";
@@ -252,8 +349,14 @@ export function PlayStoreAnalyzer() {
             aria-describedby={validation ? "play-store-url-error" : undefined}
             disabled={loading}
           />
-          <Button type="submit" disabled={loading} className="sm:w-40">
-            {loading ? (
+          <Button
+            type="submit"
+            disabled={loading || cooldownActive}
+            className="sm:w-40"
+          >
+            {cooldownActive ? (
+              `Try again in ${secondsLeft}s`
+            ) : loading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Analyzing
@@ -273,6 +376,12 @@ export function PlayStoreAnalyzer() {
             role="alert"
           >
             {validation}
+          </p>
+        )}
+        {cooldownActive && (
+          <p className="text-xs text-muted-foreground" role="status">
+            We are hitting our limits &mdash; give us a moment to catch our
+            breath.
           </p>
         )}
         <p className="text-xs text-muted-foreground">{usageCopy}</p>
