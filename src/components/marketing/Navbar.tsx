@@ -109,6 +109,11 @@ const NAV_LINKS: NavLink[] = [
     href: "#",
     children: [
       {
+        label: "Play Store Analyzer",
+        href: "/tools/play-store-analyzer",
+        description: "Free sentiment & response rate audit",
+      },
+      {
         label: "AI Reply Generator",
         href: "/tools/ai-review-reply-generator",
         description: "Generate replies in 24 languages",
@@ -122,11 +127,6 @@ const NAV_LINKS: NavLink[] = [
         label: "App Rating Calculator",
         href: "/tools/app-rating-calculator",
         description: "Find the 5-star reviews you need",
-      },
-      {
-        label: "Play Store Analyzer",
-        href: "/tools/play-store-analyzer",
-        description: "Free sentiment & response rate audit",
       },
     ],
   },
