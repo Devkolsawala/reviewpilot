@@ -60,6 +60,11 @@ const MDX_POST_SLUGS = [
   "psychology-of-1-star-app-reviews-what-users-really-mean",
   "how-to-ask-for-app-reviews-without-violating-google-policies-2026",
   "competitive-review-analysis-how-to-mine-competitor-app-reviews-in-2026",
+  "how-to-analyze-competitor-play-store-reviews",
+  "play-store-review-audit-checklist",
+  "cost-of-low-play-store-rating-2026",
+  "top-complaints-indian-apps-2026",
+  "how-to-read-app-review-sentiment-analysis",
 ] as const;
 
 function unquote(value: string): string {
