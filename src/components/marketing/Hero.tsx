@@ -93,7 +93,14 @@ export function Hero({ statsBar }: HeroProps = {}) {
                 rel="noopener noreferrer"
                 className="group inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
               >
-                <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="https://www.capterra.com/favicon.ico"
+                  alt="Capterra"
+                  width={16}
+                  height={16}
+                  className="h-4 w-4 shrink-0 rounded-sm"
+                />
                 <span>
                   Rated on Capterra —{" "}
                   <span className="underline-offset-2 group-hover:underline">
@@ -103,8 +110,8 @@ export function Hero({ statsBar }: HeroProps = {}) {
                 <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
               </a>
               <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/60 px-2.5 py-1 text-xs text-muted-foreground backdrop-blur-sm">
+                Made in India
                 <span aria-hidden>🇮🇳</span>
-                Made for Indian businesses
               </span>
             </m.div>
 

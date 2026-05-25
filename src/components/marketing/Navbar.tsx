@@ -78,9 +78,28 @@ const NAV_LINKS: NavLink[] = [
         description: "Setup guides and API reference",
       },
       {
-        label: "Free Tools",
+        section: "Free Tools",
+        label: "Play Store Analyzer",
         href: "/tools/play-store-analyzer",
-        description: "Play Store Analyzer, AI Reply Generator & more",
+        description: "Analyze app reviews & ratings",
+      },
+      {
+        section: "Free Tools",
+        label: "AI Reply Generator",
+        href: "/tools/ai-review-reply-generator",
+        description: "Generate review replies free",
+      },
+      {
+        section: "Free Tools",
+        label: "Character Counter",
+        href: "/tools/play-store-character-counter",
+        description: "350-char limit checker",
+      },
+      {
+        section: "Free Tools",
+        label: "App Rating Calculator",
+        href: "/tools/app-rating-calculator",
+        description: "Reach your target rating",
       },
     ],
   },
@@ -348,32 +367,42 @@ export function Navbar() {
                           <div className="px-3 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                             {link.label}
                           </div>
-                          {link.children.map((child) => {
+                          {link.children.map((child, idx) => {
                             const active = pathname === child.href;
+                            const prevSection =
+                              idx > 0 ? link.children![idx - 1].section : undefined;
+                            const showSection =
+                              child.section && child.section !== prevSection;
                             return (
-                              <Link
-                                key={child.href}
-                                href={child.href}
-                                onClick={closeMobile}
-                                className={cn(
-                                  "group flex min-h-[44px] items-center justify-between rounded-md px-3 py-3 text-[16px] font-medium transition-colors",
-                                  active
-                                    ? "bg-brand-500/10 text-brand-300"
-                                    : "text-foreground hover:bg-accent/10 hover:text-brand-300 active:bg-accent/15",
+                              <div key={child.href}>
+                                {showSection && (
+                                  <div className="mt-2 px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/80">
+                                    {child.section}
+                                  </div>
                                 )}
-                              >
-                                <span className="truncate pr-2">
-                                  {child.label}
-                                </span>
-                                <ChevronRight
+                                <Link
+                                  href={child.href}
+                                  onClick={closeMobile}
                                   className={cn(
-                                    "h-4 w-4 shrink-0 transition-opacity",
+                                    "group flex min-h-[44px] items-center justify-between rounded-md px-3 py-3 text-[16px] font-medium transition-colors",
                                     active
-                                      ? "opacity-70"
-                                      : "opacity-30 group-hover:opacity-70",
+                                      ? "bg-brand-500/10 text-brand-300"
+                                      : "text-foreground hover:bg-accent/10 hover:text-brand-300 active:bg-accent/15",
                                   )}
-                                />
-                              </Link>
+                                >
+                                  <span className="truncate pr-2">
+                                    {child.label}
+                                  </span>
+                                  <ChevronRight
+                                    className={cn(
+                                      "h-4 w-4 shrink-0 transition-opacity",
+                                      active
+                                        ? "opacity-70"
+                                        : "opacity-30 group-hover:opacity-70",
+                                    )}
+                                  />
+                                </Link>
+                              </div>
                             );
                           })}
                         </div>
