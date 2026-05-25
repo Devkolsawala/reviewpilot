@@ -162,6 +162,26 @@ export async function linkRecoverableReview(
       .eq("id", reviewId)
       .eq("recovery_status", "none");
 
+    // Self-heal a corrupted baseline. linkRecoverableReview only runs for
+    // 1-3★ reviews (the AI's recoverable classification gate enforces this
+    // upstream), so the CURRENT rating IS a valid negative baseline. If the
+    // stored original_rating is NULL or somehow > 3 (e.g. clobbered by an
+    // earlier migration backfill that ran after the customer had already
+    // upgraded their rating), reset it now so future recovery detection
+    // works correctly. Use the .or() PostgREST filter so we only touch
+    // rows that are actually corrupted.
+    if (rating >= 1 && rating <= 3) {
+      const { error: healErr } = await supabase
+        .from("reviews")
+        .update({ original_rating: rating })
+        .eq("id", reviewId)
+        .or("original_rating.is.null,original_rating.gt.3");
+      if (healErr) {
+        // Non-fatal — this is just a self-heal, not core functionality.
+        console.warn("[issues] baseline self-heal skipped:", healErr.message);
+      }
+    }
+
     return issueId;
   } catch (e: unknown) {
     const err = e as { message?: string };
