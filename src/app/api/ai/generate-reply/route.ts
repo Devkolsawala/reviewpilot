@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { generateReply } from "@/lib/ai/reply-generator";
+import { generateReplyWithRecovery } from "@/lib/ai/reply-generator";
 import { checkUsageLimit, incrementUsage } from "@/lib/usage";
+import { linkRecoverableReview } from "@/lib/reviews/issues";
 import type { AppContext } from "@/types/database";
 import type { Review } from "@/types/review";
 
@@ -126,7 +127,7 @@ export async function POST(request: Request) {
   });
 
   try {
-    const reply = await generateReply({
+    const aiResult = await generateReplyWithRecovery({
       appContext: context,
       review: reviewData,
       source: source || "play_store",
@@ -138,7 +139,46 @@ export async function POST(request: Request) {
       await incrementUsage(user.id, "ai_replies_used", 1, supabase);
     }
 
-    return NextResponse.json({ reply });
+    // Persist recovery fields + cluster into an issue when the AI flagged a
+    // concrete, fixable problem. Best-effort — never fails the reply.
+    if (user && reviewData.id) {
+      try {
+        await supabase
+          .from("reviews")
+          .update({
+            is_recoverable: aiResult.recoverable,
+            issue_label: aiResult.issue_label,
+            classification_at: new Date().toISOString(),
+          })
+          .eq("id", reviewData.id);
+
+        if (aiResult.recoverable && aiResult.issue_label && reviewData.rating != null) {
+          const { data: rev } = await supabase
+            .from("reviews")
+            .select("connection_id")
+            .eq("id", reviewData.id)
+            .single();
+          if (rev?.connection_id) {
+            await linkRecoverableReview(supabase, {
+              userId: user.id,
+              connectionId: rev.connection_id,
+              reviewId: reviewData.id,
+              rating: reviewData.rating,
+              issueLabel: aiResult.issue_label,
+            });
+          }
+        }
+      } catch (e: unknown) {
+        const err = e as { message?: string };
+        console.error("[ai-generate] recovery persist failed:", err.message);
+      }
+    }
+
+    return NextResponse.json({
+      reply: aiResult.reply,
+      recoverable: aiResult.recoverable,
+      issue_label: aiResult.issue_label,
+    });
   } catch (error) {
     console.error("[AI Generate Reply Error]", error);
     return NextResponse.json({ error: "Failed to generate reply" }, { status: 500 });

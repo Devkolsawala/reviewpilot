@@ -1,9 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AppContext } from "@/types/database";
 import type { Review } from "@/types/review";
-import { generateReply } from "@/lib/ai/reply-generator";
+import { generateReplyWithRecovery } from "@/lib/ai/reply-generator";
 import { replyToPlayStoreReview } from "@/lib/google/playstore";
 import { publishGBPReply } from "@/lib/google/gbp";
+import { linkRecoverableReview } from "@/lib/reviews/issues";
 
 export type ConnectionRow = {
   id: string;
@@ -118,12 +119,51 @@ export async function processAutoReplyForReview(
   const fullReview = buildFullReview(row);
   console.log("[auto-reply] generating", { reviewId: row.id, replyMode, draftOnly });
 
-  const replyText = await generateReply({
+  const aiResult = await generateReplyWithRecovery({
     appContext,
     review: fullReview,
     source: row.source,
     tone: appContext.tone,
   });
+  const replyText = aiResult.reply;
+
+  // Persist recovery classification on the review. Best-effort — failures are
+  // logged but do not block the reply flow. classification_at is stamped so
+  // the poll-reviews cron classifier pass skips this row (it's already done).
+  const recoveryUpdate: Record<string, unknown> = {
+    is_recoverable: aiResult.recoverable,
+    issue_label: aiResult.issue_label,
+    classification_at: new Date().toISOString(),
+  };
+  try {
+    await supabase.from("reviews").update(recoveryUpdate).eq("id", row.id);
+  } catch (e: unknown) {
+    const err = e as { message?: string };
+    console.error("[auto-reply] recovery field update failed:", err.message);
+  }
+
+  // Cluster into an issue + start monitoring if the AI flagged a concrete fix.
+  if (aiResult.recoverable && aiResult.issue_label) {
+    try {
+      const { data: connRow } = await supabase
+        .from("connections")
+        .select("user_id")
+        .eq("id", connection.id)
+        .single();
+      if (connRow?.user_id) {
+        await linkRecoverableReview(supabase, {
+          userId: connRow.user_id,
+          connectionId: connection.id,
+          reviewId: row.id,
+          rating: row.rating,
+          issueLabel: aiResult.issue_label,
+        });
+      }
+    } catch (e: unknown) {
+      const err = e as { message?: string };
+      console.error("[auto-reply] issue linking failed:", err.message);
+    }
+  }
 
   if (draftOnly) {
     const { error } = await supabase

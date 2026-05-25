@@ -6,13 +6,19 @@ export interface ReplyPromptParams {
   review: Review;
   source: "google_business" | "play_store" | "whatsapp";
   toneOverride?: string;
+  /**
+   * When true, append recovery-classification instructions and require the
+   * model to return a JSON object with reply + recoverable + issue_label
+   * instead of plain text. Used by the Active Issues engine for rating <= 3.
+   */
+  withRecoveryClassification?: boolean;
 }
 
 export function buildReplyPrompt(params: ReplyPromptParams): {
   system: string;
   user: string;
 } {
-  const { appContext, review, source, toneOverride } = params;
+  const { appContext, review, source, toneOverride, withRecoveryClassification } = params;
   const charLimit =
     source === "play_store" ? 350 : source === "whatsapp" ? 1024 : 2000;
   const tone = toneOverride || appContext?.tone || "friendly";
@@ -102,11 +108,74 @@ ${rule3}
   system += `
 7. Do NOT echo, quote, or repeat the reviewer's exact words, phrases, or terms in the reply. Reference what they said by PARAPHRASING the meaning in your own words. This applies especially to non-English / transliterated words written in Latin script (Gujarati, Hindi, Tamil, etc. — e.g. "mast che", "bov saras", "bahut accha", "semma"): NEVER copy these tokens into the reply. Translate the sentiment and express it naturally in the reply's own language. Example: review says "App mast che" → reply must NOT contain "mast che"; instead say something like "glad you're loving the app". Quoting product names, feature names, or proper nouns the reviewer used is fine; quoting their descriptive/sentiment words is NOT. (HARD)`;
 
+  if (withRecoveryClassification) {
+    system += `
+
+--- RECOVERY CLASSIFICATION (only for reviews rated 1-3 stars) ---
+
+In addition to the reply text, you MUST also return:
+1. "recoverable": true or false — Is there a SPECIFIC, ACTIONABLE problem described that the developer could theoretically fix?
+   - TRUE examples: app crashes, specific feature broken, performance issues, UI bugs, missing functionality that could be added
+   - FALSE examples: "worst app ever" (no specific complaint), "too many ads" with no further detail, complaints about things outside the app (network, device), pure rage/trolling, personal preferences with no fix possible
+   - When in doubt, lean toward FALSE. Only mark TRUE when there is a clear, concrete problem.
+2. "issue_label": A short (3-6 word) normalized label for the core complaint. Use Title Case. Be specific but generalizable — "Photo Upload Crash" not "Photo upload crashes when I try to upload from gallery on Samsung S24". If recoverable is false, set issue_label to null.
+
+Return your response as a JSON object with this EXACT structure (no markdown fencing, no extra text, no preamble):
+{"reply": "your reply text here", "recoverable": true, "issue_label": "Short Issue Label"}
+
+For 4-5 star reviews, return ONLY:
+{"reply": "your reply text here", "recoverable": false, "issue_label": null}
+
+The character limit in rule 2 above applies to the "reply" string inside the JSON, NOT the JSON itself.`;
+  }
+
   const rating = review.rating ?? 0;
   const user =
     source === "whatsapp"
       ? `WhatsApp from ${review.author_name}: "${review.review_text}"\n\nReply:`
       : `${rating}★ review from ${review.author_name}: "${review.review_text}"\n\nReply:`;
+
+  return { system, user };
+}
+
+/**
+ * Slim, reply-free classifier prompt used by the poll-reviews cron pass.
+ * Returns just {recoverable, issue_label}. Much shorter than buildReplyPrompt
+ * so it burns fewer tokens per call (~10× cheaper than a full reply gen).
+ *
+ * Intentionally has zero overlap with reply formatting rules — this is purely
+ * a classification task. Keeps the cron classifier independent of any future
+ * tone/length/language changes to the reply prompt.
+ */
+export function buildClassifierPrompt(review: { rating: number | null; review_text: string; author_name: string }): {
+  system: string;
+  user: string;
+} {
+  const system = `You classify the core complaint in a negative app/business review.
+
+Return ONLY a JSON object — no preamble, no markdown, no prose.
+
+Schema (exact keys, no extras):
+{"recoverable": true|false, "issue_label": "Short Label" | null}
+
+Definitions:
+- recoverable=true: the review describes a SPECIFIC, ACTIONABLE problem a developer/owner could realistically fix.
+  Examples: app crashes, specific feature broken, performance issue, UI bug, missing functionality with clear ask.
+- recoverable=false: vague rage, generic dissatisfaction, off-product issues (network, device, personal preference),
+  trolling, or complaints with no concrete fix path.
+  When uncertain, lean toward FALSE.
+
+issue_label rules (only when recoverable=true; otherwise null):
+- 3-6 words, Title Case.
+- Specific but generalizable so similar complaints cluster.
+  GOOD: "Photo Upload Crash", "Login Fails On Reopen", "Slow Search Results".
+  BAD: "Photo upload crashes when I try to upload from gallery on Samsung S24", "Bad", "Issues".
+- Don't include user-specific details (device, name, dates).`;
+
+  const rating = review.rating ?? 0;
+  const user = `${rating}★ review from ${review.author_name}: "${review.review_text}"
+
+Classify:`;
 
   return { system, user };
 }

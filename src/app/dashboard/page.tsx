@@ -7,6 +7,8 @@ import { StatsCards } from "@/components/dashboard/StatsCards";
 import { DashboardReviewRow } from "@/components/dashboard/DashboardReviewRow";
 import { GettingStartedCard, type OnboardingStep } from "@/components/dashboard/GettingStartedCard";
 import { QuickActionTiles, type QuickActionTile } from "@/components/dashboard/QuickActionTiles";
+import { ActiveIssues } from "@/components/dashboard/ActiveIssues";
+import { RecoveryRateCard } from "@/components/dashboard/RecoveryRateCard";
 import { PageTransition } from "@/components/dashboard/PageTransition";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -357,6 +359,14 @@ export default function DashboardPage() {
           oldestConnectionDaysAgo={isMock ? null : analytics.connectionAgeDays}
         />
 
+        {/* Recovery Rate — second stat row. Mock mode skips it since the
+            recovery engine only runs on real data. */}
+        {!isMock && (
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+            <RecoveryRateCard />
+          </div>
+        )}
+
         {/* Two-column layout */}
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Left — Recent reviews */}
@@ -470,6 +480,15 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
+
+        {/* Active Issues — surfaces complaint clusters detected from negative
+            reviews. Hidden in mock mode (no real classification data). */}
+        {!isMock && (
+          <ActiveIssues
+            hasConnection={hasAnyConnection}
+            hasAnyReviews={reviews.length > 0}
+          />
+        )}
 
         {/* Activity feed */}
         <Card>

@@ -4,7 +4,16 @@ import { processAutoReplyForReview } from "@/lib/reviews/auto-reply";
 import { checkUsageLimitAdmin, incrementUsageAdmin } from "@/lib/usage";
 import { GBP_ENABLED } from "@/lib/feature-flags";
 import { extractCountryFromLocale } from "@/lib/utils/locale-to-country";
+import { classifyReviewOnly } from "@/lib/ai/reply-generator";
+import { linkRecoverableReview } from "@/lib/reviews/issues";
 import type { AppContext } from "@/types/database";
+
+// Issue-classifier pass budget — strict caps so the classification work
+// never extends the cron beyond comfortable bounds. The earlier sync/push
+// phases run to completion FIRST (and last_synced_at is updated before this
+// pass runs), so even hitting either cap leaves the core flow unaffected.
+const CLASSIFIER_MAX_PER_CONNECTION = 8;
+const CLASSIFIER_MAX_WALL_MS = 25_000;
 
 function getAdminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -156,8 +165,15 @@ async function handleCron(request: NextRequest) {
     autoReplied: number;
     drafted: number;
     pendingProcessed: number;
+    classified: number;
+    issuesLinked: number;
     errors: string[];
   }> = [];
+
+  // Shared wall-clock budget for the classifier pass across ALL connections.
+  // Anchored to "after sync/push completes" so the value here is just an
+  // upper-bound safety net for the classification phase only.
+  const classifierBudget = { startedAt: 0, exhausted: false };
 
   try {
     const { data: connections, error: connError } = await supabase
@@ -205,6 +221,8 @@ async function handleCron(request: NextRequest) {
         autoReplied: 0,
         drafted: 0,
         pendingProcessed: 0,
+        classified: 0,
+        issuesLinked: 0,
         errors: [] as string[],
       };
 
@@ -277,18 +295,67 @@ async function handleCron(request: NextRequest) {
           log(`[CRON] Reviews fetched from API: ${fetchedReviews.length}`);
 
           for (const review of fetchedReviews) {
-            // Pre-check existence purely to gate auto-reply on truly new rows.
-            // The write itself is an upsert keyed on (connection_id,
-            // external_review_id) so a corrected gp: id naturally dedupes
-            // with any prior row instead of duplicating.
+            // Pre-check existence to gate auto-reply on truly new rows AND to
+            // detect end-user edits (text or rating changed upstream). Edits
+            // are persisted in-place so the UI reflects the new content,
+            // sentiment is realigned to the new rating, and edited_at gets
+            // stamped so the inbox can show an "Edited" badge. We still skip
+            // the auto-reply path for edited rows — they already have a reply.
             const { data: existing } = await supabase
               .from("reviews")
-              .select("id")
+              .select("id, rating, review_text, sentiment")
               .eq("connection_id", connection.id)
               .eq("external_review_id", review.external_review_id)
               .maybeSingle();
 
-            if (existing) continue;
+            if (existing) {
+              const textChanged =
+                (existing.review_text || "") !== (review.review_text || "");
+              const ratingChanged =
+                typeof review.rating === "number" &&
+                existing.rating !== review.rating;
+
+              if (textChanged || ratingChanged) {
+                // Recompute sentiment from the new rating. Keep 'mixed' if it
+                // was set out-of-band; otherwise use the rating-derived value.
+                // Fall back to existing sentiment if rating is somehow null
+                // on the fetched review (shouldn't happen for Play Store).
+                const r = review.rating;
+                const newSentiment =
+                  existing.sentiment === "mixed"
+                    ? "mixed"
+                    : typeof r === "number"
+                      ? r >= 4
+                        ? "positive"
+                        : r <= 2
+                          ? "negative"
+                          : "neutral"
+                      : existing.sentiment;
+
+                const editPayload: Record<string, unknown> = {
+                  edited_at: new Date().toISOString(),
+                };
+                if (textChanged) editPayload.review_text = review.review_text;
+                if (ratingChanged) {
+                  editPayload.rating = review.rating;
+                  editPayload.sentiment = newSentiment;
+                }
+
+                const { error: editErr } = await supabase
+                  .from("reviews")
+                  .update(editPayload)
+                  .eq("id", existing.id);
+
+                if (editErr) {
+                  connResult.errors.push(`Edit update: ${editErr.message}`);
+                } else {
+                  log(
+                    `[CRON] Edit detected on review ${existing.id} (text=${textChanged}, rating=${ratingChanged})`
+                  );
+                }
+              }
+              continue;
+            }
 
             const { data: inserted, error: insertErr } = await supabase
               .from("reviews")
@@ -299,6 +366,11 @@ async function handleCron(request: NextRequest) {
                   external_review_id: review.external_review_id,
                   author_name: review.author_name,
                   rating: review.rating,
+                  // First-insert baseline for passive recovery detection.
+                  // This row only reaches the upsert when no existing record
+                  // matched the (connection_id, external_review_id) pre-check
+                  // above, so it's always a true first insert.
+                  original_rating: review.rating,
                   review_text: review.review_text,
                   review_language: review.review_language,
                   reviewer_country: extractCountryFromLocale(review.review_language),
@@ -382,6 +454,65 @@ async function handleCron(request: NextRequest) {
           }
 
           log(`[CRON] New reviews inserted: ${connResult.newReviews}`);
+
+          // RECOVERY DETECTION — passive. For every fetched review that is
+          // ALREADY in our DB with recovery_status='monitoring', see if its
+          // rating climbed to 4+. Absence from the API response is NOT a
+          // signal (Play API only returns ~1 week window).
+          try {
+            const fetchedIds = fetchedReviews.map((r) => r.external_review_id);
+            if (fetchedIds.length > 0) {
+              const { data: monitoredRows, error: monErr } = await supabase
+                .from("reviews")
+                .select("id, external_review_id, original_rating")
+                .eq("connection_id", connection.id)
+                .eq("recovery_status", "monitoring")
+                .in("external_review_id", fetchedIds);
+
+              if (monErr) {
+                connResult.errors.push(`Recovery query: ${monErr.message}`);
+              } else if (monitoredRows && monitoredRows.length > 0) {
+                const fetchedByExt = new Map(
+                  fetchedReviews.map((r) => [r.external_review_id, r])
+                );
+                let recoveredCount = 0;
+                for (const row of monitoredRows) {
+                  const live = fetchedByExt.get(row.external_review_id);
+                  if (!live) continue;
+                  const newRating = live.rating;
+                  const baseline = row.original_rating;
+                  if (
+                    typeof newRating === "number" &&
+                    newRating >= 4 &&
+                    typeof baseline === "number" &&
+                    baseline <= 3
+                  ) {
+                    // Realign sentiment alongside the recovery flip — the
+                    // edit-detection branch above ALSO does this for general
+                    // edits, but a monitored review whose first observation
+                    // here is the climb-to-4+ skips that branch (no text
+                    // change) so we mirror the update locally.
+                    const { error: upErr } = await supabase
+                      .from("reviews")
+                      .update({
+                        rating: newRating,
+                        sentiment: "positive",
+                        recovery_status: "recovered",
+                        recovery_detected_at: new Date().toISOString(),
+                      })
+                      .eq("id", row.id);
+                    if (!upErr) recoveredCount++;
+                  }
+                }
+                if (recoveredCount > 0) {
+                  log(`[CRON] Recovery detected: ${recoveredCount} review(s) climbed to 4+ stars`);
+                }
+              }
+            }
+          } catch (recErr: unknown) {
+            const re = recErr as { message?: string };
+            log(`[CRON] Recovery detection error: ${re.message}`);
+          }
         } else if (connection.type === "google_business") {
           if (!GBP_ENABLED) {
             log(`[CRON] GBP connection — skipping (GBP_ENABLED=false, awaiting Google API access)`);
@@ -458,6 +589,108 @@ async function handleCron(request: NextRequest) {
           .eq("id", connection.id);
 
         log(`[CRON] Updated last_synced_at for connection ${connection.id}`);
+
+        // ISSUE CLASSIFIER PASS — runs AFTER all sync/push/auto-reply work and
+        // AFTER last_synced_at is updated. Strictly isolated: any failure here
+        // is logged but cannot retroactively affect the connection's sync
+        // result. This is what makes Active Issues populate for users in
+        // manual mode who never trigger reply generation.
+        try {
+          if (!classifierBudget.startedAt) classifierBudget.startedAt = Date.now();
+
+          if (!classifierBudget.exhausted) {
+            const { data: unclassified, error: ucErr } = await supabase
+              .from("reviews")
+              .select("id, rating, review_text, author_name")
+              .eq("connection_id", connection.id)
+              .lte("rating", 3)
+              .gte("rating", 1)
+              .is("classification_at", null)
+              .order("review_created_at", { ascending: false })
+              .limit(CLASSIFIER_MAX_PER_CONNECTION);
+
+            if (ucErr) {
+              log(`[CRON] Classifier query error: ${ucErr.message}`);
+              connResult.errors.push(`Classifier query: ${ucErr.message}`);
+            } else if (unclassified && unclassified.length > 0) {
+              log(`[CRON] Classifying ${unclassified.length} unclassified negative review(s)`);
+
+              for (const row of unclassified) {
+                if (Date.now() - classifierBudget.startedAt > CLASSIFIER_MAX_WALL_MS) {
+                  classifierBudget.exhausted = true;
+                  log(`[CRON] Classifier wall-budget exhausted — deferring remainder to next run`);
+                  break;
+                }
+
+                // Per-review usage check — classification consumes the same
+                // AI-replies budget as reply gen (it's a model call). Skip
+                // silently when the user is at cap so we don't surface a
+                // scary error; we'll retry next cron.
+                const usageCheck = await checkUsageLimitAdmin(connection.user_id, "ai_replies");
+                if (!usageCheck.allowed) {
+                  log(`[CRON] Classifier skipped — user at AI replies cap (${usageCheck.current}/${usageCheck.limit})`);
+                  break;
+                }
+
+                const result = await classifyReviewOnly({
+                  reviewId: row.id,
+                  rating: row.rating,
+                  review_text: row.review_text,
+                  author_name: row.author_name,
+                });
+
+                if (!result.ok) {
+                  // Soft failure — leave classification_at null so we retry next pass.
+                  continue;
+                }
+
+                // Persist verdict + stamp classification_at so we don't reclassify next run.
+                const { error: updErr } = await supabase
+                  .from("reviews")
+                  .update({
+                    is_recoverable: result.recoverable,
+                    issue_label: result.issue_label,
+                    classification_at: new Date().toISOString(),
+                  })
+                  .eq("id", row.id);
+
+                if (updErr) {
+                  connResult.errors.push(`Classifier update: ${updErr.message}`);
+                  continue;
+                }
+
+                connResult.classified++;
+                await incrementUsageAdmin(connection.user_id, "ai_replies_used", 1);
+
+                if (result.recoverable && result.issue_label) {
+                  const linked = await linkRecoverableReview(supabase, {
+                    userId: connection.user_id,
+                    connectionId: connection.id,
+                    reviewId: row.id,
+                    rating: row.rating,
+                    issueLabel: result.issue_label,
+                  });
+                  if (linked) connResult.issuesLinked++;
+                }
+
+                // Tiny pause between calls — same courtesy gap as the reply loop.
+                await new Promise((resolve) => setTimeout(resolve, 800));
+              }
+
+              if (connResult.classified > 0) {
+                log(`[CRON] Classified ${connResult.classified} review(s), linked ${connResult.issuesLinked} issue(s)`);
+              }
+            }
+          } else {
+            log(`[CRON] Classifier skipped for ${connection.id} — wall-budget already exhausted this run`);
+          }
+        } catch (clsErr: unknown) {
+          const ce = clsErr as { message?: string };
+          // Hard isolation — never let classifier errors bubble out and
+          // affect connResult.skipped or sync results.
+          log(`[CRON] Classifier pass error (isolated, sync result unchanged): ${ce.message}`);
+          connResult.errors.push(`Classifier: ${ce.message}`);
+        }
       } catch (connProcessError: unknown) {
         const e = connProcessError as { message?: string };
         const errMsg = e.message || "Unknown error";

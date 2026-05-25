@@ -20,6 +20,7 @@ import {
   HelpCircle,
   BookOpen,
   MessageSquare,
+  AlertTriangle,
   PanelLeftClose,
   PanelLeftOpen,
 } from "lucide-react";
@@ -114,12 +115,55 @@ function usePendingReviewCount() {
   return count;
 }
 
+function useActiveIssueCount() {
+  const [count, setCount] = useState(0);
+  const pathname = usePathname();
+
+  useEffect(() => {
+    if (IS_MOCK) return; // No issues in mock mode
+    let cancelled = false;
+    async function refresh() {
+      try {
+        const res = await fetch("/api/issues?status=active");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled) setCount((data.issues ?? []).length);
+      } catch {
+        /* ignore */
+      }
+    }
+    refresh();
+
+    // Refresh when:
+    // - the user dismisses / marks-fixed / reopens an issue (issues page or
+    //   ActiveIssues card fires this)
+    // - a sync/reply cycle just completed (cron classifier may have created
+    //   new clusters)
+    function handleChange() {
+      refresh();
+    }
+    window.addEventListener("reviewpilot:issues-changed", handleChange);
+    window.addEventListener("reviewpilot:auto-reply-complete", handleChange);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("reviewpilot:issues-changed", handleChange);
+      window.removeEventListener("reviewpilot:auto-reply-complete", handleChange);
+    };
+    // Re-run on pathname change too — covers the case where the user
+    // navigates to the issues page after editing data elsewhere.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
+
+  return count;
+}
+
 type NavItem = { label: string; href: string; icon: typeof LayoutDashboard };
 
 const WORKSPACE_NAV: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Inbox", href: "/dashboard/inbox", icon: Inbox },
   { label: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
+  { label: "Insights", href: "/dashboard/issues", icon: AlertTriangle },
   { label: "Campaigns", href: "/dashboard/campaigns", icon: Megaphone },
 ];
 
@@ -150,6 +194,7 @@ export function Sidebar({
 }) {
   const pathname = usePathname();
   const pendingCount = usePendingReviewCount();
+  const issueCount = useActiveIssueCount();
   const { plan, totalAiUsed, aiLimit, isAiUnlimited, aiPercent, resetDate, periodLabel, isLoading: usageLoading } = useUsage();
   const { isOwner, canManageConnections, canEditAIConfig } = useTeamRole();
   const reduceMotion = useReducedMotion();
@@ -230,6 +275,11 @@ export function Sidebar({
                 {pendingCount}
               </span>
             )}
+            {showBadge && item.href === "/dashboard/issues" && issueCount > 0 && (
+              <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-amber-500/15 px-1.5 text-[10px] font-semibold text-amber-600 dark:text-amber-400 ring-1 ring-amber-500/30">
+                {issueCount}
+              </span>
+            )}
             {showBadge && item.href === "/dashboard/campaigns" && (
               <span className="flex items-center rounded-full bg-muted/60 px-1.5 py-0.5 font-mono text-[9px] font-medium uppercase tracking-wider text-muted-foreground">
                 Soon
@@ -240,6 +290,11 @@ export function Sidebar({
         {isCollapsed && showBadge && item.href === "/dashboard/inbox" && pendingCount > 0 && (
           <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-accent px-1 text-[9px] font-semibold text-accent-foreground">
             {pendingCount}
+          </span>
+        )}
+        {isCollapsed && showBadge && item.href === "/dashboard/issues" && issueCount > 0 && (
+          <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-amber-500 px-1 text-[9px] font-semibold text-white">
+            {issueCount}
           </span>
         )}
       </Link>

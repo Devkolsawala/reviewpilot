@@ -361,9 +361,36 @@ export function AIReplyGenerator({
  )}
  </div>
  <span className="text-xs text-muted-foreground">{timeAgo(review.review_created_at)}</span>
- <Badge variant="secondary" className={cn("text-[10px] capitalize", sentimentColor[review.sentiment])}>
- {review.sentiment}
+ {/* Defensive: when the reviewer edits their rating on the store side, the
+     numeric rating updates but stale sentiment can persist in the DB until
+     the next sync rewrites it. Derive from current rating so the badge is
+     never out-of-sync with what the user just sees in the stars. */}
+ {(() => {
+ const derivedSentiment =
+ review.rating == null
+ ? review.sentiment
+ : review.rating >= 4
+ ? "positive"
+ : review.rating <= 2
+ ? "negative"
+ : "neutral";
+ const displaySentiment =
+ review.sentiment === "mixed" ? "mixed" : derivedSentiment;
+ return (
+ <Badge variant="secondary" className={cn("text-[10px] capitalize", sentimentColor[displaySentiment])}>
+ {displaySentiment}
  </Badge>
+ );
+ })()}
+ {review.edited_at && (
+ <Badge
+ variant="secondary"
+ className="text-[10px] bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300"
+ title={`Reviewer edited this review ${timeAgo(review.edited_at)}`}
+ >
+ Edited · {timeAgo(review.edited_at)}
+ </Badge>
+ )}
  </div>
  </div>
  </div>

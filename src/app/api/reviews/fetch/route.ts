@@ -119,7 +119,7 @@ export async function POST(request: Request) {
     // creating a duplicate the way the old select-then-insert path did.
     const { data: existing } = await supabase
       .from("reviews")
-      .select("id, review_text, author_name, reply_status, reply_text, reply_published_at, is_auto_replied, is_read")
+      .select("id, review_text, author_name, rating, sentiment, reply_status, reply_text, reply_published_at, is_auto_replied, is_read, original_rating, recovery_status")
       .eq("connection_id", connectionId)
       .eq("external_review_id", review.external_review_id)
       .maybeSingle();
@@ -149,19 +149,48 @@ export async function POST(request: Request) {
       review_created_at: review.review_created_at,
       last_seen_in_api_at: nowIso,
     };
+    // Detect upstream edit BEFORE the upsert (since the upsert will overwrite
+    // rating / review_text). If the reviewer changed text or rating on the
+    // store side, we stamp edited_at and realign sentiment further down.
+    const textChanged =
+      !!existing && (existing.review_text || "") !== (review.review_text || "");
+    const ratingChanged =
+      !!existing &&
+      typeof review.rating === "number" &&
+      existing.rating !== review.rating;
+    const wasEdited = textChanged || ratingChanged;
+
     if (!existing) {
       // First time we've seen this review — set sentiment/keywords/reply state
-      // from the transformed row.
+      // from the transformed row, AND snapshot the baseline rating for
+      // passive recovery detection. original_rating must NEVER change after
+      // this point, so we only set it here in the !existing branch.
       upsertRow.sentiment = review.sentiment;
       upsertRow.keywords = review.keywords;
       upsertRow.reply_status = review.reply_status;
       upsertRow.reply_text = review.reply_text ?? null;
       upsertRow.reply_published_at = review.reply_published_at ?? null;
       upsertRow.is_read = review.is_read ?? false;
+      upsertRow.original_rating = review.rating;
     } else if (shouldPullGoogleReply) {
       upsertRow.reply_text = review.reply_text;
       upsertRow.reply_status = review.reply_status;
       upsertRow.reply_published_at = review.reply_published_at ?? null;
+    }
+    if (wasEdited) {
+      // Stamp + realign sentiment in the same upsert so the inbox row reflects
+      // the new state immediately. Keep 'mixed' if it was deliberately set.
+      upsertRow.edited_at = nowIso;
+      if (ratingChanged && typeof review.rating === "number") {
+        upsertRow.sentiment =
+          existing!.sentiment === "mixed"
+            ? "mixed"
+            : review.rating >= 4
+              ? "positive"
+              : review.rating <= 2
+                ? "negative"
+                : "neutral";
+      }
     }
 
     const { data: upserted, error: upsertError } = await supabase
@@ -207,6 +236,62 @@ export async function POST(request: Request) {
       alreadyRepliedCount++;
       console.log(`[FETCH] Inserted already-replied review by ${review.author_name} (${review.rating}★, id: ${review.external_review_id})`);
     }
+  }
+
+  // ── Step 2.5: PASSIVE RECOVERY DETECTION ─────────────────────────────────────
+  // Mirror of the cron poll-reviews logic. For every fetched review that's
+  // already in our DB at recovery_status='monitoring', check whether its
+  // current rating has climbed to 4+. If so, flip to 'recovered' and realign
+  // sentiment. Absence from the API isn't a signal — Play only returns ~1
+  // week — so this is strictly a "saw it again" check.
+  try {
+    const fetchedIds = fetchedReviews.map((r) => r.external_review_id);
+    if (fetchedIds.length > 0) {
+      const { data: monitoredRows } = await supabase
+        .from("reviews")
+        .select("id, external_review_id, original_rating")
+        .eq("connection_id", connectionId)
+        .eq("recovery_status", "monitoring")
+        .in("external_review_id", fetchedIds);
+
+      if (monitoredRows && monitoredRows.length > 0) {
+        const fetchedByExt = new Map(
+          fetchedReviews.map((r) => [r.external_review_id, r])
+        );
+        let recoveredCount = 0;
+        for (const row of monitoredRows) {
+          const live = fetchedByExt.get(row.external_review_id);
+          if (!live) continue;
+          const newRating = live.rating;
+          const baseline = row.original_rating;
+          if (
+            typeof newRating === "number" &&
+            newRating >= 4 &&
+            typeof baseline === "number" &&
+            baseline <= 3
+          ) {
+            const { error: upErr } = await supabase
+              .from("reviews")
+              .update({
+                rating: newRating,
+                sentiment: "positive",
+                recovery_status: "recovered",
+                recovery_detected_at: nowIso,
+              })
+              .eq("id", row.id);
+            if (!upErr) recoveredCount++;
+          }
+        }
+        if (recoveredCount > 0) {
+          console.log(
+            `[FETCH] Recovery detected: ${recoveredCount} review(s) climbed to 4+ stars`
+          );
+        }
+      }
+    }
+  } catch (recErr: unknown) {
+    const re = recErr as { message?: string };
+    console.error("[FETCH] Recovery detection error (non-fatal):", re.message);
   }
 
   // ── Step 3: Process EXISTING pending reviews when auto-reply is enabled ───────

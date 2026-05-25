@@ -47,6 +47,30 @@ export interface Review {
   // review explicitly mentions are present.
   ai_aspects?: Record<string, "positive" | "neutral" | "negative"> | null;
   ai_aspects_classified_at?: string | null;
+  // Recovery tracking (Active Issues engine, migration 034)
+  is_recoverable?: boolean;
+  issue_label?: string | null;
+  original_rating?: number | null;
+  recovery_status?: "none" | "monitoring" | "recovered" | "unrecovered";
+  recovery_detected_at?: string | null;
+  // Set when the cron observes the upstream review with different text or
+  // rating than what we stored. Drives the "Edited" badge in the UI. (037)
+  edited_at?: string | null;
+}
+
+export interface Issue {
+  id: string;
+  user_id: string;
+  connection_id: string;
+  label: string;
+  description?: string | null;
+  status: "active" | "fixed" | "dismissed";
+  review_count: number;
+  avg_rating: number | null;
+  first_seen_at: string;
+  fixed_at?: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface ReviewFilter {
