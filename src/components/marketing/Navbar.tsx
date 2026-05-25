@@ -3,142 +3,93 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Menu, X, Search, ChevronDown, ChevronRight } from "lucide-react";
+import { Menu, X, ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
 import { cn } from "@/lib/utils";
-import { CommandMenu } from "./CommandMenu";
 import { m, MotionProvider } from "@/components/motion/primitives";
 import { createClient } from "@/lib/supabase/client";
+
+type NavChild = {
+  label: string;
+  href: string;
+  description?: string;
+  section?: string;
+};
 
 type NavLink = {
   label: string;
   href: string;
-  children?: { label: string; href: string; description?: string }[];
+  children?: NavChild[];
 };
 
 const NAV_LINKS: NavLink[] = [
-  {
-    label: "Product",
-    href: "/#features",
-    children: [
-      {
-        label: "Unified inbox",
-        href: "/unified-inbox",
-        description: "Play Store, Google & WhatsApp in one queue",
-      },
-      {
-        label: "WhatsApp Business automation",
-        href: "/whatsapp-automation",
-        description: "Meta-approved Embedded Signup + AI replies",
-      },
-      {
-        label: "Play Store automation",
-        href: "/features/google-play-reviews",
-        description: "AI replies within the 350-char limit",
-      },
-      {
-        label: "Google Business Profile",
-        href: "/features/google-business-profile",
-        description: "One unified inbox for every location",
-      },
-      {
-        label: "How it works",
-        href: "/how-it-works",
-        description: "Connect, draft, approve — in 4 steps",
-      },
-    ],
-  },
-  {
-    label: "Integrations",
-    href: "/integrations",
-    children: [
-      {
-        label: "All integrations",
-        href: "/integrations",
-        description: "Three platforms, one inbox",
-      },
-      {
-        label: "WhatsApp Business",
-        href: "/integrations/whatsapp-business",
-        description: "Meta Cloud API + Embedded Signup",
-      },
-      {
-        label: "Google Play Store",
-        href: "/integrations/google-play-store",
-        description: "Service-account or invite-email",
-      },
-      {
-        label: "Google Business Profile",
-        href: "/integrations/google-business-profile",
-        description: "OAuth, multi-location",
-      },
-    ],
-  },
   {
     label: "Solutions",
     href: "#",
     children: [
       {
+        section: "By platform",
+        label: "Google Play Store",
+        href: "/integrations/google-play-store",
+        description: "AI replies within the 350-char limit",
+      },
+      {
+        section: "By platform",
+        label: "Google Business Profile",
+        href: "/integrations/google-business-profile",
+        description: "One unified inbox for every location",
+      },
+      {
+        section: "By platform",
+        label: "WhatsApp Business",
+        href: "/integrations/whatsapp-business",
+        description: "Meta Cloud API + Embedded Signup",
+      },
+      {
+        section: "By business type",
         label: "For app developers",
         href: "/for-app-developers",
         description: "Protect your Play Store rating at scale",
       },
       {
+        section: "By business type",
         label: "For local businesses",
         href: "/for-local-business",
         description: "Google reviews + WhatsApp, on autopilot",
-      },
-      {
-        label: "vs Birdeye",
-        href: "/vs/birdeye",
-        description: "Affordable Birdeye alternative for India",
-      },
-      {
-        label: "vs AppFollow",
-        href: "/vs/appfollow",
-        description: "AI-first AppFollow alternative",
       },
     ],
   },
   { label: "Features", href: "/features" },
   { label: "Pricing", href: "/pricing" },
   {
-    label: "Tools",
+    label: "Resources",
     href: "#",
     children: [
       {
-        label: "Play Store Analyzer",
+        label: "Blog",
+        href: "/blog",
+        description: "Guides, playbooks & product updates",
+      },
+      {
+        label: "Docs",
+        href: "/docs",
+        description: "Setup guides and API reference",
+      },
+      {
+        label: "Free Tools",
         href: "/tools/play-store-analyzer",
-        description: "Free sentiment & response rate audit",
-      },
-      {
-        label: "AI Reply Generator",
-        href: "/tools/ai-review-reply-generator",
-        description: "Generate replies in 24 languages",
-      },
-      {
-        label: "Play Store Character Counter",
-        href: "/tools/play-store-character-counter",
-        description: "Stay under the 350-char limit",
-      },
-      {
-        label: "App Rating Calculator",
-        href: "/tools/app-rating-calculator",
-        description: "Find the 5-star reviews you need",
+        description: "Play Store Analyzer, AI Reply Generator & more",
       },
     ],
   },
-  { label: "Blog", href: "/blog" },
-  { label: "Docs", href: "/docs" },
 ];
 
 export function Navbar() {
   const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [cmdkOpen, setCmdkOpen] = useState(false);
   const [isAuthed, setIsAuthed] = useState(false);
 
   useEffect(() => {
@@ -215,23 +166,38 @@ export function Navbar() {
                       <ChevronDown className="h-3.5 w-3.5 opacity-60 transition-transform group-hover:rotate-180" />
                     </button>
                     <div className="invisible absolute left-0 top-full pt-2 opacity-0 transition-all duration-200 group-hover:visible group-hover:opacity-100">
-                      <div className="w-[320px] rounded-xl border border-border/60 bg-popover p-2 shadow-xl shadow-black/5">
-                        {link.children.map((child) => (
-                          <Link
-                            key={child.href}
-                            href={child.href}
-                            className="flex flex-col gap-0.5 rounded-lg px-3 py-2.5 transition-colors hover:bg-accent/10"
-                          >
-                            <span className="text-sm font-medium text-foreground">
-                              {child.label}
-                            </span>
-                            {child.description && (
-                              <span className="text-xs text-muted-foreground">
-                                {child.description}
-                              </span>
-                            )}
-                          </Link>
-                        ))}
+                      <div className="w-[340px] rounded-xl border border-border/60 bg-popover p-2 shadow-xl shadow-black/5">
+                        {link.children.map((child, idx) => {
+                          const prevSection = idx > 0 ? link.children![idx - 1].section : undefined;
+                          const showHeader = child.section && child.section !== prevSection;
+                          return (
+                            <div key={child.href}>
+                              {showHeader && (
+                                <div
+                                  className={cn(
+                                    "px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground",
+                                    idx > 0 && "mt-1 border-t border-border/50",
+                                  )}
+                                >
+                                  {child.section}
+                                </div>
+                              )}
+                              <Link
+                                href={child.href}
+                                className="flex flex-col gap-0.5 rounded-lg px-3 py-2.5 transition-colors hover:bg-accent/10"
+                              >
+                                <span className="text-sm font-medium text-foreground">
+                                  {child.label}
+                                </span>
+                                {child.description && (
+                                  <span className="text-xs text-muted-foreground">
+                                    {child.description}
+                                  </span>
+                                )}
+                              </Link>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   </div>
@@ -263,17 +229,6 @@ export function Navbar() {
           </nav>
 
           <div className="hidden lg:flex items-center gap-2">
-            <button
-              onClick={() => setCmdkOpen(true)}
-              className="flex items-center gap-2 rounded-md border border-border/60 bg-background/60 px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground hover:border-border"
-              aria-label="Open search (Cmd+K)"
-            >
-              <Search className="h-3.5 w-3.5" />
-              <span>Search</span>
-              <kbd className="ml-1 hidden lg:inline-flex h-5 items-center rounded border border-border/60 bg-muted px-1.5 font-mono text-[10px]">
-                ⌘K
-              </kbd>
-            </button>
             <Button variant="ghost" size="sm" asChild>
               <Link href="/login">Log in</Link>
             </Button>
@@ -498,7 +453,6 @@ export function Navbar() {
           </div>
         </div>
 
-        <CommandMenu open={cmdkOpen} onOpenChange={setCmdkOpen} />
       </header>
     </MotionProvider>
   );

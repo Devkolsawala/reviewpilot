@@ -134,8 +134,8 @@ export default function HomePage() {
         data={[organizationSchema, softwareSchema, websiteSchema, faqSchema]}
       />
       <Hero statsBar={<LiveStatsBar />} />
-      <ThreePlatformBand />
       <InteractiveAIDemo />
+      <ThreePlatformBand />
       <TrustBar />
       <PersonaSplit />
       <FeatureGrid />

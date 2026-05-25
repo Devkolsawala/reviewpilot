@@ -70,27 +70,48 @@ export function Hero({ statsBar }: HeroProps = {}) {
               variants={fadeUp}
               className="mt-6 max-w-4xl text-balance font-sans text-4xl font-semibold tracking-tight text-foreground leading-[1.1] sm:text-5xl lg:text-6xl lg:leading-[1.05]"
             >
-              AI replies for every Play Store review, Google review, and{" "}
-              <span className="text-gradient-brand font-serif italic font-normal">
-                WhatsApp message
-              </span>
-              .
+              Stop losing customers to unanswered reviews.
             </m.h1>
 
             <m.p
               variants={fadeUp}
               className="mt-6 max-w-2xl text-balance text-base text-muted-foreground sm:text-lg leading-relaxed"
             >
-              ReviewPilot drafts on-brand replies for every review and WhatsApp
-              Business message — across all three platforms, in one unified
-              inbox. Built for Indian SMBs and app developers. From{" "}
+              ReviewPilot generates on-brand AI replies for Play Store, Google,
+              and WhatsApp reviews — and publishes them in one click. From{" "}
               <span className="font-mono text-foreground">$16/mo</span>.
             </m.p>
+
+            {/* Social proof — Capterra + India badge */}
+            <m.div
+              variants={fadeUp}
+              className="mt-6 flex flex-col items-center gap-2 sm:flex-row sm:gap-4"
+            >
+              <a
+                href="https://www.capterra.com/p/10041140/ReviewPilot/reviews/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                <span>
+                  Rated on Capterra —{" "}
+                  <span className="underline-offset-2 group-hover:underline">
+                    Read reviews
+                  </span>
+                </span>
+                <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
+              </a>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/60 px-2.5 py-1 text-xs text-muted-foreground backdrop-blur-sm">
+                <span aria-hidden>🇮🇳</span>
+                Made for Indian businesses
+              </span>
+            </m.div>
 
             {/* CTAs */}
             <m.div
               variants={fadeUp}
-              className="mt-10 flex flex-col items-center gap-3 sm:flex-row sm:gap-4"
+              className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:gap-4"
             >
               <Button variant="gradient" size="xl" asChild>
                 <Link href="/signup">
@@ -129,7 +150,7 @@ export function Hero({ statsBar }: HeroProps = {}) {
               className="mt-4 inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
             >
               <ChevronDown className="h-3 w-3" aria-hidden />
-              Or try the AI right now
+              Try the AI below
             </m.a>
           </m.div>
 
