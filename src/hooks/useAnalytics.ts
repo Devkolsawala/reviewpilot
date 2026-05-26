@@ -33,6 +33,11 @@ export interface ThemeAggregate {
   avgRating: number; // 0 if no rated reviews
   previousCount: number; // 0 if no data in the prior period
   changePct: number | null; // null when prior is 0 (treated as "no change indicator")
+  // True when EVERY rated review in the theme has current rating >= 4.
+  // Drives the "Resolved" split in ThemeMapCard so past issues users
+  // confirmed-fixed render as resolved rather than as ongoing problems.
+  // A theme with zero rated reviews defaults to false (treated as active).
+  isResolved: boolean;
 }
 
 export interface CriticalIssue {
@@ -465,6 +470,12 @@ function computeThemes(
     ratingSum: number;
     ratingCount: number;
     sentCounts: Record<AiSentimentLabel, number>;
+    // Track resolved status by counting rated reviews and how many of them
+    // are currently >=4 stars. A theme is "resolved" only when every rated
+    // review has climbed to 4+ (i.e. all originally-classified complaints
+    // have been confirmed-fixed by the reviewer).
+    ratedHigh: number;
+    ratedLow: number;
   };
   const buckets: Record<string, Bucket> = {};
   let unclassifiedCount = 0;
@@ -481,6 +492,8 @@ function computeThemes(
         ratingSum: 0,
         ratingCount: 0,
         sentCounts: { positive: 0, neutral: 0, negative: 0 },
+        ratedHigh: 0,
+        ratedLow: 0,
       };
     }
     const b = buckets[theme];
@@ -488,6 +501,8 @@ function computeThemes(
     if (r.rating != null) {
       b.ratingSum += r.rating;
       b.ratingCount++;
+      if (r.rating >= 4) b.ratedHigh++;
+      else b.ratedLow++;
     }
     // Prefer CURRENT-rating-derived sentiment so recovered reviews flip the
     // theme's dominant sentiment to positive. Fall back to the stored
@@ -521,6 +536,10 @@ function computeThemes(
       b.ratingCount > 0 ? Math.round((b.ratingSum / b.ratingCount) * 10) / 10 : 0;
     const changePct =
       prev === 0 ? null : Math.round(((b.count - prev) / prev) * 100);
+    // Resolved when at least one review has a rating and EVERY rated review
+    // is 4+ stars. Themes with no rated reviews (rare) stay active so they
+    // don't accidentally hide in the "Resolved" section.
+    const isResolved = b.ratingCount > 0 && b.ratedLow === 0;
     return {
       theme,
       sentiment: dom,
@@ -528,6 +547,7 @@ function computeThemes(
       avgRating,
       previousCount: prev,
       changePct,
+      isResolved,
     };
   });
 

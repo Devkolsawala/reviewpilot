@@ -11,6 +11,7 @@ import {
   Sparkles,
   Loader2,
   Link2,
+  CheckCircle2,
 } from "lucide-react";
 import type { ThemeAggregate } from "@/hooks/useAnalytics";
 import type { ConnectionState } from "@/lib/connection-state";
@@ -69,6 +70,20 @@ export function ThemeMapCard({
   loading,
 }: ThemeMapCardProps) {
   const shown = themes.slice(0, 10);
+  // Split themes into Active (still has at least one rating <=3) and Resolved
+  // (every rated review is now 4+). Sort each section independently:
+  //   - Active:   count DESC, then avg rating ASC (worst issues first)
+  //   - Resolved: count DESC
+  const activeShown = shown
+    .filter((t) => !t.isResolved)
+    .slice()
+    .sort((a, b) => b.count - a.count || a.avgRating - b.avgRating);
+  const resolvedShown = shown
+    .filter((t) => t.isResolved)
+    .slice()
+    .sort((a, b) => b.count - a.count);
+  const hasActive = activeShown.length > 0;
+  const hasResolved = resolvedShown.length > 0;
   const [classifying, setClassifying] = useState(false);
   const hasAnyConnection = connectionState?.hasAnyConnection ?? true;
   const oldestConnectionDaysAgo = connectionState?.oldestConnectionDaysAgo ?? null;
@@ -226,102 +241,50 @@ export function ThemeMapCard({
             </div>
           )
         ) : (
-          <ul className="divide-y divide-border/60">
-            {shown.map((t) => {
-              const showTrend =
-                t.changePct !== null &&
-                Math.abs(t.changePct) >= TREND_HIDE_THRESHOLD;
-              const trendUp = (t.changePct ?? 0) > 0;
-              return (
-                <li key={t.theme}>
-                  <Link
-                    href={themeHref(t.theme)}
-                    // Block link so the entire row (both lines on mobile) is one
-                    // click target.
-                    className="group block py-2.5 px-1 -mx-1 rounded-md hover:bg-muted/40 transition-colors"
-                  >
-                    {/* Line 1: dot + name + count (always one row, both
-                        viewports). On desktop the trend/rating tag along here;
-                        on mobile they wrap to line 2. */}
-                    <div className="flex items-center gap-3">
-                      <span
-                        aria-hidden
-                        className={cn(
-                          "h-2.5 w-2.5 shrink-0 rounded-full",
-                          SENTIMENT_DOT[t.sentiment] || SENTIMENT_DOT.neutral
-                        )}
-                      />
-                      <span className="flex-1 truncate text-sm font-medium capitalize">
-                        {t.theme}
-                      </span>
-                      <span className="font-mono text-xs tabular-nums text-muted-foreground">
-                        {t.count}
-                      </span>
-                      {/* Desktop: trend + avg sit on line 1 next to the count */}
-                      {showTrend && (
-                        <span
-                          className={cn(
-                            "hidden sm:inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums",
-                            trendUp
-                              ? "bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400"
-                              : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
-                          )}
-                          aria-label={`${trendUp ? "Up" : "Down"} ${Math.abs(
-                            t.changePct ?? 0
-                          )}% vs previous period`}
-                        >
-                          {trendUp ? (
-                            <TrendingUp className="h-3 w-3" />
-                          ) : (
-                            <TrendingDown className="h-3 w-3" />
-                          )}
-                          {Math.abs(t.changePct ?? 0)}%
-                        </span>
-                      )}
-                      {t.avgRating > 0 && (
-                        <span className="hidden sm:inline-flex items-center gap-0.5 text-[11px] text-muted-foreground/80 tabular-nums w-14 justify-end">
-                          {t.avgRating.toFixed(1)}
-                          <span className="text-amber-500">★</span>
-                          <span className="text-muted-foreground/60">avg</span>
-                        </span>
-                      )}
-                    </div>
+          <>
+            {/* When the only themes in this period are resolved, lead with a
+                small success banner so the meaning is unambiguous. */}
+            {!hasActive && hasResolved && (
+              <div className="mb-3 flex items-start gap-2 rounded-md border border-emerald-500/20 bg-emerald-50 dark:bg-emerald-950/30 px-3 py-2">
+                <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400 mt-0.5" aria-hidden />
+                <p className="text-xs font-medium text-emerald-700 dark:text-emerald-300">
+                  All issues resolved! Your users confirmed the fixes.
+                </p>
+              </div>
+            )}
 
-                    {/* Line 2 (mobile only): avg + trend, indented to align
-                        with the theme name above. */}
-                    {(showTrend || t.avgRating > 0) && (
-                      <div className="sm:hidden flex items-center gap-2 mt-1 pl-5 text-[11px] text-muted-foreground/80 tabular-nums">
-                        {t.avgRating > 0 && (
-                          <span className="inline-flex items-center gap-0.5">
-                            {t.avgRating.toFixed(1)}
-                            <span className="text-amber-500">★</span>
-                            <span className="text-muted-foreground/60">avg</span>
-                          </span>
-                        )}
-                        {showTrend && (
-                          <span
-                            className={cn(
-                              "inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
-                              trendUp
-                                ? "bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400"
-                                : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
-                            )}
-                          >
-                            {trendUp ? (
-                              <TrendingUp className="h-3 w-3" />
-                            ) : (
-                              <TrendingDown className="h-3 w-3" />
-                            )}
-                            {Math.abs(t.changePct ?? 0)}%
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
+            {hasActive && (
+              <ul className="divide-y divide-border/60">
+                {activeShown.map((t) => (
+                  <ThemeRow key={t.theme} t={t} resolved={false} />
+                ))}
+              </ul>
+            )}
+
+            {/* Divider between Active and Resolved sections — only renders
+                when BOTH sections have rows. Centered "Resolved" label. */}
+            {hasActive && hasResolved && (
+              <div
+                className="my-3 flex items-center gap-3"
+                role="separator"
+                aria-label="Resolved themes"
+              >
+                <span className="flex-1 h-px bg-border/60" aria-hidden />
+                <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                  Resolved
+                </span>
+                <span className="flex-1 h-px bg-border/60" aria-hidden />
+              </div>
+            )}
+
+            {hasResolved && (
+              <ul className="divide-y divide-border/60">
+                {resolvedShown.map((t) => (
+                  <ThemeRow key={t.theme} t={t} resolved={true} />
+                ))}
+              </ul>
+            )}
+          </>
         )}
 
         {unclassifiedCount > 0 && (
@@ -332,5 +295,126 @@ export function ThemeMapCard({
         )}
       </CardContent>
     </Card>
+  );
+}
+
+/**
+ * One row in the Theme Map list. Renders identically to the prior flat layout
+ * when `resolved=false`; when `resolved=true` it swaps the colored dot for a
+ * green check, mutes the label, and keeps the same counts/trend/avg cells so
+ * the two sections align visually. Click target (the whole row) is preserved
+ * for both states so filter-by-theme works identically.
+ */
+function ThemeRow({
+  t,
+  resolved,
+}: {
+  t: ThemeAggregate;
+  resolved: boolean;
+}) {
+  const showTrend =
+    t.changePct !== null && Math.abs(t.changePct) >= TREND_HIDE_THRESHOLD;
+  const trendUp = (t.changePct ?? 0) > 0;
+  return (
+    <li>
+      <Link
+        href={themeHref(t.theme)}
+        className="group block py-2.5 px-1 -mx-1 rounded-md hover:bg-muted/40 transition-colors"
+      >
+        {/* Line 1: indicator + name + count (always one row). On desktop the
+            trend/rating tag along here; on mobile they wrap to line 2. */}
+        <div className="flex items-center gap-3">
+          {resolved ? (
+            <CheckCircle2
+              className="h-3.5 w-3.5 shrink-0 text-emerald-500"
+              aria-label="Resolved"
+            />
+          ) : (
+            <span
+              aria-hidden
+              className={cn(
+                "h-2.5 w-2.5 shrink-0 rounded-full",
+                SENTIMENT_DOT[t.sentiment] || SENTIMENT_DOT.neutral
+              )}
+            />
+          )}
+          <span
+            className={cn(
+              "flex-1 truncate text-sm font-medium capitalize",
+              resolved && "text-muted-foreground"
+            )}
+          >
+            {t.theme}
+          </span>
+          <span className="font-mono text-xs tabular-nums text-muted-foreground">
+            {t.count}
+          </span>
+          {showTrend && (
+            <span
+              className={cn(
+                "hidden sm:inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums",
+                trendUp
+                  ? "bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400"
+                  : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
+              )}
+              aria-label={`${trendUp ? "Up" : "Down"} ${Math.abs(
+                t.changePct ?? 0
+              )}% vs previous period`}
+            >
+              {trendUp ? (
+                <TrendingUp className="h-3 w-3" />
+              ) : (
+                <TrendingDown className="h-3 w-3" />
+              )}
+              {Math.abs(t.changePct ?? 0)}%
+            </span>
+          )}
+          {t.avgRating > 0 && (
+            <span
+              className={cn(
+                "hidden sm:inline-flex items-center gap-0.5 text-[11px] tabular-nums w-14 justify-end",
+                resolved
+                  ? "text-muted-foreground/70"
+                  : "text-muted-foreground/80"
+              )}
+            >
+              {t.avgRating.toFixed(1)}
+              <span className="text-amber-500">★</span>
+              <span className="text-muted-foreground/60">avg</span>
+            </span>
+          )}
+        </div>
+
+        {/* Line 2 (mobile only): avg + trend, indented to align with name. */}
+        {(showTrend || t.avgRating > 0) && (
+          <div className="sm:hidden flex items-center gap-2 mt-1 pl-5 text-[11px] text-muted-foreground/80 tabular-nums">
+            {t.avgRating > 0 && (
+              <span className="inline-flex items-center gap-0.5">
+                {t.avgRating.toFixed(1)}
+                <span className="text-amber-500">★</span>
+                <span className="text-muted-foreground/60">avg</span>
+              </span>
+            )}
+            {showTrend && (
+              <span
+                className={cn(
+                  "inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
+                  trendUp
+                    ? "bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400"
+                    : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
+                )}
+              >
+                {trendUp ? (
+                  <TrendingUp className="h-3 w-3" />
+                ) : (
+                  <TrendingDown className="h-3 w-3" />
+                )}
+                {Math.abs(t.changePct ?? 0)}%
+              </span>
+            )}
+          </div>
+        )}
+      </Link>
+    </li>
   );
 }
