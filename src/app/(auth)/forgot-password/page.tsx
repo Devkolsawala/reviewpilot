@@ -97,6 +97,9 @@ export default function ForgotPasswordPage() {
             <span className="font-medium text-foreground">{email}</span>, a
             reset link is on its way. The link expires in 60 minutes.
           </p>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Can&apos;t find it? Check your spam or promotions folder.
+          </p>
 
           {error && (
             <p className="mt-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">

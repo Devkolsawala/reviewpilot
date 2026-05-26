@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,16 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [resetSuccess, setResetSuccess] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("reset") === "success") {
+      setResetSuccess(true);
+      window.history.replaceState(null, "", "/login");
+    }
+  }, []);
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -52,6 +61,12 @@ export default function LoginPage() {
           ReviewPilot
         </span>
       </div>
+
+      {resetSuccess && (
+        <div className="mb-6 rounded-lg bg-purple-50 px-4 py-3 text-sm text-purple-700">
+          Your password was updated. Log in with your new password to continue.
+        </div>
+      )}
 
       <h1 className="font-sans text-2xl font-semibold tracking-tight sm:text-3xl">
         Welcome back

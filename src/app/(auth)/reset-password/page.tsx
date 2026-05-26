@@ -89,9 +89,11 @@ export default function ResetPasswordPage() {
       setSubmitting(false);
       return;
     }
+    // Terminate the recovery session so the user must log in fresh with the new password.
+    await supabase.auth.signOut();
     setState("success");
     setTimeout(() => {
-      router.replace("/dashboard");
+      router.replace("/login?reset=success");
       router.refresh();
     }, 1500);
   }
@@ -163,7 +165,7 @@ export default function ResetPasswordPage() {
             Password updated
           </h1>
           <p className="mt-3 max-w-xs text-sm text-muted-foreground leading-relaxed">
-            Password updated. Redirecting…
+            Your password has been changed. Redirecting you to login…
           </p>
         </div>
       </div>
