@@ -441,6 +441,19 @@ function isValidAiSentiment(v: unknown): v is AiSentimentLabel {
   return v === "positive" || v === "neutral" || v === "negative";
 }
 
+// Sentiment inferred from the review's CURRENT rating, not the classification
+// snapshot. A review classified as negative that later recovers to 4–5★ should
+// count as positive, so Theme Map dots and Aspect Sentiment reflect today's
+// state — not what was true at classification time.
+function sentimentFromRating(
+  rating: number | null | undefined
+): AiSentimentLabel | null {
+  if (typeof rating !== "number") return null;
+  if (rating >= 4) return "positive";
+  if (rating <= 2) return "negative";
+  return "neutral";
+}
+
 function computeThemes(
   current: MinReview[],
   previous: MinReview[]
@@ -476,7 +489,12 @@ function computeThemes(
       b.ratingSum += r.rating;
       b.ratingCount++;
     }
-    const s = isValidAiSentiment(r.ai_sentiment) ? r.ai_sentiment : "neutral";
+    // Prefer CURRENT-rating-derived sentiment so recovered reviews flip the
+    // theme's dominant sentiment to positive. Fall back to the stored
+    // ai_sentiment only when the row has no rating (rare — non-rating sources).
+    const ratingSent = sentimentFromRating(r.rating);
+    const s: AiSentimentLabel = ratingSent
+      ?? (isValidAiSentiment(r.ai_sentiment) ? r.ai_sentiment : "neutral");
     b.sentCounts[s]++;
   }
 
@@ -591,20 +609,27 @@ function computeAspectAggregates(
   for (const r of rows) {
     const a = r.ai_aspects;
     if (!a || typeof a !== "object") continue;
-    for (const [aspect, sentiment] of Object.entries(a)) {
+    // Override stored aspect sentiment with the review's CURRENT-rating
+    // sentiment. Recovered reviews (e.g. went from 1★→5★) should count their
+    // aspects as positive even though the classifier originally tagged them
+    // negative. Fall back to the stored sentiment when the row has no rating.
+    const ratingSent = sentimentFromRating(r.rating);
+    for (const [aspect, storedSentiment] of Object.entries(a)) {
       if (!aspect) continue;
-      if (
-        sentiment !== "positive" &&
-        sentiment !== "neutral" &&
-        sentiment !== "negative"
-      )
-        continue;
+      const effective =
+        ratingSent ??
+        (storedSentiment === "positive" ||
+        storedSentiment === "neutral" ||
+        storedSentiment === "negative"
+          ? (storedSentiment as AiSentimentLabel)
+          : null);
+      if (!effective) continue;
       const current = map.get(aspect) ?? {
         positive: 0,
         neutral: 0,
         negative: 0,
       };
-      current[sentiment as "positive" | "neutral" | "negative"]++;
+      current[effective]++;
       map.set(aspect, current);
     }
   }

@@ -148,7 +148,7 @@ export default function IssuesPage() {
         toast({ title: "Marked as fixed", description });
       } else {
         toast({
-          title: status === "dismissed" ? "Insight dismissed" : "Insight reopened",
+          title: status === "dismissed" ? "Issue dismissed" : "Issue reopened",
         });
       }
       // Refresh affected tabs
@@ -195,7 +195,7 @@ export default function IssuesPage() {
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
           <div>
             <h1 className="font-sans text-2xl sm:text-3xl font-semibold tracking-tight">
-              Insights
+              AI Issue Tracker
             </h1>
             <p className="text-xs sm:text-sm text-muted-foreground mt-1">
               Recurring themes detected from your negative reviews. Mark them
@@ -240,9 +240,9 @@ export default function IssuesPage() {
             <CardContent className="p-4 flex items-start gap-3">
               <AlertTriangle className="h-5 w-5 text-accent shrink-0 mt-0.5" aria-hidden />
               <div className="flex-1">
-                <p className="text-sm font-semibold">Upgrade for full insight analysis</p>
+                <p className="text-sm font-semibold">Upgrade for full issue analysis</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Free plan shows insight labels and counts. Upgrade to Starter
+                  Free plan shows issue labels and counts. Upgrade to Starter
                   to drill into linked reviews, see recovery trends, and access
                   fixed/dismissed history.
                 </p>
@@ -271,17 +271,17 @@ export default function IssuesPage() {
                 <Inbox className="h-6 w-6 text-muted-foreground/50" aria-hidden />
               </div>
               <p className="text-sm font-medium mb-1">
-                {tab === "active" && "No active insights"}
-                {tab === "fixed" && "No fixed insights yet"}
-                {tab === "dismissed" && "No dismissed insights"}
+                {tab === "active" && "No active issues"}
+                {tab === "fixed" && "No fixed issues yet"}
+                {tab === "dismissed" && "No dismissed issues"}
               </p>
               <p className="text-xs text-muted-foreground max-w-sm">
                 {tab === "active" &&
                   "When AI detects a recurring theme in your negative reviews, it'll appear here."}
                 {tab === "fixed" &&
-                  "Insights you mark as fixed will move here for tracking."}
+                  "Issues you mark as fixed will move here for tracking."}
                 {tab === "dismissed" &&
-                  "Insights you dismiss will be archived here."}
+                  "Issues you dismiss will be archived here."}
               </p>
             </CardContent>
           </Card>

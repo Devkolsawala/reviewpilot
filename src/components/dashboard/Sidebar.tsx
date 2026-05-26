@@ -163,7 +163,7 @@ const WORKSPACE_NAV: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Inbox", href: "/dashboard/inbox", icon: Inbox },
   { label: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
-  { label: "Insights", href: "/dashboard/issues", icon: AlertTriangle },
+  { label: "AI Issue Tracker", href: "/dashboard/issues", icon: AlertTriangle },
   { label: "Campaigns", href: "/dashboard/campaigns", icon: Megaphone },
 ];
 
