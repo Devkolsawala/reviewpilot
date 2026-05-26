@@ -63,7 +63,7 @@ export default function AuthLayout({
       </div>
 
       {/* Right panel — form */}
-      <div className="flex flex-1 items-center justify-center p-6 sm:p-12">
+      <div className="flex flex-1 items-start sm:items-center justify-center p-6 pt-10 sm:p-12">
         <div className="w-full max-w-md">{children}</div>
       </div>
     </div>
