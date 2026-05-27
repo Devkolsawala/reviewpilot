@@ -20,7 +20,18 @@ interface RecoveryRateData {
   window_days: number;
 }
 
-const MIN_SAMPLE = 3;
+function encouragementFor(rate: number): string {
+  if (rate >= 80) return "Exceptional recovery rate!";
+  if (rate >= 50) return "Strong recovery — your fixes are working";
+  if (rate >= 1) return "Keep fixing issues — ratings update over time";
+  return "Reviews are being monitored for changes";
+}
+
+function rateColorClass(rate: number): string {
+  if (rate >= 50) return "text-emerald-600 dark:text-emerald-400";
+  if (rate >= 25) return "text-amber-600 dark:text-amber-400";
+  return "text-foreground";
+}
 
 export function RecoveryRateCard({ connectionId, days = 30 }: RecoveryRateCardProps) {
   const [data, setData] = useState<RecoveryRateData | null>(null);
@@ -32,7 +43,12 @@ export function RecoveryRateCard({ connectionId, days = 30 }: RecoveryRateCardPr
       try {
         const qs = new URLSearchParams({ days: String(days) });
         if (connectionId) qs.set("connection_id", connectionId);
-        const res = await fetch(`/api/dashboard/recovery-rate?${qs.toString()}`);
+        // cache: 'no-store' guarantees a fresh fetch on every page load so a
+        // newly-detected recovery shows up immediately without a hard refresh.
+        const res = await fetch(
+          `/api/dashboard/recovery-rate?${qs.toString()}`,
+          { cache: "no-store" }
+        );
         if (!res.ok) {
           if (!cancelled) setData(null);
           return;
@@ -51,9 +67,12 @@ export function RecoveryRateCard({ connectionId, days = 30 }: RecoveryRateCardPr
     };
   }, [connectionId, days]);
 
-  const enoughData = !!data && data.total_negative >= MIN_SAMPLE;
-  const rate = enoughData ? data!.rate ?? 0 : null;
-  const prev = enoughData ? data!.previous_rate : null;
+  // Show real numbers as soon as we have at least one tracked negative review.
+  // The MIN_SAMPLE=3 gate previously hid useful data and showed "Not enough
+  // data yet" which felt like an error.
+  const hasAnyTracked = !!data && data.total_negative > 0;
+  const rate = hasAnyTracked ? data!.rate ?? 0 : null;
+  const prev = hasAnyTracked ? data!.previous_rate : null;
 
   let trendKind: "up" | "down" | "zero" | null = null;
   let trendLabel = "";
@@ -100,13 +119,18 @@ export function RecoveryRateCard({ connectionId, days = 30 }: RecoveryRateCardPr
         <div className="flex items-end gap-2 flex-wrap min-h-[36px]">
           {loading ? (
             <div className="h-8 w-20 rounded-md bg-muted/40 animate-pulse" />
-          ) : !enoughData ? (
-            <span className="font-sans text-base font-medium text-muted-foreground">
-              Not enough data yet
+          ) : !hasAnyTracked ? (
+            <span className="font-sans text-3xl font-bold tracking-tight tabular-nums text-muted-foreground/60">
+              —
             </span>
           ) : (
             <>
-              <span className="font-sans text-3xl font-bold tracking-tight tabular-nums">
+              <span
+                className={cn(
+                  "font-sans text-3xl font-bold tracking-tight tabular-nums",
+                  rateColorClass(rate!)
+                )}
+              >
                 {rate}%
               </span>
               {trendKind && prev !== null && (
@@ -125,13 +149,19 @@ export function RecoveryRateCard({ connectionId, days = 30 }: RecoveryRateCardPr
         </div>
 
         <div className="mt-3 min-h-[32px]">
-          {enoughData ? (
-            <p className="text-[11px] text-muted-foreground leading-snug">
-              {data!.recovered} of {data!.total_negative} negative reviews improved their rating
-            </p>
+          {hasAnyTracked ? (
+            <>
+              <p className="text-[11px] text-muted-foreground leading-snug">
+                {data!.recovered} of {data!.total_negative} negative review
+                {data!.total_negative === 1 ? "" : "s"} improved
+              </p>
+              <p className="text-[10px] text-muted-foreground/70 leading-snug mt-0.5">
+                {encouragementFor(rate!)}
+              </p>
+            </>
           ) : (
             <p className="text-[11px] text-muted-foreground/70 leading-snug">
-              Need at least {MIN_SAMPLE} negative reviews to compute a rate.
+              Tracking begins when negative reviews are detected
             </p>
           )}
         </div>
@@ -139,7 +169,7 @@ export function RecoveryRateCard({ connectionId, days = 30 }: RecoveryRateCardPr
         <div className="mt-2 flex items-center justify-between text-[10px] text-muted-foreground/80 font-mono">
           <span>Last {days} days</span>
           <span className="text-muted-foreground/60">
-            {enoughData && prev != null ? `vs previous ${days} days` : "—"}
+            {hasAnyTracked && prev != null ? `vs previous ${days} days` : "—"}
           </span>
         </div>
       </CardContent>

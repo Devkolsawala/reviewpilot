@@ -120,7 +120,7 @@ export function ActiveIssues({
         description = `Published ${published}, drafted ${drafted}.`;
       }
 
-      toast({ title: "Insight marked as fixed", description });
+      toast({ title: "Issue marked as fixed", description });
       // Refresh the sidebar count badge.
       window.dispatchEvent(new CustomEvent("reviewpilot:issues-changed"));
       // Refresh inbox / draft counters when new replies were generated.
@@ -153,10 +153,10 @@ export function ActiveIssues({
         <div className="min-w-0">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 text-amber-500" aria-hidden />
-            Active Insights
+            Active Issues
           </CardTitle>
           <p className="text-xs text-muted-foreground mt-1">
-            Themes detected from negative reviews
+            AI-detected themes from negative reviews
           </p>
         </div>
         {issues.length > 0 && (
@@ -180,7 +180,7 @@ export function ActiveIssues({
             <div className="rounded-2xl bg-secondary/60 p-3 mb-3 ring-1 ring-border/60">
               <AlertTriangle className="h-5 w-5 text-muted-foreground/50" aria-hidden />
             </div>
-            <p className="text-sm font-medium mb-1">No insights yet</p>
+            <p className="text-sm font-medium mb-1">No issues yet</p>
             <p className="text-xs text-muted-foreground max-w-sm">
               Connect a source to start surfacing themes from negative reviews.
             </p>
@@ -190,9 +190,9 @@ export function ActiveIssues({
             <div className="rounded-2xl bg-secondary/60 p-3 mb-3 ring-1 ring-border/60">
               <AlertTriangle className="h-5 w-5 text-muted-foreground/50" aria-hidden />
             </div>
-            <p className="text-sm font-medium mb-1">No insights detected yet</p>
+            <p className="text-sm font-medium mb-1">No issues detected yet</p>
             <p className="text-xs text-muted-foreground max-w-sm">
-              Insights will appear here as ReviewPilot analyzes your negative reviews.
+              Issues will appear here as ReviewPilot analyzes your negative reviews.
             </p>
           </div>
         ) : issues.length === 0 ? (
@@ -200,7 +200,7 @@ export function ActiveIssues({
             <div className="rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 p-3 mb-3 ring-1 ring-emerald-500/20">
               <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400" aria-hidden />
             </div>
-            <p className="text-sm font-medium mb-1">No active insights — great work!</p>
+            <p className="text-sm font-medium mb-1">No active issues — great work!</p>
             <p className="text-xs text-muted-foreground max-w-sm">
               Your app is in good shape. We&apos;ll flag new complaints here as they come in.
             </p>
@@ -304,7 +304,7 @@ export function ActiveIssues({
                 href="/dashboard/issues"
                 className="block text-center text-xs text-muted-foreground hover:text-foreground transition-colors py-1.5"
               >
-                + {hiddenCount} more {hiddenCount === 1 ? "insight" : "insights"}
+                + {hiddenCount} more {hiddenCount === 1 ? "issue" : "issues"}
               </Link>
             )}
           </div>

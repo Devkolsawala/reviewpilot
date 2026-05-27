@@ -85,6 +85,13 @@ export function ReviewCard({ review, selected, onClick, compact }: ReviewCardPro
  const aiTheme = (review.ai_theme || "").trim();
  const showThemeChip = aiTheme.length > 0 && aiTheme.toLowerCase() !== "general feedback";
  const isCritical = review.ai_urgency === "critical";
+ // A theme chip on a recovered review gets a "resolved" treatment so users
+ // immediately see this was a past issue that's now fixed — instead of the
+ // old complaint label reading like an ongoing problem. Recovery requires
+ // BOTH the cron-detected recovery_status AND a current rating >= 4 so an
+ // edge-case stale flag can't accidentally repaint a low-rated review.
+ const isResolvedTheme =
+   review.recovery_status === "recovered" && (review.rating ?? 0) >= 4;
 
  // Theme chip click navigates to the inbox with the theme filter applied.
  // It's rendered as a role=button span (not a nested <button>) because the
@@ -207,6 +214,8 @@ export function ReviewCard({ review, selected, onClick, compact }: ReviewCardPro
  // Rendered as role=button span (not <button>) so it can sit inside
  // the parent row <button> without invalid nesting. stopPropagation
  // keeps the row click from firing when the chip is tapped.
+ // Recovered reviews get a green "resolved" treatment so an old
+ // complaint label doesn't read like a current problem.
  <span
  role="button"
  tabIndex={0}
@@ -215,13 +224,18 @@ export function ReviewCard({ review, selected, onClick, compact }: ReviewCardPro
  if (e.key === "Enter" || e.key === " ") handleThemeChipClick(e);
  }}
  className={cn(
- "inline-flex items-center rounded-full bg-muted px-1.5 py-0 text-[10px] font-medium lowercase",
- "text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors",
- "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1"
+ "inline-flex items-center rounded-full px-1.5 py-0 text-[10px] font-medium lowercase border transition-colors",
+ "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1",
+ isResolvedTheme
+ ? "bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800 hover:bg-green-100 dark:hover:bg-green-950/50"
+ : "bg-muted border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/80"
  )}
- title={`Filter inbox by theme: ${aiTheme}`}
- aria-label={`Filter inbox by theme: ${aiTheme}`}
+ title={`Filter inbox by theme: ${aiTheme}${isResolvedTheme ? " (resolved)" : ""}`}
+ aria-label={`Filter inbox by theme: ${aiTheme}${isResolvedTheme ? " (resolved)" : ""}`}
  >
+ {isResolvedTheme && (
+ <span aria-hidden className="mr-0.5">✓</span>
+ )}
  {aiTheme}
  </span>
  )}

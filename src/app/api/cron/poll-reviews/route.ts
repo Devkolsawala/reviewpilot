@@ -691,6 +691,51 @@ async function handleCron(request: NextRequest) {
           log(`[CRON] Classifier pass error (isolated, sync result unchanged): ${ce.message}`);
           connResult.errors.push(`Classifier: ${ce.message}`);
         }
+
+        // ── Auto-classify AI insights (fire-and-forget) ────────────────────
+        // Mirrors the /api/reviews/fetch behavior so the automated cron also
+        // populates ai_theme/ai_aspects/ai_sentiment for new reviews. Gated by
+        // AUTO_CLASSIFY_ON_SYNC=true so it can be disabled in environments
+        // that don't want xAI cost in the cron path. STRICTLY isolated —
+        // failure here must not affect this connection's sync result.
+        try {
+          const autoClassifyEnabled =
+            process.env.AUTO_CLASSIFY_ON_SYNC === "true";
+          if (autoClassifyEnabled && connResult.newReviews > 0) {
+            const appUrl =
+              process.env.NEXT_PUBLIC_APP_URL ||
+              "https://www.reviewpilot.co.in";
+            const cronSecret = process.env.CRON_SECRET;
+            if (cronSecret) {
+              void fetch(`${appUrl}/api/internal/classify-insights`, {
+                method: "POST",
+                headers: {
+                  Authorization: `Bearer ${cronSecret}`,
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  batchSize: 15,
+                  userId: connection.user_id,
+                  chainCount: 0,
+                }),
+              }).catch((err) => {
+                console.log(
+                  `[CRON] Auto-classify fire-and-forget failed (non-blocking): ${err?.message ?? err}`
+                );
+              });
+              log(
+                `[CRON] Auto-classify triggered for user ${connection.user_id} (${connResult.newReviews} new review(s))`
+              );
+            } else {
+              log(`[CRON] Auto-classify skipped — CRON_SECRET not set`);
+            }
+          }
+        } catch (acErr: unknown) {
+          const ae = acErr as { message?: string };
+          log(
+            `[CRON] Auto-classify trigger skipped (isolated): ${ae.message}`
+          );
+        }
       } catch (connProcessError: unknown) {
         const e = connProcessError as { message?: string };
         const errMsg = e.message || "Unknown error";

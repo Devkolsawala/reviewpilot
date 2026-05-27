@@ -33,6 +33,11 @@ export interface ThemeAggregate {
   avgRating: number; // 0 if no rated reviews
   previousCount: number; // 0 if no data in the prior period
   changePct: number | null; // null when prior is 0 (treated as "no change indicator")
+  // True when EVERY rated review in the theme has current rating >= 4.
+  // Drives the "Resolved" split in ThemeMapCard so past issues users
+  // confirmed-fixed render as resolved rather than as ongoing problems.
+  // A theme with zero rated reviews defaults to false (treated as active).
+  isResolved: boolean;
 }
 
 export interface CriticalIssue {
@@ -441,6 +446,19 @@ function isValidAiSentiment(v: unknown): v is AiSentimentLabel {
   return v === "positive" || v === "neutral" || v === "negative";
 }
 
+// Sentiment inferred from the review's CURRENT rating, not the classification
+// snapshot. A review classified as negative that later recovers to 4–5★ should
+// count as positive, so Theme Map dots and Aspect Sentiment reflect today's
+// state — not what was true at classification time.
+function sentimentFromRating(
+  rating: number | null | undefined
+): AiSentimentLabel | null {
+  if (typeof rating !== "number") return null;
+  if (rating >= 4) return "positive";
+  if (rating <= 2) return "negative";
+  return "neutral";
+}
+
 function computeThemes(
   current: MinReview[],
   previous: MinReview[]
@@ -452,6 +470,12 @@ function computeThemes(
     ratingSum: number;
     ratingCount: number;
     sentCounts: Record<AiSentimentLabel, number>;
+    // Track resolved status by counting rated reviews and how many of them
+    // are currently >=4 stars. A theme is "resolved" only when every rated
+    // review has climbed to 4+ (i.e. all originally-classified complaints
+    // have been confirmed-fixed by the reviewer).
+    ratedHigh: number;
+    ratedLow: number;
   };
   const buckets: Record<string, Bucket> = {};
   let unclassifiedCount = 0;
@@ -468,6 +492,8 @@ function computeThemes(
         ratingSum: 0,
         ratingCount: 0,
         sentCounts: { positive: 0, neutral: 0, negative: 0 },
+        ratedHigh: 0,
+        ratedLow: 0,
       };
     }
     const b = buckets[theme];
@@ -475,8 +501,15 @@ function computeThemes(
     if (r.rating != null) {
       b.ratingSum += r.rating;
       b.ratingCount++;
+      if (r.rating >= 4) b.ratedHigh++;
+      else b.ratedLow++;
     }
-    const s = isValidAiSentiment(r.ai_sentiment) ? r.ai_sentiment : "neutral";
+    // Prefer CURRENT-rating-derived sentiment so recovered reviews flip the
+    // theme's dominant sentiment to positive. Fall back to the stored
+    // ai_sentiment only when the row has no rating (rare — non-rating sources).
+    const ratingSent = sentimentFromRating(r.rating);
+    const s: AiSentimentLabel = ratingSent
+      ?? (isValidAiSentiment(r.ai_sentiment) ? r.ai_sentiment : "neutral");
     b.sentCounts[s]++;
   }
 
@@ -503,6 +536,10 @@ function computeThemes(
       b.ratingCount > 0 ? Math.round((b.ratingSum / b.ratingCount) * 10) / 10 : 0;
     const changePct =
       prev === 0 ? null : Math.round(((b.count - prev) / prev) * 100);
+    // Resolved when at least one review has a rating and EVERY rated review
+    // is 4+ stars. Themes with no rated reviews (rare) stay active so they
+    // don't accidentally hide in the "Resolved" section.
+    const isResolved = b.ratingCount > 0 && b.ratedLow === 0;
     return {
       theme,
       sentiment: dom,
@@ -510,6 +547,7 @@ function computeThemes(
       avgRating,
       previousCount: prev,
       changePct,
+      isResolved,
     };
   });
 
@@ -591,20 +629,27 @@ function computeAspectAggregates(
   for (const r of rows) {
     const a = r.ai_aspects;
     if (!a || typeof a !== "object") continue;
-    for (const [aspect, sentiment] of Object.entries(a)) {
+    // Override stored aspect sentiment with the review's CURRENT-rating
+    // sentiment. Recovered reviews (e.g. went from 1★→5★) should count their
+    // aspects as positive even though the classifier originally tagged them
+    // negative. Fall back to the stored sentiment when the row has no rating.
+    const ratingSent = sentimentFromRating(r.rating);
+    for (const [aspect, storedSentiment] of Object.entries(a)) {
       if (!aspect) continue;
-      if (
-        sentiment !== "positive" &&
-        sentiment !== "neutral" &&
-        sentiment !== "negative"
-      )
-        continue;
+      const effective =
+        ratingSent ??
+        (storedSentiment === "positive" ||
+        storedSentiment === "neutral" ||
+        storedSentiment === "negative"
+          ? (storedSentiment as AiSentimentLabel)
+          : null);
+      if (!effective) continue;
       const current = map.get(aspect) ?? {
         positive: 0,
         neutral: 0,
         negative: 0,
       };
-      current[sentiment as "positive" | "neutral" | "negative"]++;
+      current[effective]++;
       map.set(aspect, current);
     }
   }
