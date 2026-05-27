@@ -378,6 +378,13 @@ async function handleCron(request: NextRequest) {
                   sentiment: review.sentiment,
                   keywords: review.keywords,
                   review_created_at: review.review_created_at,
+                  // App version (migration 039). Mirrors the same fields in
+                  // /api/reviews/fetch so the 2-hour cron path also populates
+                  // them. Both may be NULL when Google's API didn't send
+                  // version metadata for a review (web reviews, certain
+                  // device configs) — per their docs, this is normal.
+                  app_version_name: review.app_version_name ?? null,
+                  app_version_code: review.app_version_code ?? null,
                 },
                 { onConflict: "connection_id,external_review_id" }
               )
