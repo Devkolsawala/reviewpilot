@@ -13,6 +13,10 @@ export interface Review {
   /** ISO 3166-1 alpha-2 derived from review_language locale region. Null when locale has no region. */
   reviewer_country?: string | null;
   device_info?: Record<string, unknown>;
+  /** Play Store app version installed at review time, e.g. "1.2.3". NULL when API omitted it (per Google docs, may be absent). Only populated for source = "play_store". */
+  app_version_name?: string | null;
+  /** Play Store integer app version code, e.g. 12345. Used for correct numeric sort of versions in inbox dropdown. NULL when API omitted it. */
+  app_version_code?: number | null;
   /** For WhatsApp, the customer's phone number in E.164 format (e.g. +919812345678) */
   author_id?: string | null;
   /** When true, skip the AI auto-reply for this row (e.g. non-text WhatsApp messages) */

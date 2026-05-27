@@ -180,6 +180,11 @@ export function ReviewCard({ review, selected, onClick, compact }: ReviewCardPro
  <Globe className="h-2.5 w-2.5" /> Google
  </span>
  )}
+ {review.source === "play_store" && review.app_version_name && (
+ <span className="inline-flex items-center rounded-full bg-muted px-1.5 py-0 text-[10px] font-mono font-medium text-muted-foreground">
+ v{review.app_version_name}
+ </span>
+ )}
  {review.source === "whatsapp" && review.skip_auto_reply && (
  <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
  Non-text

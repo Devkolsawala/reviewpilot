@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Search, CheckCheck, Inbox, Zap, Info, BookOpen, ChevronDown, Bot, Loader2, ArrowLeft, MessageCircle, X } from "lucide-react";
 import { UpgradeGate } from "@/components/dashboard/UpgradeGate";
 import { AppSwitcher } from "@/components/dashboard/AppSwitcher";
+import { AppVersionFilter } from "@/components/inbox/AppVersionFilter";
 import { toast } from "@/components/ui/use-toast";
 import { useReviews } from "@/hooks/useReviews";
 import { useConnections } from "@/hooks/useConnection";
@@ -31,9 +32,6 @@ type StatusFilter = "all" | "pending" | "drafted" | "published";
 function InboxPageInner() {
  const router = useRouter();
  const searchParams = useSearchParams();
- const { reviews: rawReviews, isMock, updateReview, refetch } = useReviews();
- const { connections } = useConnections();
- const { isReadOnly } = useTeamRole();
  const [localReviews, setLocalReviews] = useState<Review[]>([]);
  const [selectedId, setSelectedId] = useState<string | null>(null);
  const [deepLinkApplied, setDeepLinkApplied] = useState(false);
@@ -42,6 +40,16 @@ function InboxPageInner() {
  const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
  const [ratingFilter, setRatingFilter] = useState<RatingFilter>("all");
  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+ // App version filter — only mounted when source ∈ {all, play_store} because
+ // only Play Store reviews carry version metadata. Mutually exclusive:
+ // appVersionUnknown=true selects rows with NULL version; otherwise appVersion
+ // (when non-null) filters by exact match. Threaded into useReviews so the
+ // filter is server-side and works across more than the 200-row fetch cap.
+ const [appVersion, setAppVersion] = useState<string | null>(null);
+ const [appVersionUnknown, setAppVersionUnknown] = useState(false);
+ const { reviews: rawReviews, isMock, updateReview, refetch } = useReviews({ appVersion, appVersionUnknown });
+ const { connections } = useConnections();
+ const { isReadOnly } = useTeamRole();
  // Theme filter is URL-driven (?theme=<theme> from ThemeMapCard links). The
  // chip above the filter groups lets the user clear it.
  const themeFilter = (searchParams?.get("theme") || "").trim().toLowerCase();
@@ -83,6 +91,16 @@ function InboxPageInner() {
  useEffect(() => {
  setLocalReviews(rawReviews);
  }, [rawReviews]);
+
+ // App version control is only relevant when source ∈ {all, play_store}. When
+ // the user switches source to whatsapp or google_business, reset version
+ // state so stale selections don't leak across mount cycles.
+ useEffect(() => {
+ if (sourceFilter !== "all" && sourceFilter !== "play_store") {
+ if (appVersion !== null) setAppVersion(null);
+ if (appVersionUnknown) setAppVersionUnknown(false);
+ }
+ }, [sourceFilter, appVersion, appVersionUnknown]);
 
  // Deep link: /dashboard/inbox?review=<id> from the dashboard recent-reviews row.
  // Applies once after reviews load — never overrides a manual selection later.
@@ -510,6 +528,22 @@ function InboxPageInner() {
  ))}
  </FilterGroup>
  )}
+
+ {(sourceFilter === "all" || sourceFilter === "play_store") && (
+ <FilterGroup label="Version">
+ <AppVersionFilter
+ connectionId={activeAppId}
+ appVersion={appVersion}
+ appVersionUnknown={appVersionUnknown}
+ onChange={({ appVersion: v, appVersionUnknown: u }) => {
+ setAppVersion(v);
+ setAppVersionUnknown(u);
+ }}
+ isMock={isMock}
+ mockRows={localReviews}
+ />
+ </FilterGroup>
+ )}
  </div>
 
  {/* Batch actions */}
@@ -542,6 +576,26 @@ function InboxPageInner() {
  <p className="text-xs mt-1 max-w-xs">
  Send a WhatsApp message to your connected business number. It will appear here within a few seconds.
  </p>
+ </div>
+ ) : (appVersion || appVersionUnknown) ? (
+ <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-6 text-center">
+ <Search className="h-8 w-8 mb-2 opacity-40" />
+ <p className="text-sm font-medium">
+ {appVersionUnknown
+ ? "No reviews are missing version info on this connection."
+ : `No reviews on version v${appVersion} yet.`}
+ </p>
+ <p className="text-xs mt-1 mb-3 max-w-xs">
+ {appVersionUnknown
+ ? "Every review on this connection has version metadata from Google. Clear the filter to see them all."
+ : "Try a different version or clear the filter."}
+ </p>
+ <button
+ onClick={() => { setAppVersion(null); setAppVersionUnknown(false); }}
+ className="text-[11px] font-medium text-accent hover:underline underline-offset-2"
+ >
+ Clear filter
+ </button>
  </div>
  ) : (
  <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-6">

@@ -148,6 +148,13 @@ export async function POST(request: Request) {
       device_info: review.device_info ?? null,
       review_created_at: review.review_created_at,
       last_seen_in_api_at: nowIso,
+      // App version (migration 039). Carried on every upsert (new and existing
+      // rows) so the column backfills naturally as the cron re-sees reviews,
+      // and updates if the user upgraded the app + re-edited the review.
+      // Pure data plumbing — no orchestration change. Both may be NULL when
+      // Google's API didn't return version metadata (per their docs).
+      app_version_name: review.app_version_name ?? null,
+      app_version_code: review.app_version_code ?? null,
     };
     // Detect upstream edit BEFORE the upsert (since the upsert will overwrite
     // rating / review_text). If the reviewer changed text or rating on the

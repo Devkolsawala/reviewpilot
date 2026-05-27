@@ -55,6 +55,28 @@ function gbpToReview(gbp: GBPReview, idx: number): Review {
   };
 }
 
+/**
+ * Mirrors the server-side filter on the mock-data path so behavior is
+ * consistent across both modes. WhatsApp / GBP rows never have a version,
+ * so a specific-version filter naturally excludes them; the Unknown filter
+ * additionally requires source === "play_store" to match the SQL semantics.
+ */
+function applyVersionFilter(
+  rows: Review[],
+  appVersion: string | null,
+  appVersionUnknown: boolean
+): Review[] {
+  if (appVersionUnknown) {
+    return rows.filter(
+      (r) => r.source === "play_store" && (r.app_version_name === null || r.app_version_name === undefined)
+    );
+  }
+  if (appVersion) {
+    return rows.filter((r) => r.app_version_name === appVersion);
+  }
+  return rows;
+}
+
 async function buildMockReviews(overridesKey: string): Promise<Review[]> {
   const [{ mockPlayReviews }, { mockGBPReviews }] = await Promise.all([
     import("@/lib/mock/mock-reviews"),
@@ -74,7 +96,25 @@ async function buildMockReviews(overridesKey: string): Promise<Review[]> {
   return combined.map((r) => (overrides[r.id] ? { ...r, ...overrides[r.id] } : r));
 }
 
-export function useReviews() {
+/**
+ * Optional filter params applied at query time on the real-data path. The
+ * mock-data path filters in-memory after assembling the fixture set. Adding
+ * these here (rather than filtering client-side downstream) keeps the
+ * filter correct even when a single version has more rows than the 200-row
+ * fetch cap.
+ *
+ * appVersion         — exact match on reviews.app_version_name
+ * appVersionUnknown  — when true, app_version_name IS NULL AND source = 'play_store'
+ *                      (mutually exclusive — when true, appVersion is ignored)
+ */
+export interface UseReviewsOptions {
+  appVersion?: string | null;
+  appVersionUnknown?: boolean;
+}
+
+export function useReviews(options: UseReviewsOptions = {}) {
+  const { appVersion = null, appVersionUnknown = false } = options;
+
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [isMock, setIsMock] = useState(false);
@@ -97,10 +137,11 @@ export function useReviews() {
         setMockKey(key);
 
         const mock = await buildMockReviews(key);
-        setReviews(mock);
+        const filteredMock = applyVersionFilter(mock, appVersion, appVersionUnknown);
+        setReviews(filteredMock);
         setIsMock(true);
         setActiveConnectionId(null);
-        console.log("[HOOK] Fetched reviews from Supabase:", mock.length, "isMock:", true);
+        console.log("[HOOK] Fetched reviews from Supabase:", filteredMock.length, "isMock:", true);
         return;
       }
 
@@ -125,7 +166,7 @@ export function useReviews() {
       console.log("[useReviews] Active connections found:", connections?.length ?? 0, connError ? `(error: ${connError.message})` : "");
 
       if (connError || !connections || connections.length === 0) {
-        setReviews(MOCK_REVIEWS);
+        setReviews(applyVersionFilter(MOCK_REVIEWS, appVersion, appVersionUnknown));
         setIsMock(true);
         setActiveConnectionId(null);
         console.log("[useReviews] No connections — showing mock data");
@@ -138,12 +179,21 @@ export function useReviews() {
       const connectionIds = connections.map((c) => c.id);
       console.log("[useReviews] Fetching reviews for connection IDs:", connectionIds);
 
-      const { data, error } = await supabase
+      // Version filter is applied at the query level so it remains correct
+      // even when one version has more rows than the 200-row fetch cap.
+      // appVersionUnknown wins when both are set (mutual-exclusion rule).
+      let query = supabase
         .from("reviews")
         .select("*")
         .in("connection_id", connectionIds)
         .order("review_created_at", { ascending: false })
         .limit(200);
+      if (appVersionUnknown) {
+        query = query.is("app_version_name", null).eq("source", "play_store");
+      } else if (appVersion) {
+        query = query.eq("app_version_name", appVersion);
+      }
+      const { data, error } = await query;
 
       if (error) {
         console.error("[useReviews] Reviews query error:", error.message);
@@ -168,7 +218,7 @@ export function useReviews() {
     } finally {
       if (!silent) setLoading(false);
     }
-  }, []);
+  }, [appVersion, appVersionUnknown]);
 
   useEffect(() => {
     fetchReviews();

@@ -71,3 +71,77 @@ test("transform: missing userComment returns null", () => {
   );
   assert.equal(result, null);
 });
+
+// ── App version extraction (migration 039 / inbox version filter) ────────────
+// Google's docs explicitly state appVersionName / appVersionCode "may be
+// absent" on userComment for some reviews (old reviews, web reviews, certain
+// device configurations). NULL on either field maps to the "Unknown" bucket.
+
+const versionedReview = (version: { appVersionName?: unknown; appVersionCode?: unknown }) => ({
+  reviewId: "gp:AOqpTOH-version-case",
+  authorName: "Test User",
+  comments: [
+    {
+      userComment: {
+        text: "Test",
+        starRating: 4,
+        reviewerLanguage: "en_US",
+        lastModified: { seconds: "1700000000", nanos: 0 },
+        ...version,
+      },
+    },
+  ],
+});
+
+test("transform: both appVersionName and appVersionCode present → both stored", () => {
+  const result = transformPlayStoreReview(
+    versionedReview({ appVersionName: "1.2.3", appVersionCode: 123 }) as Parameters<typeof transformPlayStoreReview>[0]
+  );
+  assert.notEqual(result, null);
+  assert.equal(result!.app_version_name, "1.2.3");
+  assert.equal(result!.app_version_code, 123);
+});
+
+test("transform: both fields absent → both stored as null", () => {
+  const result = transformPlayStoreReview(
+    versionedReview({}) as Parameters<typeof transformPlayStoreReview>[0]
+  );
+  assert.notEqual(result, null);
+  assert.equal(result!.app_version_name, null);
+  assert.equal(result!.app_version_code, null);
+});
+
+test("transform: only appVersionName present → name stored, code null", () => {
+  const result = transformPlayStoreReview(
+    versionedReview({ appVersionName: "2.0.0" }) as Parameters<typeof transformPlayStoreReview>[0]
+  );
+  assert.notEqual(result, null);
+  assert.equal(result!.app_version_name, "2.0.0");
+  assert.equal(result!.app_version_code, null);
+});
+
+test("transform: empty-string appVersionName → stored as null (trim falsifies it)", () => {
+  const result = transformPlayStoreReview(
+    versionedReview({ appVersionName: "", appVersionCode: 42 }) as Parameters<typeof transformPlayStoreReview>[0]
+  );
+  assert.notEqual(result, null);
+  assert.equal(result!.app_version_name, null);
+  assert.equal(result!.app_version_code, 42);
+});
+
+test("transform: whitespace-only appVersionName → stored as null", () => {
+  const result = transformPlayStoreReview(
+    versionedReview({ appVersionName: "   " }) as Parameters<typeof transformPlayStoreReview>[0]
+  );
+  assert.notEqual(result, null);
+  assert.equal(result!.app_version_name, null);
+});
+
+test("transform: appVersionCode as string → coerced to null (no Number() coercion)", () => {
+  const result = transformPlayStoreReview(
+    versionedReview({ appVersionName: "1.0.0", appVersionCode: "123" }) as Parameters<typeof transformPlayStoreReview>[0]
+  );
+  assert.notEqual(result, null);
+  assert.equal(result!.app_version_name, "1.0.0");
+  assert.equal(result!.app_version_code, null);
+});

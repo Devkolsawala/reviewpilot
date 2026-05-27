@@ -329,6 +329,10 @@ interface RawReviewData {
       reviewerLanguage?: string;
       lastModified?: { seconds?: string; nanos?: number };
       deviceMetadata?: Record<string, unknown>;
+      // Both may be absent per Google's official docs (very old reviews, web
+      // reviews, certain device configurations). NULL → "Unknown" bucket in UI.
+      appVersionName?: string;
+      appVersionCode?: number;
     };
     developerComment?: {
       text?: string;
@@ -360,6 +364,29 @@ export function transformPlayStoreReview(
 
   const text = userComment.text || "";
   const rating = userComment.starRating || 0;
+
+  // App version (both may be absent per Google's API docs). Trim the name so
+  // whitespace-only values land in the "Unknown" bucket alongside true absents.
+  // For the code, only accept a real number — do NOT coerce strings.
+  const appVersionName = userComment.appVersionName?.trim() || null;
+  const appVersionCode =
+    typeof userComment.appVersionCode === "number"
+      ? userComment.appVersionCode
+      : null;
+
+  // Diagnostic: log when Google omits version data so it can be verified
+  // against raw API responses. Web reviews, certain device configs, and some
+  // legacy records legitimately lack these fields per Google's own docs.
+  if (appVersionName === null || appVersionCode === null) {
+    console.log(
+      "[TRANSFORM][version-missing] reviewId=%s name=%s code=%s rawNameType=%s rawCodeType=%s — Google omitted version metadata for this review (web review / no telemetry / legacy)",
+      review.reviewId,
+      appVersionName,
+      appVersionCode,
+      typeof userComment.appVersionName,
+      typeof userComment.appVersionCode
+    );
+  }
 
   // Parse timestamp — Play Store uses seconds since epoch
   let reviewDate: string;
@@ -396,6 +423,8 @@ export function transformPlayStoreReview(
     keywords: extractKeywords(text),
     is_read: hasExistingReply,
     review_created_at: reviewDate,
+    app_version_name: appVersionName,
+    app_version_code: appVersionCode,
   };
 }
 
