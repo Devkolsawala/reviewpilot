@@ -9,7 +9,7 @@ import { JsonLd, SITE_URL } from "@/components/marketing/JsonLd";
 export const metadata: Metadata = {
   title: "How AI Review Management Works — Setup in Minutes",
   description:
-    "How does AI review management work? Connect Google Business Profile or Play Store, train brand voice, set auto-reply rules, go live. Full walkthrough here.",
+    "How does AI review management work? Connect Play Store or WhatsApp (Google Business Profile coming soon), train brand voice, set auto-reply rules, go live. Full walkthrough here.",
   alternates: { canonical: "/how-it-works" },
   openGraph: {
     title: "How AI Review Management Works",
@@ -70,7 +70,7 @@ const howToSchema = {
   "@type": "HowTo",
   name: "How automated Google review reply setup works with ReviewPilot",
   description:
-    "A 6-step process for setting up AI review management across Google Business Profile and Play Store.",
+    "A 6-step process for setting up AI review management across Play Store and WhatsApp, with Google Business Profile coming soon.",
   step: STEPS.map((s, i) => ({
     "@type": "HowToStep",
     position: i + 1,

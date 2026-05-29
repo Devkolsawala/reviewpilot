@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
-  ArrowRight, CheckCircle2, XCircle, MinusCircle,
+  ArrowRight, CheckCircle2, XCircle, MinusCircle, Clock,
   IndianRupee, Smartphone, Globe,
 } from "lucide-react";
 import { JsonLd, SITE_URL, SITE_OG } from "@/components/marketing/JsonLd";
@@ -15,14 +15,14 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Birdeye Alternative India — Affordable AI Review Management | ReviewPilot",
     description:
-      "ReviewPilot vs Birdeye vs AppFollow: honest comparison for Indian SMBs. 17× cheaper, Play Store + Google Business, INR pricing. Start free.",
+      "ReviewPilot vs Birdeye vs AppFollow: honest comparison for Indian SMBs. 17× cheaper, Play Store reviews (Google Business coming soon), INR pricing. Start free.",
     url: `${SITE_URL}/alternatives/birdeye-alternative`,
     images: [{ url: "/og-image.svg", width: 1200, height: 630, alt: "Birdeye alternative India — ReviewPilot" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "Birdeye Alternative for India | ReviewPilot",
-    description: "17× cheaper than Birdeye. Play Store + Google Business reviews. INR pricing. Start your free trial.",
+    description: "17× cheaper than Birdeye. Play Store reviews (Google Business coming soon). INR pricing. Start your free trial.",
     images: ["/og-image.svg"],
   },
 };
@@ -61,7 +61,7 @@ const faqSchema = {
       name: "Does Birdeye support Google Play Store reviews?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Birdeye focuses on Google Business Profile and local-business review surfaces. Play Store review management is not a core Birdeye capability. ReviewPilot is the only India-market tool that handles both Play Store and Google Business Profile in a single inbox.",
+        text: "Birdeye focuses on Google Business Profile and local-business review surfaces. Play Store review management is not a core Birdeye capability. ReviewPilot manages Play Store reviews in a single inbox today, with Google Business Profile review management coming soon.",
       },
     },
     {
@@ -69,7 +69,7 @@ const faqSchema = {
       name: "What does AppFollow do that ReviewPilot doesn't?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "AppFollow is a global app store intelligence platform with deeper App Store analytics, sentiment tracking over time, and integrations with Slack and Jira. It is not focused on Google Business Profile reviews. ReviewPilot is the better fit if you need both Play Store and GBP reviews managed together at an India-friendly price.",
+        text: "AppFollow is a global app store intelligence platform with deeper App Store analytics, sentiment tracking over time, and integrations with Slack and Jira. It is not focused on Google Business Profile reviews. ReviewPilot is the better fit if you need Play Store reviews managed at an India-friendly price today, with Google Business Profile review management coming soon.",
       },
     },
     {
@@ -77,7 +77,7 @@ const faqSchema = {
       name: "Can I switch from Birdeye to ReviewPilot without losing data?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Yes — new reviews sync automatically once you connect Google Business Profile or Play Console. Historical reply data from Birdeye is not migrated, but ReviewPilot will pull your last 90 days of reviews on the first sync. Our team can walk you through onboarding on a free demo call.",
+        text: "Play Store reviews sync automatically as soon as you connect Play Console; Google Business Profile sync is coming soon. Historical reply data from Birdeye is not migrated, but ReviewPilot will pull your last 90 days of Play Store reviews on the first sync. Our team can walk you through onboarding on a free demo call.",
       },
     },
   ],
@@ -92,12 +92,13 @@ type FeatureRow = {
 
 const ROWS: FeatureRow[] = [
   { feature: "Starting monthly price (USD)", reviewpilot: "$16", birdeye: "~$266", appfollow: "~$85" },
-  { feature: "Google Business Profile reviews", reviewpilot: true, birdeye: true, appfollow: false },
+  { feature: "Google Business Profile reviews", reviewpilot: "soon", birdeye: true, appfollow: false },
   { feature: "Google Play Store reviews", reviewpilot: true, birdeye: false, appfollow: true },
-  { feature: "Both GBP + Play Store in one inbox", reviewpilot: true, birdeye: false, appfollow: false },
+  { feature: "Review Recovery Engine", reviewpilot: true, birdeye: false, appfollow: false },
+  { feature: "AI Insights (themes + ABSA)", reviewpilot: true, birdeye: "Partial", appfollow: "Partial" },
   { feature: "AI-generated review replies", reviewpilot: true, birdeye: true, appfollow: true },
   { feature: "INR pricing & UPI payments", reviewpilot: true, birdeye: false, appfollow: false },
-  { feature: "SMS review collection", reviewpilot: true, birdeye: true, appfollow: false },
+  { feature: "SMS review collection", reviewpilot: "soon", birdeye: true, appfollow: false },
   { feature: "Smart routing (4–5★ to Google, 1–3★ private)", reviewpilot: true, birdeye: "Partial", appfollow: false },
   { feature: "7-day free trial, no credit card", reviewpilot: true, birdeye: false, appfollow: false },
   { feature: "India-based support", reviewpilot: true, birdeye: false, appfollow: false },
@@ -110,6 +111,16 @@ function Cell({ value }: { value: boolean | string }) {
     return <CheckCircle2 className="h-5 w-5 text-accent mx-auto" />;
   if (value === false)
     return <XCircle className="h-5 w-5 text-red-400/60 mx-auto" />;
+  if (value === "soon")
+    return (
+      <span
+        className="mx-auto inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-600 dark:text-amber-400"
+        title="Coming soon"
+      >
+        <Clock className="h-3 w-3" aria-hidden="true" />
+        Soon
+      </span>
+    );
   return (
     <span className="text-xs text-muted-foreground text-center block">{value}</span>
   );
@@ -122,15 +133,15 @@ const FAQS = [
   },
   {
     q: "Does Birdeye support Google Play Store reviews?",
-    a: "Birdeye focuses on Google Business Profile and local-business review surfaces. Play Store review management is not a core Birdeye capability. ReviewPilot is the only India-market tool that handles both Play Store and Google Business Profile in a single inbox.",
+    a: "Birdeye focuses on Google Business Profile and local-business review surfaces. Play Store review management is not a core Birdeye capability. ReviewPilot manages Play Store reviews in a single inbox today, with Google Business Profile review management coming soon.",
   },
   {
     q: "What does AppFollow do that ReviewPilot doesn't?",
-    a: "AppFollow is a global app store intelligence platform with deeper App Store analytics, sentiment tracking over time, and integrations with Slack and Jira. It is not focused on Google Business Profile reviews. ReviewPilot is the better fit if you need both Play Store and GBP reviews managed together at an India-friendly price.",
+    a: "AppFollow is a global app store intelligence platform with deeper App Store analytics, sentiment tracking over time, and integrations with Slack and Jira. It is not focused on Google Business Profile reviews. ReviewPilot is the better fit if you need Play Store reviews managed at an India-friendly price today, with Google Business Profile review management coming soon.",
   },
   {
     q: "Can I switch from Birdeye to ReviewPilot without losing data?",
-    a: "Yes — new reviews sync automatically once you connect Google Business Profile or Play Console. Historical reply data from Birdeye is not migrated, but ReviewPilot will pull your last 90 days of reviews on the first sync. Our team can walk you through onboarding on a free demo call.",
+    a: "Play Store reviews sync automatically as soon as you connect Play Console; Google Business Profile sync is coming soon. Historical reply data from Birdeye is not migrated, but ReviewPilot will pull your last 90 days of Play Store reviews on the first sync. Our team can walk you through onboarding on a free demo call.",
   },
 ];
 
@@ -151,9 +162,10 @@ export default function BirdeyeAlternativePage() {
           </h1>
           <p className="mt-6 text-lg text-muted-foreground leading-relaxed max-w-2xl mx-auto">
             Birdeye charges Indian SMBs ~$266/month. ReviewPilot does the
-            same core job — AI review replies for Google Business Profile and
-            Play Store — for $16/month. That&apos;s 17× cheaper, with INR-equivalent
-            billing, UPI payments, and Indian-language AI replies included.
+            same core job — AI review replies for Play Store today, with
+            Google Business Profile coming soon — for $16/month. That&apos;s
+            17× cheaper, with INR-equivalent billing, UPI payments, and
+            Indian-language AI replies included.
           </p>
           <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
             <Button size="lg" asChild>
@@ -187,8 +199,8 @@ export default function BirdeyeAlternativePage() {
               <p className="text-sm text-muted-foreground mt-1">per month · Starter</p>
               <p className="text-[10px] text-muted-foreground">Billed in INR equivalent at checkout</p>
               <div className="mt-4 space-y-2 text-sm text-left">
-                <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-accent shrink-0" /> GBP + Play Store</div>
-                <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-accent shrink-0" /> Indian languages</div>
+                <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-accent shrink-0" /> Play Store + WhatsApp</div>
+                <div className="flex items-center gap-2"><Clock className="h-4 w-4 text-amber-500 shrink-0" /> Google Business Profile (soon)</div>
                 <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-accent shrink-0" /> UPI / INR billing</div>
                 <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-accent shrink-0" /> No annual contract</div>
               </div>
@@ -274,7 +286,7 @@ export default function BirdeyeAlternativePage() {
               <ul className="space-y-3">
                 {[
                   "You're an Indian SMB or indie app developer",
-                  "You need Play Store AND Google Business reviews together",
+                  "You need Play Store reviews today, with Google Business coming soon",
                   "You want INR billing, UPI, and India-based support",
                   "You need AI replies in Hindi, Tamil, Telugu, and more",
                   "You want a 7-day free trial with no annual commitment",
@@ -354,7 +366,7 @@ export default function BirdeyeAlternativePage() {
           Also see:{" "}
           <Link href="/compare/reviewpilot-vs-birdeye" className="text-accent hover:underline">Detailed ReviewPilot vs Birdeye comparison</Link>
           {" · "}
-          <Link href="/features/google-business-profile" className="text-accent hover:underline">Google Business Profile automation</Link>
+          <Link href="/features/google-business-profile" className="text-accent hover:underline">Google Business Profile automation (coming soon)</Link>
           {" · "}
           <Link href="/features/google-play-reviews" className="text-accent hover:underline">Play Store review automation</Link>
           {" · "}

@@ -23,13 +23,13 @@ import {
 export const metadata: Metadata = {
   title: "AI Review Management Software India — Play Store, Google & WhatsApp",
   description:
-    "Review management software for India. AI replies for Play Store, Google Business Profile, and WhatsApp Business in one unified inbox. From $16/mo. 7-day free trial.",
+    "Review management software for India. AI replies for Play Store and WhatsApp Business, plus a Review Recovery Engine and AI Insights, in one unified inbox. From $16/mo. 7-day free trial.",
   alternates: { canonical: "/" },
   openGraph: {
     title:
       "AI Review Management Software India — Play Store, Google & WhatsApp",
     description:
-      "AI replies for Play Store reviews, Google reviews, and WhatsApp messages — one unified inbox. Made for India. From $16/mo.",
+      "AI replies for Play Store reviews and WhatsApp messages, plus review recovery and AI insights — one unified inbox. Made for India. From $16/mo.",
     type: "website",
     url: SITE_URL,
     images: [
@@ -45,7 +45,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "AI Review Management India — Play Store, Google & WhatsApp",
     description:
-      "AI replies for Play Store, Google, and WhatsApp in one inbox. From $16/mo.",
+      "AI replies for Play Store and WhatsApp, plus review recovery, in one inbox. From $16/mo.",
     images: ["/og-image.svg"],
   },
 };
@@ -57,16 +57,16 @@ const softwareSchema = {
   operatingSystem: "Web",
   applicationCategory: "BusinessApplication",
   description:
-    "AI-powered review management for Indian SMBs and app developers. Auto-reply to Play Store reviews, Google Business Profile reviews, and WhatsApp Business messages in one unified inbox.",
+    "AI-powered review management for Indian SMBs and app developers. Auto-reply to Play Store reviews and WhatsApp Business messages in one unified inbox, with a Review Recovery Engine and AI Insights. Google Business Profile support is coming soon.",
   url: SITE_URL,
   image: SITE_OG,
   featureList: [
     "AI replies for Google Play Store reviews",
-    "AI replies for Google Business Profile reviews",
+    "Review Recovery Engine — convert negative reviewers into promoters",
+    "AI Insights — theme map and aspect-based sentiment",
     "WhatsApp Business automation via official Cloud API",
-    "Unified inbox across all three platforms",
     "Meta-approved Embedded Signup for WhatsApp",
-    "8 Indian languages supported",
+    "Sentiment analytics with Net Sentiment Score",
     "Team collaboration with role-based access",
   ],
   offers: {
@@ -97,7 +97,7 @@ const FAQ_SCHEMA_ITEMS = [
   },
   {
     q: "Does ReviewPilot work with WhatsApp Business?",
-    a: "Yes. ReviewPilot is a Meta-approved Tech Provider with the official WhatsApp Cloud API. Connect via Embedded Signup in 60 seconds, and inbound messages land in your unified inbox in real time alongside Play Store and Google reviews.",
+    a: "Yes. ReviewPilot is a Meta-approved Tech Provider with the official WhatsApp Cloud API. Connect via Embedded Signup in 60 seconds, and inbound messages land in your unified inbox in real time alongside your Play Store reviews.",
   },
   {
     q: "Is the WhatsApp integration official and Meta-approved?",
@@ -105,7 +105,7 @@ const FAQ_SCHEMA_ITEMS = [
   },
   {
     q: "Can I reply to WhatsApp messages and Play Store reviews from the same inbox?",
-    a: "Yes. ReviewPilot's unified inbox combines Play Store reviews, Google Business Profile reviews, and WhatsApp Business messages in one queue, with one AI engine drafting replies in your tone.",
+    a: "Yes. ReviewPilot's unified inbox combines Play Store reviews and WhatsApp Business messages in one queue, with one AI engine drafting replies in your tone. Google Business Profile reviews are coming soon.",
   },
   {
     q: "Does ReviewPilot work with Google Play Store reviews?",

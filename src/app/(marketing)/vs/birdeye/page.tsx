@@ -4,6 +4,7 @@ import {
   ArrowRight,
   CheckCircle2,
   XCircle,
+  Clock,
   Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -22,7 +23,7 @@ const PAGE_URL = `${SITE_URL}/vs/birdeye`;
 export const metadata: Metadata = {
   title: "Birdeye Alternative for Indian Businesses",
   description:
-    "Affordable Birdeye alternative for India. ReviewPilot adds Play Store + WhatsApp Business automation, AI replies in 8 Indian languages, INR pricing from $16/mo.",
+    "Affordable Birdeye alternative for India. ReviewPilot adds Play Store + WhatsApp Business automation, AI replies in Indian languages, INR pricing from $16/mo.",
   alternates: { canonical: "/vs/birdeye" },
   openGraph: {
     title: "Birdeye Alternative for Indian Businesses — ReviewPilot",
@@ -47,11 +48,11 @@ const FAQS = [
   },
   {
     q: "Does Birdeye support Google Play Store reviews?",
-    a: "Birdeye focuses on Google Business Profile and other local-business review surfaces. Deep Play Store review management is not part of their core product, so app developers (and SMBs that run both a storefront and a mobile app) won't get a single inbox for both. ReviewPilot handles Play Store, Google Business Profile, and WhatsApp Business in one unified inbox.",
+    a: "Birdeye focuses on Google Business Profile and other local-business review surfaces. Deep Play Store review management is not part of their core product, so app developers (and SMBs that run both a storefront and a mobile app) won't get a single inbox for both. ReviewPilot handles Play Store and WhatsApp Business in one unified inbox today, with Google Business Profile review management coming soon.",
   },
   {
     q: "Does Birdeye have WhatsApp Business automation?",
-    a: "Yes — Birdeye does support WhatsApp Business as a customer messaging channel. The differentiator is pricing and packaging: Birdeye is quote-only on annual contracts that typically start around $266/month, while ReviewPilot bundles WhatsApp Business automation, Play Store, and Google Business Profile review management on a self-serve $16/month plan billed in INR.",
+    a: "Yes — Birdeye does support WhatsApp Business as a customer messaging channel. The differentiator is pricing and packaging: Birdeye is quote-only on annual contracts that typically start around $266/month, while ReviewPilot bundles WhatsApp Business automation and Play Store review management on a self-serve $16/month plan billed in INR, with Google Business Profile review management coming soon.",
   },
   {
     q: "When does Birdeye still make sense?",
@@ -59,7 +60,7 @@ const FAQS = [
   },
   {
     q: "Can I migrate from Birdeye to ReviewPilot?",
-    a: "Yes. New reviews sync automatically once you connect Google Business Profile. Historical reply data isn't imported, but we're happy to walk you through onboarding on a free demo call.",
+    a: "Play Store reviews sync automatically as soon as you connect Play Console. Google Business Profile sync is coming soon — once it launches, your GBP reviews will sync automatically too. Historical reply data isn't imported, but we're happy to walk you through onboarding on a free demo call.",
   },
   {
     q: "Does ReviewPilot bill in INR?",
@@ -109,7 +110,7 @@ const ROWS = [
     a: "$16 (~₹1,500)",
     b: "~$266 (quoted)",
   },
-  { cap: "Google Business Profile reviews", a: <Yes />, b: <Yes /> },
+  { cap: "Google Business Profile reviews", a: <Soon />, b: <Yes /> },
   {
     cap: "Google Play Store reviews",
     a: <Yes />,
@@ -121,7 +122,8 @@ const ROWS = [
     b: <Yes />,
   },
   { cap: "AI-drafted replies", a: <Yes />, b: <Yes /> },
-  { cap: "8 Indian languages", a: <Yes />, b: <No /> },
+  { cap: "Review Recovery Engine", a: <Yes />, b: <No /> },
+  { cap: "AI Insights (themes + ABSA)", a: <Yes />, b: <No /> },
   {
     cap: "INR billing via Razorpay",
     a: <Yes />,
@@ -163,7 +165,7 @@ export default function VsBirdeyePage() {
             <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground leading-relaxed">
               Honest comparison. ReviewPilot adds Play Store + WhatsApp Business
               automation that Birdeye doesn&apos;t cover, ships AI replies in
-              8 Indian languages, and bills in INR through Razorpay — at a
+              major Indian languages, and bills in INR through Razorpay — at a
               fraction of Birdeye&apos;s annual-contract pricing.
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
@@ -194,8 +196,9 @@ export default function VsBirdeyePage() {
               the lack of Play Store and WhatsApp coverage — none of it
               matches how Indian SMBs actually buy or work. ReviewPilot
               exists to be the tool that does. Self-serve sign-up, INR
-              billing, three platforms in one inbox, AI replies in your
-              tone in eight Indian languages, $16 to start.
+              billing, Play Store and WhatsApp in one inbox (with Google
+              Business Profile coming soon), AI replies in your tone in
+              major Indian languages, $16 to start.
             </p>
           </div>
         </section>
@@ -302,5 +305,16 @@ function Yes() {
 function No() {
   return (
     <XCircle className="h-4 w-4 text-muted-foreground/50" aria-label="No" />
+  );
+}
+function Soon() {
+  return (
+    <span
+      className="inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-600 dark:text-amber-400"
+      title="Coming soon"
+    >
+      <Clock className="h-3 w-3" aria-hidden="true" />
+      Soon
+    </span>
   );
 }

@@ -38,22 +38,22 @@ const PERSONAS: Record<
   businesses: {
     icon: MapPin,
     label: "For local businesses",
-    eyebrow: "Google Business Profile",
-    title: "Every Google review, replied while you sleep.",
+    eyebrow: "WhatsApp now · Google Business Profile soon",
+    title: "Every customer message, replied while you sleep.",
     description:
-      "Connect your Google Business Profile in one click. AI drafts replies in your brand voice; SMS campaigns route happy customers to Google and critics to private feedback.",
+      "Today, ReviewPilot answers your WhatsApp Business DMs with AI in your brand voice. Google Business Profile review management is coming soon — when it launches, your Google reviews join the same inbox.",
     bullets: [
-      "One-click Google Business Profile connection",
-      "Smart routing — 4-5★ to Google, 1-3★ to private feedback",
+      "WhatsApp Business automation — live today",
+      "Google Business Profile connection — coming soon",
+      "Smart routing — 4-5★ to Google, 1-3★ to private feedback (coming soon)",
       "Multi-location dashboards for chains and agencies",
-      "Response rate from 20% to 95% in under a month",
     ],
     cta: { label: "See GBP features", href: "/features/google-business-profile" },
   },
 };
 
 export function PersonaSplit() {
-  const [active, setActive] = useState<PersonaKey>("businesses");
+  const [active, setActive] = useState<PersonaKey>("developers");
   const persona = PERSONAS[active];
   const Icon = persona.icon;
 
@@ -220,7 +220,7 @@ function BusinessPreview() {
       </div>
       <div className="rounded-lg border border-border/60 bg-background/60 p-3">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-medium">Ravi · Google Review</span>
+          <span className="text-xs font-medium">Ravi · Google Review · soon</span>
           <div className="flex gap-0.5">
             {[1, 2, 3, 4, 5].map((i) => (
               <Star key={i} className="h-2.5 w-2.5 fill-amber-400 text-amber-400" />

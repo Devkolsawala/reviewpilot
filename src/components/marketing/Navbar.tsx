@@ -37,9 +37,9 @@ const NAV_LINKS: NavLink[] = [
       },
       {
         section: "By platform",
-        label: "Google Business Profile",
+        label: "Google Business Profile (soon)",
         href: "/integrations/google-business-profile",
-        description: "One unified inbox for every location",
+        description: "Coming soon — one unified inbox for every location",
       },
       {
         section: "By platform",
@@ -57,7 +57,7 @@ const NAV_LINKS: NavLink[] = [
         section: "By business type",
         label: "For local businesses",
         href: "/for-local-business",
-        description: "Google reviews + WhatsApp, on autopilot",
+        description: "WhatsApp now, Google reviews coming soon",
       },
     ],
   },

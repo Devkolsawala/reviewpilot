@@ -41,7 +41,7 @@ const COLUMNS: { heading: string; links: { label: string; href: string }[] }[] =
       { label: "All integrations", href: "/integrations" },
       { label: "WhatsApp Business API", href: "/integrations/whatsapp-business" },
       { label: "Google Play Store", href: "/integrations/google-play-store" },
-      { label: "Google Business Profile", href: "/integrations/google-business-profile" },
+      { label: "Google Business Profile (soon)", href: "/integrations/google-business-profile" },
     ],
   },
   {
@@ -108,9 +108,10 @@ export function Footer() {
               </span>
             </Link>
             <p className="mt-4 max-w-sm text-sm text-muted-foreground leading-relaxed">
-              AI replies for Play Store reviews, Google Business Profile
-              reviews, and WhatsApp Business messages — one unified inbox
-              built for Indian SMBs and app developers. From $16/mo.
+              AI replies for Play Store reviews and WhatsApp Business
+              messages, plus review recovery and AI insights — one unified
+              inbox built for Indian SMBs and app developers. Google Business
+              Profile coming soon. From $16/mo.
             </p>
 
             {/* Newsletter — disabled until backend wiring lands */}

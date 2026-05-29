@@ -44,7 +44,7 @@ const ITEMS = [
   {
     group: "Features",
     icon: Sparkles,
-    label: "Google Business Profile automation",
+    label: "Google Business Profile automation (soon)",
     href: "/features/google-business-profile",
   },
   { group: "Account", icon: LogIn, label: "Log in", href: "/login" },

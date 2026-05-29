@@ -12,19 +12,19 @@ import { JsonLd, SITE_URL, SITE_OG } from "@/components/marketing/JsonLd";
 export const metadata: Metadata = {
   title: "AI Replies to Google Business Reviews India",
   description:
-    "Auto-reply to Google Business Profile reviews with AI. One-click GBP connection, brand-voice replies, SMS review collection. Built for Indian SMBs. $16/mo.",
+    "Auto-reply to Google Business Profile reviews with AI — coming soon. One-click GBP connection, brand-voice replies, multi-location. Built for Indian SMBs. Play Store and WhatsApp live today from $16/mo.",
   alternates: { canonical: "/features/google-business-profile" },
   openGraph: {
     title: "AI Replies to Google Business Reviews — Built for India",
     description:
-      "Connect Google Business Profile in one click. AI writes brand-voice replies, SMS collection smart-routes happy customers to Google. From $16/mo.",
+      "Coming soon: connect Google Business Profile in one click. AI writes brand-voice replies and smart-routes happy customers to Google. Play Store live today from $16/mo.",
     url: `${SITE_URL}/features/google-business-profile`,
     images: [{ url: "/og-image.svg", width: 1200, height: 630, alt: "Google Business Profile review automation — ReviewPilot" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "AI Google Business Review Replies India",
-    description: "Auto-reply to Google Business reviews with AI. Built for Indian SMBs. $16/mo.",
+    description: "Auto-reply to Google Business reviews with AI — coming soon. Built for Indian SMBs. $16/mo.",
     images: ["/og-image.svg"],
   },
 };
@@ -36,7 +36,7 @@ const schema = {
   applicationCategory: "BusinessApplication",
   operatingSystem: "Web",
   description:
-    "AI-powered Google Business Profile review management for Indian SMBs. One-click connection, brand-voice AI replies, and SMS review collection.",
+    "AI-powered Google Business Profile review management for Indian SMBs — coming soon. One-click connection, brand-voice AI replies, and multi-location support.",
   url: `${SITE_URL}/features/google-business-profile`,
   image: SITE_OG,
   offers: {
@@ -73,7 +73,7 @@ const STEPS = [
 const BENEFITS = [
   { icon: CheckCircle2, text: "One-click Google Business Profile connection via OAuth" },
   { icon: Star, text: "AI replies calibrated to your industry (restaurant, clinic, retail, etc.)" },
-  { icon: MessageSquareText, text: "SMS review collection with smart routing to protect your rating" },
+  { icon: MessageSquareText, text: "SMS review collection with smart routing to protect your rating (coming soon)" },
   { icon: BarChart3, text: "Rating trend dashboard — track lift over days and weeks" },
   { icon: Zap, text: "Reply to 30 days of backlog reviews on your first login" },
   { icon: CheckCircle2, text: "Multi-location management — one dashboard for all branches" },
@@ -88,8 +88,9 @@ export default function GoogleBusinessProfilePage() {
       <div className="border-b border-amber-500/30 bg-amber-500/10">
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-2.5 text-center">
           <p className="text-xs text-amber-700 dark:text-amber-300">
-            <span className="font-semibold">Launching soon.</span> Google Business
-            Profile automation is in beta.{" "}
+            <span className="font-semibold">Coming soon.</span> Google Business
+            Profile automation is in Google&apos;s API approval and launching
+            soon.{" "}
             <Link
               href="/features/google-play-reviews"
               className="underline font-medium hover:text-amber-600 dark:hover:text-amber-200"
@@ -124,9 +125,10 @@ export default function GoogleBusinessProfilePage() {
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground leading-relaxed">
             88% of Indian consumers check Google reviews before visiting a local
-            business. ReviewPilot connects to your Google Business Profile in one
-            click and handles every reply — in your voice, automatically, from
-            $16/month.
+            business. Coming soon: ReviewPilot will connect to your Google
+            Business Profile in one click and handle every reply — in your
+            voice, automatically. Play Store and WhatsApp review management are
+            live today from $16/month.
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
             <Button variant="gradient" size="xl" asChild>
@@ -183,13 +185,13 @@ export default function GoogleBusinessProfilePage() {
           <div className="grid gap-12 md:grid-cols-2 items-center">
             <div>
               <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
-                SMS collection
+                SMS collection · Coming soon
               </p>
               <h2 className="mt-3 font-sans text-3xl font-semibold tracking-tight sm:text-4xl">
                 Collect more reviews — without the risk.
               </h2>
               <p className="mt-4 text-muted-foreground leading-relaxed">
-                ReviewPilot&apos;s SMS collection uses{" "}
+                ReviewPilot&apos;s SMS collection (coming soon) will use{" "}
                 <strong className="text-foreground">smart routing</strong>:
                 customers who rate 4–5 stars are sent to your Google review page.
                 Those who rate 1–3 stars go to a private feedback form — so unhappy
@@ -201,7 +203,7 @@ export default function GoogleBusinessProfilePage() {
               </p>
               <Button variant="gradient" className="mt-6" asChild>
                 <Link href="/signup">
-                  Try SMS collection free
+                  Start free trial
                   <ArrowRight className="ml-1.5 h-4 w-4" />
                 </Link>
               </Button>
@@ -294,11 +296,12 @@ export default function GoogleBusinessProfilePage() {
             />
             <div className="relative">
               <h2 className="mx-auto max-w-2xl font-sans text-3xl font-semibold tracking-tight sm:text-4xl">
-                Start automating your Google reviews today.
+                Be first to automate your Google reviews.
               </h2>
               <p className="mx-auto mt-4 max-w-xl text-muted-foreground">
-                7-day free trial. No credit card. Connect your Business Profile in
-                one click.
+                Google Business Profile is coming soon. Start your free trial
+                today for live Play Store and WhatsApp review management — no
+                credit card.
               </p>
               <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
                 <Button variant="gradient" size="xl" asChild>

@@ -15,7 +15,7 @@ export default function Image() {
     eyebrow: "Play Store integration",
     title: "Google Play Store review management with AI replies.",
     kicker:
-      "Service-account or invite-email · 350-char enforced · 8 Indian languages",
+      "Service-account or invite-email · 350-char enforced · Indian languages",
     accentColor: "#34A853",
   });
 }

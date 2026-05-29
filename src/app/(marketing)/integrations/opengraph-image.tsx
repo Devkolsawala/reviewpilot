@@ -14,6 +14,6 @@ export default function Image() {
     eyebrow: "Integrations",
     title:
       "Play Store, Google Business Profile, and WhatsApp Business — three official integrations.",
-    kicker: "One unified inbox · AI replies in 8 Indian languages",
+    kicker: "One unified inbox · AI replies in Indian languages",
   });
 }

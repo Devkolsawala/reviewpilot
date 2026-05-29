@@ -15,6 +15,6 @@ export default function Image() {
     title:
       "ReviewPilot vs AppFollow — for Play Store review automation in India.",
     kicker:
-      "AI replies · Google Business Profile · WhatsApp Business · From $16/month",
+      "AI replies · Review recovery · WhatsApp Business · From $16/month",
   });
 }

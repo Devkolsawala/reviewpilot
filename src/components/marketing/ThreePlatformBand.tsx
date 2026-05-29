@@ -22,8 +22,9 @@ export function ThreePlatformBand() {
             <span className="text-gradient-brand">in one unified inbox</span>.
           </h2>
           <p className="mt-4 text-muted-foreground">
-            One AI engine, one workflow, one source-typed view. Stop tab-hopping
-            between Play Console, Google Business, and WhatsApp Business.
+            One AI engine, one workflow, one source-typed view. Play Store and
+            WhatsApp Business are live today; Google Business Profile is coming
+            soon.
           </p>
         </div>
 
@@ -37,8 +38,8 @@ export function ThreePlatformBand() {
           />
           <PlatformTile
             href="/integrations/google-business-profile"
-            label="Google Business Profile"
-            caption="OAuth, multi-location, recovery engine"
+            label="Google Business Profile (soon)"
+            caption="Coming soon — OAuth, multi-location, recovery engine"
             icon={
               <Building2
                 className="h-6 w-6"

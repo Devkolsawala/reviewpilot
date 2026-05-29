@@ -4,6 +4,7 @@ import {
   ArrowRight,
   CheckCircle2,
   XCircle,
+  Clock,
   Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -22,12 +23,12 @@ const PAGE_URL = `${SITE_URL}/vs/appfollow`;
 export const metadata: Metadata = {
   title: "AppFollow Alternative for Play Store Review Automation",
   description:
-    "AppFollow alternative built for Indian app developers. ReviewPilot adds AI replies, Google Business Profile, WhatsApp Business, and INR pricing from $16/mo.",
+    "AppFollow alternative built for Indian app developers. ReviewPilot adds AI replies, a Review Recovery Engine, WhatsApp Business, and INR pricing from $16/mo. Google Business Profile coming soon.",
   alternates: { canonical: "/vs/appfollow" },
   openGraph: {
     title: "AppFollow Alternative — ReviewPilot",
     description:
-      "Play Store review automation with AI replies. Plus Google + WhatsApp.",
+      "Play Store review automation with AI replies, recovery, and WhatsApp. Google coming soon.",
     url: PAGE_URL,
     type: "article",
     siteName: "ReviewPilot",
@@ -36,18 +37,18 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "AppFollow Alternative — ReviewPilot",
-    description: "Play Store + GBP + WhatsApp. From $16/mo.",
+    description: "Play Store + recovery + WhatsApp. GBP coming soon. From $16/mo.",
   },
 };
 
 const FAQS = [
   {
     q: "How is ReviewPilot different from AppFollow?",
-    a: "AppFollow is a strong Play Store and App Store review monitoring tool focused on app developers. ReviewPilot extends that with AI-drafted replies, Google Business Profile review management, and WhatsApp Business automation — all in a single unified inbox. So if you're an app developer who also wants to manage your support WhatsApp number or your studio's Google reviews, ReviewPilot covers all of it.",
+    a: "AppFollow is a strong Play Store and App Store review monitoring tool focused on app developers. ReviewPilot extends that with AI-drafted replies, a Review Recovery Engine, AI Insights, and WhatsApp Business automation — all in a single unified inbox. Google Business Profile review management is coming soon. So if you're an app developer who also wants to manage your support WhatsApp number, ReviewPilot covers that today, with your studio's Google reviews coming soon.",
   },
   {
     q: "Does AppFollow support Google Business Profile?",
-    a: "No. AppFollow's core focus is mobile app stores — Google Play Store and Apple App Store. Native Google Business Profile (GBP / Google My Business) review management is not part of their product. ReviewPilot supports Google Business Profile via OAuth alongside Play Store and WhatsApp Business in one unified inbox.",
+    a: "No. AppFollow's core focus is mobile app stores — Google Play Store and Apple App Store. Native Google Business Profile (GBP / Google My Business) review management is not part of their product. ReviewPilot is adding Google Business Profile review management (coming soon) alongside its live Play Store and WhatsApp Business support in one unified inbox.",
   },
   {
     q: "Does AppFollow do WhatsApp automation?",
@@ -55,7 +56,7 @@ const FAQS = [
   },
   {
     q: "Does ReviewPilot do iOS App Store reviews?",
-    a: "Not yet. ReviewPilot focuses on Google Play Store, Google Business Profile, and WhatsApp Business today. If iOS App Store coverage is a hard requirement, AppFollow is the better fit. If Play Store + Google + WhatsApp matters more, ReviewPilot is the only tool that covers all three.",
+    a: "Not yet. ReviewPilot focuses on Google Play Store and WhatsApp Business today, with Google Business Profile coming soon. If iOS App Store coverage is a hard requirement, AppFollow is the better fit. If Play Store + WhatsApp (and soon Google) matters more, ReviewPilot is the stronger fit.",
   },
   {
     q: "Is ReviewPilot India-friendly?",
@@ -117,7 +118,7 @@ const ROWS = [
   },
   {
     cap: "Google Business Profile reviews",
-    a: <Yes />,
+    a: <Soon />,
     b: <No />,
   },
   {
@@ -126,7 +127,8 @@ const ROWS = [
     b: <No />,
   },
   { cap: "AI-drafted replies", a: <Yes />, b: <Yes /> },
-  { cap: "8 Indian languages", a: <Yes />, b: <No /> },
+  { cap: "Review Recovery Engine", a: <Yes />, b: <No /> },
+  { cap: "AI Insights (themes + ABSA)", a: <Yes />, b: <No /> },
   {
     cap: "INR billing via Razorpay",
     a: <Yes />,
@@ -158,8 +160,9 @@ export default function VsAppFollowPage() {
             <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground leading-relaxed">
               The honest comparison for Indian app developers. AppFollow
               monitors mobile app reviews. ReviewPilot adds AI-drafted
-              replies, Google Business Profile, and WhatsApp Business —
-              all in one inbox, billed in INR from $16/month.
+              replies, a Review Recovery Engine, and WhatsApp Business —
+              all in one inbox, billed in INR from $16/month. Google
+              Business Profile is coming soon.
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
               <Button variant="gradient" size="xl" asChild>
@@ -188,9 +191,9 @@ export default function VsAppFollowPage() {
               reviews. But for an Indian indie dev or studio that wants
               the AI to actually draft and ship the replies — not just
               alert you that a review came in — and that also wants to
-              cover the studio&apos;s Google Business Profile and the
-              support WhatsApp number, AppFollow leaves three obvious
-              gaps. ReviewPilot fills all three. That&apos;s the difference.
+              cover the support WhatsApp number, AppFollow leaves clear
+              gaps. ReviewPilot fills them, with Google Business Profile
+              coverage coming soon. That&apos;s the difference.
             </p>
           </div>
         </section>
@@ -296,5 +299,16 @@ function Yes() {
 function No() {
   return (
     <XCircle className="h-4 w-4 text-muted-foreground/50" aria-label="No" />
+  );
+}
+function Soon() {
+  return (
+    <span
+      className="inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-600 dark:text-amber-400"
+      title="Coming soon"
+    >
+      <Clock className="h-3 w-3" aria-hidden="true" />
+      Soon
+    </span>
   );
 }

@@ -16,7 +16,7 @@ export default function Image() {
     title:
       "Google Business Profile review management for Indian local businesses.",
     kicker:
-      "OAuth · Multi-location · Recovery engine · 8 Indian languages",
+      "OAuth · Multi-location · Recovery engine · Indian languages",
     accentColor: "#4285F4",
   });
 }

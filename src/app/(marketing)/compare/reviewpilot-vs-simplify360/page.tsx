@@ -67,7 +67,7 @@ export default function Page() {
         pricingNote="Simplify360 pricing is bundled with their broader CX suite and quoted per account, so exact numbers aren't published publicly."
         rows={[
           { feature: "Starting price (monthly)", reviewpilot: "$16", competitor: "Enterprise bundle" },
-          { feature: "Google Business Profile replies", reviewpilot: true, competitor: true },
+          { feature: "Google Business Profile replies", reviewpilot: "soon", competitor: true },
           { feature: "Google Play Store reviews", reviewpilot: true, competitor: "Not advertised" },
           { feature: "AI-generated replies", reviewpilot: true, competitor: "Tier-dependent" },
           { feature: "India-first (INR, UPI)", reviewpilot: true, competitor: true },
@@ -82,7 +82,7 @@ export default function Page() {
         ]}
         whenReviewPilot={[
           "You want a focused review-management tool, not a full CX suite.",
-          "You need Google Business Profile AND Play Store in one inbox.",
+          "You need native Play Store review management today, with Google Business Profile coming soon — both in one inbox.",
           "You want transparent, self-serve pricing in INR.",
           "You'd rather be live in 10 minutes than in six weeks of onboarding.",
         ]}

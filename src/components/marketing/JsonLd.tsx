@@ -23,7 +23,7 @@ export const organizationSchema: JsonLdObject = {
   url: SITE_URL,
   logo: SITE_LOGO,
   description:
-    "AI review management for Indian SMBs and app developers. Automated replies for Play Store reviews, Google Business Profile reviews, and WhatsApp Business messages — in one unified inbox.",
+    "AI review management for Indian SMBs and app developers. Automated replies for Play Store reviews and WhatsApp Business messages in one unified inbox, with a Review Recovery Engine and AI Insights. Google Business Profile coming soon.",
   foundingDate: "2026",
   founders: [
     { "@type": "Person", name: "Dev Kolsawala" },

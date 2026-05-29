@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { Building2 } from "lucide-react";
+import Link from "next/link";
+import { Building2, Clock } from "lucide-react";
 import {
   IntegrationPage,
   buildIntegrationSchemas,
@@ -12,12 +13,12 @@ export const metadata: Metadata = {
   title:
     "Google Business Profile Review Management for Local Businesses",
   description:
-    "Google Business Profile review management with AI replies. OAuth connection, multi-location support, smart routing, recovery engine. Built for India. From $16/mo.",
+    "Google Business Profile review management with AI replies — coming soon. OAuth connection, multi-location support, recovery engine. Built for India. Play Store and WhatsApp live today from $16/mo.",
   alternates: { canonical: "/integrations/google-business-profile" },
   openGraph: {
     title: "Google Business Profile Review Management for Local Businesses",
     description:
-      "OAuth connection, multi-location, AI brand-voice replies. The GMB review reply automation Indian SMBs were waiting for.",
+      "Coming soon — OAuth connection, multi-location, AI brand-voice replies. The GMB review reply automation Indian SMBs have been waiting for.",
     url: PAGE_URL,
     type: "website",
     siteName: "ReviewPilot",
@@ -56,7 +57,7 @@ const FAQS = [
 const features = [
   "Google OAuth one-click connection",
   "Multi-location support on Growth & Agency",
-  "AI replies in 8 Indian languages",
+  "AI replies in Indian languages",
   "Recovery engine for 1–3★ reviews",
   "Same App Context Profile system as Play Store",
   "Unified inbox with WhatsApp and Play Store",
@@ -72,14 +73,35 @@ export default function GBPIntegrationPage() {
           siteOg: SITE_OG,
           name: "ReviewPilot — Google Business Profile integration",
           description:
-            "Google Business Profile review management with OAuth connection, multi-location support, and AI replies in 8 Indian languages.",
+            "Google Business Profile review management (coming soon) with OAuth connection, multi-location support, and AI replies in Indian languages.",
           features,
           breadcrumbName: "Google Business Profile",
           faqs: FAQS,
         })}
       />
       <IntegrationPage
-        eyebrow="Google Business Profile integration"
+        banner={
+          <div className="border-b border-amber-500/30 bg-amber-500/10">
+            <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-2.5 text-center">
+              <p className="inline-flex flex-wrap items-center justify-center gap-1.5 text-xs text-amber-700 dark:text-amber-300">
+                <Clock className="h-3.5 w-3.5" aria-hidden="true" />
+                <span>
+                  <span className="font-semibold">Coming soon.</span> Google
+                  Business Profile review management is in Google&apos;s API
+                  approval and launching soon.{" "}
+                  <Link
+                    href="/integrations/google-play-store"
+                    className="underline font-medium hover:text-amber-600 dark:hover:text-amber-200"
+                  >
+                    Play Store and WhatsApp are live today
+                  </Link>
+                  .
+                </span>
+              </p>
+            </div>
+          </div>
+        }
+        eyebrow="Google Business Profile integration · Coming soon"
         h1={
           <>
             Google Business Profile review management for{" "}
@@ -89,7 +111,8 @@ export default function GBPIntegrationPage() {
             .
           </>
         }
-        subhead="Connect Google Business Profile in one click via OAuth. AI drafts replies in your tone, in the reviewer's language, across every location. Smart routing keeps your public rating high while one-star feedback funnels to a private channel."
+        subhead="Coming soon: connect Google Business Profile in one click via OAuth. AI will draft replies in your tone, in the reviewer's language, across every location — with smart routing that keeps your public rating high while one-star feedback funnels to a private channel. Play Store and WhatsApp review management are live today."
+        ctaLabel="Start free trial (Play Store + WhatsApp)"
         icon={Building2}
         iconBg="rgba(59, 130, 246, 0.15)"
         iconColor="#3b82f6"

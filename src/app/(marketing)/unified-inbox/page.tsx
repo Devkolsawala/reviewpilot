@@ -30,12 +30,12 @@ const WHATSAPP_GREEN = "#25D366";
 export const metadata: Metadata = {
   title: "Unified Inbox for Play Store, Google & WhatsApp",
   description:
-    "One unified review inbox for Play Store reviews, Google Business Profile reviews, and WhatsApp Business messages. AI replies across all three platforms. From $16/mo.",
+    "One unified review inbox for Play Store reviews and WhatsApp Business messages, with Google Business Profile reviews coming soon. AI replies across every platform. From $16/mo.",
   alternates: { canonical: "/unified-inbox" },
   openGraph: {
     title: "Unified Inbox — Play Store, Google Reviews & WhatsApp",
     description:
-      "Reply to a Play Store review, a Google review, and a WhatsApp message from the same inbox. One AI engine. One workflow.",
+      "Reply to a Play Store review and a WhatsApp message from the same inbox — with Google reviews coming soon. One AI engine. One workflow.",
     url: PAGE_URL,
     type: "website",
     siteName: "ReviewPilot",
@@ -52,11 +52,11 @@ export const metadata: Metadata = {
 const FAQS: { q: string; a: string }[] = [
   {
     q: "What is a unified review inbox?",
-    a: "A unified review inbox is a single workspace where every customer signal across every platform — Play Store reviews, Google Business Profile reviews, WhatsApp Business messages — lands in the same queue. You stop tab-hopping between Play Console, Google Business, and WhatsApp Business; you reply, triage, and analyze in one place.",
+    a: "A unified review inbox is a single workspace where every customer signal across every platform — Play Store reviews and WhatsApp Business messages today, with Google Business Profile reviews coming soon — lands in the same queue. You stop tab-hopping between Play Console and WhatsApp Business; you reply, triage, and analyze in one place.",
   },
   {
     q: "Which platforms does ReviewPilot's unified inbox support?",
-    a: "Three platforms today: Google Play Store reviews (via the Play Developer API), Google Business Profile reviews (via OAuth), and WhatsApp Business messages (via the official WhatsApp Cloud API with Embedded Signup). All three live in the same dashboard with the same AI engine.",
+    a: "Two platforms today: Google Play Store reviews (via the Play Developer API) and WhatsApp Business messages (via the official WhatsApp Cloud API with Embedded Signup). Google Business Profile reviews (via OAuth) are coming soon. All of them live in the same dashboard with the same AI engine.",
   },
   {
     q: "Can my team reply to reviews and messages from the unified inbox?",
@@ -68,7 +68,7 @@ const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "How is this different from Birdeye or AppFollow?",
-    a: "Birdeye covers Google reviews and SMS but not Play Store deeply, and starts at roughly $266/month. AppFollow covers Play Store and App Store reviews but not Google Business Profile or WhatsApp. ReviewPilot covers all three from a single $16/month plan, billed in INR equivalent. We're the only one with WhatsApp Cloud API + Play Store + GBP in one inbox.",
+    a: "Birdeye covers Google reviews and SMS but not Play Store deeply, and starts at roughly $266/month. AppFollow covers Play Store and App Store reviews but not Google Business Profile or WhatsApp. ReviewPilot covers Play Store and WhatsApp from a single $16/month plan, billed in INR equivalent, with Google Business Profile coming soon. We're the only one combining WhatsApp Cloud API and Play Store in one inbox today.",
   },
 ];
 
@@ -77,13 +77,13 @@ const softwareSchema = {
   "@type": "SoftwareApplication",
   name: "ReviewPilot — Unified Inbox",
   description:
-    "One unified inbox for Play Store reviews, Google Business Profile reviews, and WhatsApp Business messages.",
+    "One unified inbox for Play Store reviews and WhatsApp Business messages, with Google Business Profile reviews coming soon.",
   applicationCategory: "BusinessApplication",
   operatingSystem: "Web",
   url: PAGE_URL,
   image: SITE_OG,
   featureList: [
-    "Single queue for Play Store, Google, and WhatsApp",
+    "Single queue for Play Store and WhatsApp (Google Business Profile coming soon)",
     "Source-typed badges for fast triage",
     "Single AI engine across every platform",
     "Filter by source, rating, status, date",
@@ -139,16 +139,17 @@ export default function UnifiedInboxPage() {
               </span>
             </div>
             <h1 className="mt-6 font-sans text-4xl font-semibold tracking-tight text-balance sm:text-5xl lg:text-6xl">
-              Unified inbox for Play Store reviews, Google reviews, and{" "}
+              Unified inbox for Play Store reviews and{" "}
               <span className="text-gradient-brand font-serif italic">
                 WhatsApp messages
               </span>
               .
             </h1>
             <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground leading-relaxed">
-              Stop tab-hopping between Play Console, Google Business, and
-              WhatsApp Business. Every customer signal — review or DM — lands
-              in one queue, with one AI engine drafting replies in your tone.
+              Stop tab-hopping between Play Console and WhatsApp Business — with
+              Google Business Profile coming soon. Every customer signal —
+              review or DM — lands in one queue, with one AI engine drafting
+              replies in your tone.
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
               <Button variant="gradient" size="xl" asChild>
@@ -321,8 +322,8 @@ export default function UnifiedInboxPage() {
                 },
                 {
                   icon: Building2,
-                  title: "Google Business Profile",
-                  body: "Real-time via the GBP API. Multi-location aware. Same AI brand voice across every storefront.",
+                  title: "Google Business Profile (soon)",
+                  body: "Coming soon — real-time via the GBP API. Multi-location aware. Same AI brand voice across every storefront.",
                   color: "text-blue-600 dark:text-blue-400",
                 },
                 {
@@ -390,8 +391,12 @@ export default function UnifiedInboxPage() {
                         c: <CheckCell />,
                       },
                       {
-                        cap: "Google Business Profile reviews",
-                        a: <CheckCell />,
+                        cap: "Google Business Profile reviews (soon)",
+                        a: (
+                          <span className="mx-auto inline-flex items-center rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-600 dark:text-amber-400">
+                            Soon
+                          </span>
+                        ),
                         b: <CheckCell />,
                         c: <XCell />,
                       },
@@ -475,8 +480,9 @@ export default function UnifiedInboxPage() {
                 One inbox. Three platforms. Zero tab-switching.
               </h2>
               <p className="mx-auto mt-4 max-w-xl text-muted-foreground">
-                Connect Play Store, Google Business Profile, and WhatsApp in
-                under 10 minutes. Start a 7-day free trial — no credit card.
+                Connect Play Store and WhatsApp in under 10 minutes (Google
+                Business Profile coming soon). Start a 7-day free trial — no
+                credit card.
               </p>
               <div className="mt-8 flex justify-center">
                 <Button variant="gradient" size="xl" asChild>

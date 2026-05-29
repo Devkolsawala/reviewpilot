@@ -18,13 +18,13 @@ const WHATSAPP_GREEN = "#25D366";
 export const metadata: Metadata = {
   title: "Integrations — Play Store, Google & WhatsApp",
   description:
-    "ReviewPilot integrates with Google Play Store, Google Business Profile, and WhatsApp Business. AI replies for every review and message in a unified inbox. From $16/mo.",
+    "ReviewPilot integrates with Google Play Store and WhatsApp Business, with Google Business Profile coming soon. AI replies for every review and message in a unified inbox. From $16/mo.",
   alternates: { canonical: "/integrations" },
   openGraph: {
     title:
       "ReviewPilot Integrations — Play Store, Google Business Profile, WhatsApp",
     description:
-      "Three official integrations. One unified inbox. AI replies in your tone, in 8 Indian languages.",
+      "Official integrations. One unified inbox. AI replies in your tone, in Indian languages. Google Business Profile coming soon.",
     url: PAGE_URL,
     type: "website",
     siteName: "ReviewPilot",
@@ -52,14 +52,13 @@ const softwareSchema = {
   "@type": "SoftwareApplication",
   name: "ReviewPilot Integrations",
   description:
-    "Official integrations with Google Play Store, Google Business Profile, and WhatsApp Business Cloud API.",
+    "Official integrations with Google Play Store and WhatsApp Business Cloud API, with Google Business Profile coming soon.",
   applicationCategory: "BusinessApplication",
   operatingSystem: "Web",
   url: PAGE_URL,
   image: SITE_OG,
   featureList: [
     "Google Play Store reviews via Play Developer API",
-    "Google Business Profile reviews via OAuth",
     "WhatsApp Business via Meta Cloud API + Embedded Signup",
   ],
 };
@@ -75,8 +74,8 @@ const INTEGRATIONS = [
   },
   {
     href: "/integrations/google-business-profile",
-    title: "Google Business Profile",
-    body: "Connect Google Business Profile via OAuth. Multi-location aware. Smart routing — 4–5★ to Google, 1–3★ to private feedback.",
+    title: "Google Business Profile (soon)",
+    body: "Coming soon: connect Google Business Profile via OAuth. Multi-location aware. Smart routing — 4–5★ to Google, 1–3★ to private feedback.",
     icon: Building2,
     cta: "Google Business Profile integration →",
     accent: "bg-blue-500/10 text-blue-600",
@@ -113,9 +112,9 @@ export default function IntegrationsHubPage() {
               .
             </h1>
             <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground leading-relaxed">
-              Three official integrations. One unified inbox. AI replies that
-              sound like you, in eight Indian languages. Built for Indian SMBs
-              and app developers.
+              Official integrations. One unified inbox. AI replies that
+              sound like you, in major Indian languages. Built for Indian SMBs
+              and app developers. Google Business Profile coming soon.
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
               <Button variant="gradient" size="xl" asChild>

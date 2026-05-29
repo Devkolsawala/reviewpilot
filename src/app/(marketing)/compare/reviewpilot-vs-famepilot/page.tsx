@@ -63,15 +63,15 @@ export default function Page() {
       <JsonLd data={[articleSchema, faqSchema]} />
       <CompareLayout
         competitor="Famepilot"
-        intro="Famepilot is a well-established Indian review and reputation management platform popular with multi-location brands. ReviewPilot is a newer India-first alternative focused on transparent pricing, unified Google + Play Store inboxes, and SMB affordability."
+        intro="Famepilot is a well-established Indian review and reputation management platform popular with multi-location brands. ReviewPilot is a newer India-first alternative focused on transparent pricing, native Play Store review management (with Google Business Profile coming soon), and SMB affordability."
         pricingNote="Famepilot pricing is quote-only and varies by location count, so we've shown 'Quote-based' where specific numbers aren't published."
         rows={[
           { feature: "Starting price (monthly)", reviewpilot: "$16 (published)", competitor: "Quote-based" },
-          { feature: "Google Business Profile replies", reviewpilot: true, competitor: true },
+          { feature: "Google Business Profile replies", reviewpilot: "soon", competitor: true },
           { feature: "Google Play Store reviews", reviewpilot: true, competitor: "Not advertised" },
           { feature: "AI-generated replies", reviewpilot: true, competitor: "Tier-dependent" },
           { feature: "Indian-language replies", reviewpilot: true, competitor: "Not advertised" },
-          { feature: "SMS review collection", reviewpilot: true, competitor: true },
+          { feature: "SMS review collection", reviewpilot: "soon", competitor: true },
           { feature: "Transparent published pricing", reviewpilot: true, competitor: false },
           { feature: "7-day free self-serve trial", reviewpilot: true, competitor: "Demo-only" },
         ]}
@@ -82,7 +82,7 @@ export default function Page() {
         ]}
         whenReviewPilot={[
           "You want transparent published pricing you can evaluate without a sales call.",
-          "You need both Google Business Profile AND Play Store in one inbox.",
+          "You need native Play Store review management today, with Google Business Profile coming soon — both in one inbox.",
           "You're an SMB, agency, or indie developer who wants to self-serve.",
           "You want AI replies in Hindi, Tamil, Telugu, and other Indian languages.",
         ]}

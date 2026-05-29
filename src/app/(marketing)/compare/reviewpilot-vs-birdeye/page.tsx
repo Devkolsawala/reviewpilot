@@ -29,7 +29,7 @@ const faqs = [
   },
   {
     q: "Does Birdeye support Google Play Store reviews?",
-    a: "Birdeye focuses on Google Business Profile and other local-business review surfaces. Play Store review management is not part of their core product. If you're an Indian app developer — or an SMB that runs both a storefront and a mobile app — ReviewPilot is the only tool that handles both Play Store and Google Business Profile in a single inbox.",
+    a: "Birdeye focuses on Google Business Profile and other local-business review surfaces. Play Store review management is not part of their core product. If you're an Indian app developer — or an SMB that runs both a storefront and a mobile app — ReviewPilot manages Play Store reviews in a single inbox today, with Google Business Profile review management coming soon (we're completing Google's API approval).",
   },
   {
     q: "What about integrations and enterprise features?",
@@ -37,7 +37,7 @@ const faqs = [
   },
   {
     q: "Can I migrate from Birdeye to ReviewPilot?",
-    a: "Yes — new reviews sync automatically once you connect Google Business Profile. Historical reply data isn't imported, but we're happy to walk you through onboarding on a free demo call.",
+    a: "Play Store reviews sync automatically as soon as you connect Play Console. Google Business Profile sync is coming soon — once it launches, new GBP reviews will sync automatically too. Historical reply data isn't imported, but we're happy to walk you through onboarding on a free demo call.",
   },
 ];
 
@@ -77,11 +77,11 @@ export default function Page() {
         pricingNote="The ReviewPilot price shown is our published Starter plan ($16/mo, billed in INR equivalent at checkout). Birdeye is quote-only in India, so the ~$266/mo figure reflects typical market quotes and will vary by contract size."
         rows={[
           { feature: "Starting price (monthly)", reviewpilot: "$16", competitor: "~$266 (quoted)" },
-          { feature: "Google Business Profile replies", reviewpilot: true, competitor: true },
+          { feature: "Google Business Profile replies", reviewpilot: "soon", competitor: true },
           { feature: "Google Play Store reviews", reviewpilot: true, competitor: "Not a core feature" },
           { feature: "AI-generated replies", reviewpilot: true, competitor: true },
           { feature: "India-first pricing (INR, UPI)", reviewpilot: true, competitor: false },
-          { feature: "SMS review collection", reviewpilot: true, competitor: true },
+          { feature: "SMS review collection", reviewpilot: "soon", competitor: true },
           { feature: "Annual contract required", reviewpilot: false, competitor: "Typically yes" },
           { feature: "7-day free trial, no card", reviewpilot: true, competitor: "Demo-only" },
           { feature: "Indian-language AI replies", reviewpilot: true, competitor: "Not advertised" },
@@ -94,7 +94,7 @@ export default function Page() {
         ]}
         whenReviewPilot={[
           "You're an Indian SMB, agency, or indie app developer with a realistic SaaS budget.",
-          "You need Google Business Profile AND Play Store in one inbox.",
+          "You want Play Store review management today, with Google Business Profile coming soon — both in one inbox.",
           "You want INR pricing, UPI, and India-based support.",
           "You want AI replies in Hindi, Tamil, Telugu and other Indian languages.",
           "You'd rather start with a 7-day trial and no annual contract.",

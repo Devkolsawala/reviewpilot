@@ -67,11 +67,11 @@ export default function Page() {
         pricingNote="Podium's plans are priced in USD for the North American market; the ~$213 figure below is the typical equivalent at current exchange rates."
         rows={[
           { feature: "Starting price (monthly)", reviewpilot: "$16", competitor: "~$213 (USD-billed)" },
-          { feature: "Google Business Profile replies", reviewpilot: true, competitor: true },
+          { feature: "Google Business Profile replies", reviewpilot: "soon", competitor: true },
           { feature: "Google Play Store reviews", reviewpilot: true, competitor: false },
           { feature: "AI-generated replies", reviewpilot: true, competitor: "Tier-dependent" },
           { feature: "India-first pricing (INR, UPI)", reviewpilot: true, competitor: false },
-          { feature: "SMS review collection", reviewpilot: true, competitor: true },
+          { feature: "SMS review collection", reviewpilot: "soon", competitor: true },
           { feature: "Indian-language replies", reviewpilot: true, competitor: "Not advertised" },
           { feature: "7-day free trial, no card", reviewpilot: true, competitor: "Demo-only" },
         ]}

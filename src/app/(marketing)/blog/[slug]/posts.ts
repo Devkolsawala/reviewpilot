@@ -457,7 +457,7 @@ We looked at four things that matter for Indian SMBs in 2026:
 
 ### 1. ReviewPilot — $16/mo starting
 
-The tool you're on right now. Built in India, priced for Indian SMBs, and the only platform that treats Google Play Store AND Google Business Profile as equal first-class citizens in a single unified inbox. AI replies in Hindi, Tamil, Telugu and other Indian languages. Enforces Play Store's 350-char reply limit. App Context Profiles let you bake known bugs and FAQs directly into AI reply logic.
+The tool you're on right now. Built in India, priced for Indian SMBs, and built to treat Google Play Store and (coming soon) Google Business Profile as equal first-class citizens in a single unified inbox. AI replies in Hindi, Tamil, Telugu and other Indian languages. Enforces Play Store's 350-char reply limit. App Context Profiles let you bake known bugs and FAQs directly into AI reply logic.
 
 **Best for:** Indian SMBs, agencies, indie app developers, multi-location franchises with a budget ceiling.
 
@@ -769,7 +769,7 @@ AI isn't important because it's better than humans. It's important because it ma
 ## Where AI clearly wins
 
 - **Volume.** 50+ reviews a day cannot be replied to manually without burning out staff.
-- **Multi-language.** AI reads and replies in 10 Indian languages natively. Your team probably doesn't.
+- **Multi-language.** AI reads and replies in Indian languages natively. Your team probably doesn't.
 - **Consistency.** AI never forgets to mention the App Context Profile's known bug. Humans do, when they're tired.
 - **After-hours.** Reviews arrive at 2am. AI replies at 2:01am (if you let it).
 
@@ -857,7 +857,7 @@ Generic AI replies are worse than no reply. The whole point of automation is tha
 
 **1. The App Context Profile.** Tell the AI about your business: name, hours, service categories, FAQs, brand voice (warm/professional/casual). The AI uses this on every reply. A salon's replies sound different from a clinic's, even if both are running the same model.
 
-**2. Language detection.** Indian customers DM in English, Hindi, Hinglish, Gujarati, Tamil, Telugu, Marathi, Bengali, Kannada, and Punjabi — sometimes mixed in a single message. The AI should auto-detect the customer's language and reply in the same one. ReviewPilot supports 8 Indian languages out of the box.
+**2. Language detection.** Indian customers DM in English, Hindi, Hinglish, Gujarati, Tamil, Telugu, Marathi, Bengali, Kannada, and Punjabi — sometimes mixed in a single message. The AI should auto-detect the customer's language and reply in the same one. ReviewPilot supports Indian languages out of the box.
 
 **3. Approval policy.** Don't auto-send everything from day one. Start with "AI drafts → you approve" for the first week. Watch the drafts. If 90%+ feel right, switch high-confidence categories (order confirmations, hours questions, basic FAQs) to auto-send. Keep complaints and refund requests on human approval forever.
 
@@ -926,7 +926,7 @@ Two cost lines to plan around:
 
 ## A 14-day setup plan
 
-**Day 1–2.** Connect WhatsApp Business via Embedded Signup. Fill in your App Context Profile (tone, hours, FAQs, brand voice). Connect Google Business Profile and Play Store too if you have them — same dashboard.
+**Day 1–2.** Connect WhatsApp Business via Embedded Signup. Fill in your App Context Profile (tone, hours, FAQs, brand voice). Connect Play Store too if you have it — same dashboard. (Google Business Profile is coming soon.)
 
 **Day 3–7.** All AI replies in approval mode. Watch every draft. Edit ones that feel off. Update your App Context Profile based on what you learn.
 
@@ -934,7 +934,7 @@ Two cost lines to plan around:
 
 **Day 11–14.** Tune the rest. Set up your first message templates for outside-window follow-ups. Review your quality rating in the dashboard.
 
-By day 14, most teams are responding to inbound WhatsApp DMs in under 60 seconds, 24/7, in 8 Indian languages, without anyone manually clicking send.
+By day 14, most teams are responding to inbound WhatsApp DMs in under 60 seconds, 24/7, in Indian languages, without anyone manually clicking send.
 
 ## Get started
 
@@ -1006,9 +1006,9 @@ Three gaps matter for the typical Indian buyer:
 
 **Pricing.** $16/month Starter, $32/month Growth, $85/month Agency, billed in INR equivalent through Razorpay. UPI and net banking work.
 
-**What it covers.** Google Business Profile reviews, Google Play Store reviews, WhatsApp Business automation — all in one unified inbox. AI replies in 8 Indian languages. Self-serve signup, 7-day free trial, no credit card needed.
+**What it covers.** Google Play Store reviews and WhatsApp Business automation in one unified inbox, with Google Business Profile reviews coming soon. AI replies in Indian languages. Self-serve signup, 7-day free trial, no credit card needed.
 
-**When it makes sense.** SMBs, indie devs, agencies under 10 locations, anyone who wants Play Store + GBP + WhatsApp in one place. See the full [ReviewPilot vs Birdeye comparison](/vs/birdeye) for a side-by-side.
+**When it makes sense.** SMBs, indie devs, agencies under 10 locations, anyone who wants Play Store + WhatsApp in one place, with GBP coming soon. See the full [ReviewPilot vs Birdeye comparison](/vs/birdeye) for a side-by-side.
 
 **When it doesn't.** Healthcare-specific compliance workflows (HIPAA), 50+ location enterprises with deep CRM integrations, businesses that need legacy directory sync across 50+ sites.
 
@@ -1167,7 +1167,7 @@ The reply rate on these reviews — across pretty much every Indian SMB — is d
 
 Customers notice. A Tamil reviewer who got an English copy-paste reply will leave a worse review next time. A Tamil reviewer who got a thoughtful Tamil reply will tell three friends.
 
-Modern AI tools detect the reviewer's language and reply in the same one. ReviewPilot supports 8 Indian languages out of the box. If your competitors are not replying in Indian languages and you are, you'll see the rating gap close within 90 days.
+Modern AI tools detect the reviewer's language and reply in the same one. ReviewPilot supports Indian languages out of the box. If your competitors are not replying in Indian languages and you are, you'll see the rating gap close within 90 days.
 
 ## What to write in a GBP reply (the 3-sentence framework)
 
@@ -1213,7 +1213,7 @@ By day 60, response rate is 95%+, recovery rate is climbing, and your average ra
 
 ## Get started
 
-[Start a free 7-day ReviewPilot trial](/signup) — connect your GBP via OAuth in one click. No credit card. AI replies in 8 Indian languages. Multi-location on Growth and Agency plans.
+[Start a free 7-day ReviewPilot trial](/signup) — Play Store and WhatsApp live today, Google Business Profile coming soon. No credit card. AI replies in Indian languages. Multi-location on Growth and Agency plans.
 
 Related reading: [Google Business Profile integration page](/integrations/google-business-profile), [for local businesses](/for-local-business), [unified inbox playbook](/blog/unified-review-inbox).
 `,
@@ -1303,7 +1303,7 @@ You're feeling the pain when:
 
 ## Get started
 
-[Start a free 7-day ReviewPilot trial](/signup) — connect Play Store, Google Business Profile, and WhatsApp in under 10 minutes. One inbox. One AI engine. One workflow.
+[Start a free 7-day ReviewPilot trial](/signup) — connect Play Store and WhatsApp in under 10 minutes (Google Business Profile coming soon). One inbox. One AI engine. One workflow.
 
 Related reading: [WhatsApp Business automation 2026 guide](/blog/whatsapp-business-automation-india-2026), [GBP review management playbook](/blog/google-business-profile-review-management-india-2026), [Birdeye pricing in India](/blog/birdeye-pricing-india-vs-alternatives).
 `,
@@ -1477,7 +1477,7 @@ AppFollow is built for app marketing teams at studios with 50+ apps, mature ASO 
 
 ## What Is ReviewPilot and Who Is It For?
 
-ReviewPilot is a focused **review management** platform for Google Play Store developers and local businesses on Google Business Profile. It does AI-generated replies, sentiment analysis, multi-language support, review recovery workflows, and a unified inbox. It does **not** do ASO keyword tracking, organic rank monitoring, or screenshot A/B testing.
+ReviewPilot is a focused **review management** platform for Google Play Store developers and local businesses (with Google Business Profile support coming soon). It does AI-generated replies, sentiment analysis, multi-language support, review recovery workflows, and a unified inbox. It does **not** do ASO keyword tracking, organic rank monitoring, or screenshot A/B testing.
 
 It is built for indie devs, 2–10 person app teams, agencies managing 5–50 apps, and local SMBs. ReviewPilot starts at $16/month with a 7-day free trial.
 
@@ -1487,7 +1487,7 @@ Here's where each tool stands on the features that actually matter day-to-day:
 
 **Review Management Core**
 
-- AI-generated replies: AppFollow ✅ (basic templates + AI add-on) / ReviewPilot ✅ (contextual, brand-voice-tuned, 8 Indian languages)
+- AI-generated replies: AppFollow ✅ (basic templates + AI add-on) / ReviewPilot ✅ (contextual, brand-voice-tuned, Indian languages)
 - Auto-reply rules: Both ✅
 - Sentiment analysis: Both ✅
 - Multi-language replies: AppFollow ✅ (30+ languages) / ReviewPilot ✅ (8 Indian + English; expanding)
@@ -1517,7 +1517,7 @@ Here's where each tool stands on the features that actually matter day-to-day:
 
 - Google Play Store: Both ✅
 - Apple App Store: AppFollow ✅ / ReviewPilot ❌ (on roadmap)
-- Google Business Profile: AppFollow ❌ / ReviewPilot ✅
+- Google Business Profile: AppFollow ❌ / ReviewPilot ⏳ (coming soon)
 - WhatsApp Business: AppFollow ❌ / ReviewPilot ✅
 
 ## AppFollow vs ReviewPilot: Pricing Compared
@@ -1574,7 +1574,7 @@ If two or more of these apply, ReviewPilot is almost certainly the better fit.
 Most teams complete the migration in under 60 minutes:
 
 1. **Connect Google Play Console.** OAuth flow with the same Service Account JSON you use today. We have a [step-by-step setup guide](/blog/service-account-json-play-console-setup).
-2. **Connect Google Business Profile (optional).** OAuth in 30 seconds if you also run a local business.
+2. **Connect Google Business Profile (coming soon).** OAuth connection is launching soon for local businesses.
 3. **Import your reply templates.** Copy-paste your top 10–20 templates into ReviewPilot's prompt library, or let our AI auto-generate brand-voice replies from your existing approved responses.
 4. **Set up Slack notifications.** Same flow as AppFollow — webhook URL, channel mapping, severity rules.
 5. **Cancel AppFollow at the end of your billing cycle.** Most teams keep both running for one cycle to verify parity.
@@ -1655,7 +1655,7 @@ This deserves its own section because almost no business in India is doing it we
 
 If a customer writes a Google review in Hindi, Tamil, Marathi, or Bengali, and you reply in English, you are signaling that you don't see them. Reply in their language and you build a stronger relationship than 95% of your competitors. Future customers scrolling your profile see replies in their language and instantly feel served.
 
-The problem: manual Hindi/Tamil/Marathi replies are slow, prone to translation errors, and inconsistent. Tools like [ReviewPilot generate native-quality replies in 8 Indian languages](/features) — Hindi, Tamil, Telugu, Marathi, Bengali, Gujarati, Kannada, and Malayalam — in 2 seconds, in your brand voice. This is one of the most underrated competitive moats in Indian local SEO right now.
+The problem: manual Hindi/Tamil/Marathi replies are slow, prone to translation errors, and inconsistent. Tools like [ReviewPilot generate native-quality replies in Indian languages](/features) — Hindi, Tamil, Telugu, Marathi, Bengali, Gujarati, Kannada, and Malayalam — in 2 seconds, in your brand voice. This is one of the most underrated competitive moats in Indian local SEO right now.
 
 <div className="cta">
 
@@ -1726,7 +1726,7 @@ The mistakes we see repeatedly:
 
 ## Get Started
 
-[Start a free 7-day ReviewPilot trial](/signup) — INR pricing from ₹1,500/month, 8 Indian languages out of the box, GST invoicing, and an Indian support team that answers WhatsApp in under 30 minutes during business hours.
+[Start a free 7-day ReviewPilot trial](/signup) — INR pricing from ₹1,500/month, Indian languages out of the box, GST invoicing, and an Indian support team that answers WhatsApp in under 30 minutes during business hours.
 
 Related reading: [Google Business Profile review management 2026 playbook](/blog/google-business-profile-review-management-india-2026), [WhatsApp Business automation in India](/blog/whatsapp-business-automation-india-2026), [Best review management software in India 2026](/blog/best-review-management-software-india-2026).
 `,
@@ -1984,7 +1984,7 @@ AI tools let you maintain this reply discipline at any review volume. Key constr
 - **Multi-language reply** — reply in the language the user reviewed in.
 - **Human approval on all 1–2★ replies** — non-negotiable; the risk of an AI saying something wrong is too high.
 
-[ReviewPilot is purpose-built for these constraints](/features/google-play-reviews) — 350-char-aware drafts, brand-voice tuning, 8 Indian languages, mandatory human approval on negative reviews.
+[ReviewPilot is purpose-built for these constraints](/features/google-play-reviews) — 350-char-aware drafts, brand-voice tuning, Indian languages, mandatory human approval on negative reviews.
 
 ## What Should the 60-Day Recovery Sprint Look Like?
 

@@ -7,7 +7,7 @@ import { GridPattern } from "@/components/ui/grid-pattern";
 export const metadata: Metadata = {
   title: "Book a Live Demo — AI Review Management India",
   description:
-    "See ReviewPilot live: AI replies for Google & Play Store reviews, SMS collection, analytics. Book your free 20-minute demo with our India team today.",
+    "See ReviewPilot live: AI replies for Play Store reviews and WhatsApp, review recovery, and analytics (Google Business Profile and SMS coming soon). Book your free 20-minute demo with our India team today.",
   alternates: { canonical: "/demo" },
   openGraph: {
     title: "Book a Live Demo",
@@ -27,7 +27,7 @@ export const metadata: Metadata = {
 const DEMO_BENEFITS = [
   "Personalized walkthrough of the dashboard",
   "See AI reply generation in real-time",
-  "Learn how to set up SMS review collection",
+  "See WhatsApp review collection (SMS coming soon)",
   "Get pricing recommendations for your needs",
   "Ask questions to our product team",
 ];

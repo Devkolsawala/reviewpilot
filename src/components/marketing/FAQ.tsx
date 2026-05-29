@@ -21,7 +21,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "Can I reply to WhatsApp messages and Play Store reviews from the same inbox?",
-    a: "Yes. ReviewPilot's unified inbox combines Play Store reviews, Google Business Profile reviews, and WhatsApp Business messages in one queue, with one AI engine drafting replies in your tone — across all three platforms.",
+    a: "Yes. ReviewPilot's unified inbox combines Play Store reviews and WhatsApp Business messages in one queue, with one AI engine drafting replies in your tone. Google Business Profile reviews join the same inbox when the integration ships (coming soon).",
   },
   {
     q: "Does ReviewPilot actually work with Google Play Store reviews?",
@@ -29,7 +29,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "Is Google Business Profile supported?",
-    a: "Yes. Connect Google Business Profile via OAuth — multi-location aware. Reviews land in the unified inbox alongside Play Store reviews and WhatsApp messages.",
+    a: "Google Business Profile review management is coming soon — we're completing Google's API approval. When it launches it will be multi-location aware, and GBP reviews will land in the unified inbox alongside your Play Store reviews and WhatsApp messages.",
   },
   {
     q: "How does the AI know our brand voice?",

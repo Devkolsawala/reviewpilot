@@ -43,13 +43,13 @@ export const metadata: Metadata = {
   title:
     "Features — AI Replies, Unified Inbox, WhatsApp Automation",
   description:
-    "Every ReviewPilot feature: AI replies for Play Store, Google Business Profile, and WhatsApp Business; unified inbox; team collaboration; sentiment analytics. Plans from $16/month.",
+    "Every ReviewPilot feature: AI replies for Play Store and WhatsApp Business, Review Recovery Engine, AI Insights, unified inbox, team collaboration, sentiment analytics. Google Business Profile coming soon. Plans from $16/month.",
   alternates: { canonical: "/features" },
   openGraph: {
     title:
       "Features — AI Replies, Unified Inbox, WhatsApp Automation",
     description:
-      "AI replies for Play Store, Google Business Profile, and WhatsApp Business — unified inbox, team collaboration, sentiment analytics, daily digests. From $16/mo.",
+      "AI replies for Play Store and WhatsApp Business, review recovery, AI insights, unified inbox, team collaboration, sentiment analytics. Google Business Profile coming soon. From $16/mo.",
     url: PAGE_URL,
     type: "website",
     siteName: "ReviewPilot",
@@ -66,7 +66,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Every ReviewPilot feature, in one place",
     description:
-      "AI replies for Play Store, Google Business, and WhatsApp. Unified inbox. From $16/month.",
+      "AI replies for Play Store and WhatsApp, review recovery, AI insights. Unified inbox. Google Business coming soon. From $16/month.",
     images: ["/og-image.svg"],
   },
 };
@@ -101,7 +101,7 @@ const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "Do you support Google Business Profile?",
-    a: "Google Business Profile is marked Coming Soon. The integration is in beta, but we are not yet offering it to general customers. Play Store review management is fully live today, so this page is honest about which surface is shipping versus in development.",
+    a: "Google Business Profile is marked Coming Soon. We're completing Google's API approval and it is not yet available to customers. Play Store review management is fully live today, so this page is honest about which surface is shipping versus in development.",
   },
   {
     q: "Can my whole team use one ReviewPilot account?",
@@ -133,11 +133,11 @@ const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "How is ReviewPilot different from Birdeye or AppFollow?",
-    a: "ReviewPilot is built in India for Indian buyers. Pricing starts at $16/month, billed in INR equivalent through Razorpay at checkout. We support Play Store reviews, Google Business Profile reviews, and WhatsApp Business messages — all in one unified inbox with one AI engine. See the side-by-side comparison on our /vs/birdeye and /vs/appfollow pages.",
+    a: "ReviewPilot is built in India for Indian buyers. Pricing starts at $16/month, billed in INR equivalent through Razorpay at checkout. We support Play Store reviews and WhatsApp Business messages — all in one unified inbox with one AI engine — plus a Review Recovery Engine and AI Insights. Google Business Profile review management is coming soon. See the side-by-side comparison on our /vs/birdeye and /vs/appfollow pages.",
   },
   {
     q: "Can ReviewPilot reply to WhatsApp Business messages?",
-    a: "Yes. ReviewPilot is a Meta-approved Tech Provider with the official WhatsApp Cloud API. Connect via Embedded Signup in 60 seconds, and inbound messages land in your unified inbox alongside Play Store and Google reviews. AI drafts replies inside Meta's 24-hour customer service window, so replies are nearly always free.",
+    a: "Yes. ReviewPilot is a Meta-approved Tech Provider with the official WhatsApp Cloud API. Connect via Embedded Signup in 60 seconds, and inbound messages land in your unified inbox alongside your Play Store reviews. AI drafts replies inside Meta's 24-hour customer service window, so replies are nearly always free.",
   },
 ];
 
@@ -149,7 +149,7 @@ const softwareSchema = {
   "@type": "SoftwareApplication",
   name: "ReviewPilot",
   description:
-    "AI-powered review management for Indian SMBs and app developers. Auto-reply to Play Store and Google Business Profile reviews, collaborate with role-based team access, and track sentiment in one dashboard.",
+    "AI-powered review management for Indian SMBs and app developers. Auto-reply to Play Store reviews and WhatsApp Business messages, recover negative reviewers, surface AI insights, collaborate with role-based team access, and track sentiment in one dashboard. Google Business Profile coming soon.",
   applicationCategory: "BusinessApplication",
   operatingSystem: "Web",
   url: PAGE_URL,
@@ -214,9 +214,10 @@ export default function FeaturesPage() {
               .
             </h1>
             <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground leading-relaxed">
-              AI replies for Google Play Store reviews, Google Business Profile
-              reviews, and WhatsApp Business messages — all in one unified
-              inbox. Built in India for Indian app developers and local
+              AI replies for Google Play Store reviews and WhatsApp Business
+              messages — plus a Review Recovery Engine and AI Insights — all in
+              one unified inbox. Google Business Profile review management is
+              coming soon. Built in India for Indian app developers and local
               businesses, billed in INR.
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
@@ -247,7 +248,7 @@ export default function FeaturesPage() {
             icon={Bot}
             kicker="Drafting"
             h2="AI-powered review and message replies in your brand voice"
-            body="ReviewPilot drafts every reply in three seconds, in the customer's language, in your brand voice — across Play Store reviews, Google reviews, and WhatsApp Business messages. The AI is told about your business through your App Context Profile, so the response is specific — not generic. Drafts respect each platform's character limits."
+            body="ReviewPilot drafts every reply in three seconds, in the customer's language, in your brand voice — across Play Store reviews and WhatsApp Business messages (with Google Business Profile coming soon). The AI is told about your business through your App Context Profile, so the response is specific — not generic. Drafts respect each platform's character limits."
             bullets={[
               "Replies in your brand voice, tuned per connection",
               "Auto-detects the customer's language and responds in kind",
@@ -260,10 +261,10 @@ export default function FeaturesPage() {
             id="unified-inbox"
             icon={Inbox}
             kicker="Unified inbox"
-            h2="One inbox for Play Store, Google, and WhatsApp"
-            body="Every customer signal — a Play Store review, a Google Business Profile review, a WhatsApp Business message — lands in the same queue. One AI engine. One workflow. Filter by source when you want to focus, or work the whole queue when you want speed."
+            h2="One inbox for Play Store and WhatsApp — Google coming soon"
+            body="Every customer signal — a Play Store review, a WhatsApp Business message — lands in the same queue. One AI engine. One workflow. Filter by source when you want to focus, or work the whole queue when you want speed. Google Business Profile reviews join the same inbox when the integration ships."
             bullets={[
-              "Single source-typed view across all three platforms",
+              "Single source-typed view across connected platforms",
               "Filter by source, rating, status, or date",
               "Same App Context Profile across every channel",
             ]}
@@ -297,7 +298,7 @@ export default function FeaturesPage() {
             icon={Building2}
             kicker="Google Business Profile"
             h2="Google Business Profile review management for local businesses"
-            body="Google Business Profile review automation is in beta and not yet generally available. We are open about that — Play Store is fully live today, GBP is on the next milestone. The same AI engine, sentiment analytics, and team workflow will apply to your locations when GBP ships."
+            body="Google Business Profile review automation is coming soon — it's in Google's API approval and not yet available to customers. We are open about that — Play Store is fully live today, GBP is on the next milestone. The same AI engine, sentiment analytics, and team workflow will apply to your locations when GBP ships."
             bullets={[
               "One unified inbox across every location once live",
               "Same AI brand-voice engine as Play Store",
@@ -379,7 +380,7 @@ export default function FeaturesPage() {
             icon={BarChart3}
             kicker="Dashboard"
             h2="Analytics dashboard for ratings, response rate, and source"
-            body="One dashboard for every metric a review program needs to prove its impact. See average rating over time, response rate by week, source breakdown across Play Store and Google, and rating distribution. Switch between 7d, 30d, 90d, or pick a custom range."
+            body="One dashboard for every metric a review program needs to prove its impact. See average rating over time, response rate by week, source breakdown across your connected platforms, and rating distribution. Switch between 7d, 30d, 90d, or pick a custom range."
             bullets={[
               "Date ranges: 7d, 30d, 90d, custom",
               "Average rating, response rate, reply latency",
@@ -600,7 +601,7 @@ export default function FeaturesPage() {
               </div>
               <div>
                 <h3 className="font-sans text-base font-semibold tracking-tight">
-                  Multi-language: 8 Indian languages supported
+                  Multi-language: Indian languages supported
                 </h3>
                 <p className="mt-2 text-sm text-muted-foreground">
                   English, Hindi, Tamil, Telugu, Marathi, Bengali, Kannada,

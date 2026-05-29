@@ -14,7 +14,7 @@ export default function Image() {
     eyebrow: "WhatsApp Business automation",
     title: "AI replies for every WhatsApp Business message — Meta-approved.",
     kicker:
-      "Embedded Signup in 60 seconds · Free inside 24-hour window · 8 Indian languages",
+      "Embedded Signup in 60 seconds · Free inside 24-hour window · Indian languages",
     accentColor: "#25D366",
   });
 }

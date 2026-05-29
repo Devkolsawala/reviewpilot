@@ -7,9 +7,9 @@ const STEPS = [
   {
     num: "01",
     icon: Link2,
-    title: "Connect Play Store, Google, or WhatsApp",
+    title: "Connect Play Store or WhatsApp",
     description:
-      "One click each — service-account or invite-email for Play Store, OAuth for Google Business Profile, Meta Embedded Signup for WhatsApp Business.",
+      "One click each — service-account or invite-email for Play Store, Meta Embedded Signup for WhatsApp Business. Google Business Profile (OAuth) is coming soon.",
     snippet: <ConnectSnippet />,
   },
   {
@@ -17,7 +17,7 @@ const STEPS = [
     icon: Bot,
     title: "Reviews and messages land in real time",
     description:
-      "ReviewPilot pulls every Play Store review every 2 hours and receives Google reviews and WhatsApp messages via real-time Cloud API webhooks.",
+      "ReviewPilot pulls every Play Store review every 2 hours and receives WhatsApp messages via real-time Cloud API webhooks. Google reviews join the same flow when GBP launches.",
     snippet: <DraftSnippet />,
   },
   {
@@ -98,12 +98,12 @@ function ConnectSnippet() {
     <div className="rounded-lg border border-border/60 bg-card/60 p-3 text-xs backdrop-blur-sm">
       <div className="flex items-center gap-2">
         <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-        <span className="font-mono text-muted-foreground">GBP connected</span>
+        <span className="font-mono text-muted-foreground">Play Store connected</span>
       </div>
       <div className="mt-2 font-mono text-muted-foreground">
-        <div>· Syncing locations…</div>
+        <div>· Syncing reviews…</div>
         <div className="text-emerald-600 dark:text-emerald-400">
-          <Check className="inline h-3 w-3" /> 3 locations, 248 reviews
+          <Check className="inline h-3 w-3" /> 248 reviews synced
         </div>
       </div>
     </div>

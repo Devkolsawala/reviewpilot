@@ -28,7 +28,7 @@ const STEPS = [
     key: "sms",
     icon: MessageSquare,
     label: "Collect 5★ reviews",
-    caption: "SMS campaigns route happy customers to Google automatically.",
+    caption: "Review-collection campaigns route happy customers to Google (SMS coming soon).",
   },
 ] as const;
 

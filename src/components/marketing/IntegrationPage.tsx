@@ -29,6 +29,8 @@ export interface IntegrationPageProps {
   ctaHref?: string;
   ctaLabel?: string;
   cross?: { href: string; label: string }[];
+  /** Optional banner rendered above the hero (e.g. a "Coming soon" notice). */
+  banner?: React.ReactNode;
 }
 
 export function IntegrationPage({
@@ -43,9 +45,11 @@ export function IntegrationPage({
   ctaHref = "/signup",
   ctaLabel = "Start 7-day free trial",
   cross = [],
+  banner,
 }: IntegrationPageProps) {
   return (
     <main>
+      {banner}
       {/* Hero */}
       <section className="relative overflow-hidden py-24 sm:py-28">
         <AuroraBackground intensity="subtle" />

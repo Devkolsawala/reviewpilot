@@ -22,7 +22,7 @@ const PILLARS = [
   },
   {
     icon: Languages,
-    label: "8 Indian languages supported",
+    label: "Indian-language AI replies",
   },
   {
     icon: Zap,

@@ -15,7 +15,9 @@ import {
   Inbox,
   Languages,
   Sparkles,
+  HeartPulse,
 } from "lucide-react";
+import { featureById } from "@/lib/marketing/features";
 
 const WHATSAPP_GREEN = "#25D366";
 import { AuroraBackground } from "@/components/ui/aurora-background";
@@ -43,6 +45,11 @@ export const metadata: Metadata = {
 
 const BENEFITS = [
   {
+    icon: HeartPulse,
+    title: featureById("review_recovery_engine")!.title,
+    description: featureById("review_recovery_engine")!.description,
+  },
+  {
     icon: MessageSquare,
     title: "Reply to every review",
     description:
@@ -52,7 +59,7 @@ const BENEFITS = [
     icon: Star,
     title: "Collect more reviews",
     description:
-      "Send SMS to happy customers with a direct link to leave a Google review. Watch your rating climb.",
+      "Send a WhatsApp message to happy customers with a direct link to leave a review. Watch your rating climb. (SMS collection coming soon.)",
   },
   {
     icon: TrendingUp,
@@ -98,9 +105,10 @@ export default function ForLocalBusinessPage() {
       <div className="border-b border-amber-500/30 bg-amber-500/10">
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-2.5 text-center">
           <p className="text-xs text-amber-700 dark:text-amber-300">
-            <span className="font-semibold">Launching soon.</span> Google Business
-            Profile automation is in beta. Play Store review management is live
-            today.
+            <span className="font-semibold">Coming soon.</span> Google Business
+            Profile automation is in Google&apos;s API approval and launching
+            soon. Play Store review management and WhatsApp Business automation
+            are live today.
           </p>
         </div>
       </div>
@@ -127,8 +135,9 @@ export default function ForLocalBusinessPage() {
             <p className="mt-6 max-w-2xl text-lg text-muted-foreground leading-relaxed">
               Restaurants, salons, clinics, retailers — you live on Google
               reviews and WhatsApp messages. ReviewPilot uses AI to reply to
-              every Google review and every WhatsApp Business DM in your tone,
-              in 8 Indian languages, from one inbox.{" "}
+              every WhatsApp Business DM in your tone, in major Indian
+              languages, from one inbox — with Google Business Profile review
+              management coming soon.{" "}
               <Link
                 href="/whatsapp-automation"
                 className="text-foreground underline-offset-4 hover:underline"
@@ -214,9 +223,9 @@ export default function ForLocalBusinessPage() {
                 Google review, and a customer who tells their friends.
                 ReviewPilot connects to your WhatsApp Business number through
                 Meta&apos;s official Embedded Signup, drafts AI replies in
-                your tone in 8 Indian languages, and sends them inside the
-                24-hour window for free — all from the same inbox where you
-                manage your Google reviews.
+                your tone in major Indian languages, and sends them inside the
+                24-hour window for free — all from the same inbox that will
+                soon manage your Google reviews too.
               </p>
 
               <div className="mt-8 grid gap-3 sm:grid-cols-2">
@@ -379,7 +388,7 @@ export default function ForLocalBusinessPage() {
                 </h3>
               </div>
               <ul className="mt-4 space-y-2 text-sm text-foreground/85">
-                <li>Connect Google Business Profile and locations</li>
+                <li>Connect Play Store and WhatsApp (Google Business Profile coming soon)</li>
                 <li>Manage Razorpay billing and subscription</li>
                 <li>Invite, promote, or remove staff members</li>
                 <li>Set the brand voice and auto-reply rules</li>

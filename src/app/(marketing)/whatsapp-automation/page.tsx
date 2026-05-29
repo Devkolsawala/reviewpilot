@@ -34,7 +34,7 @@ const WHATSAPP_GREEN = "#25D366";
 export const metadata: Metadata = {
   title: "WhatsApp Business Automation with AI Replies",
   description:
-    "Automate WhatsApp Business replies with AI. Meta-approved Embedded Signup, Cloud API webhooks, unified inbox with Play Store and Google reviews. Built for India. From $16/mo.",
+    "Automate WhatsApp Business replies with AI. Meta-approved Embedded Signup, Cloud API webhooks, unified inbox with Play Store reviews (Google reviews coming soon). Built for India. From $16/mo.",
   alternates: { canonical: "/whatsapp-automation" },
   openGraph: {
     title: "WhatsApp Business Automation with AI Replies",
@@ -101,7 +101,7 @@ const softwareSchema = {
   "@type": "SoftwareApplication",
   name: "ReviewPilot — WhatsApp Business Automation",
   description:
-    "AI-powered WhatsApp Business automation with Meta-approved Embedded Signup, Cloud API webhooks, and a unified inbox alongside Play Store and Google Business Profile reviews.",
+    "AI-powered WhatsApp Business automation with Meta-approved Embedded Signup, Cloud API webhooks, and a unified inbox alongside Play Store reviews (Google Business Profile coming soon).",
   applicationCategory: "BusinessApplication",
   operatingSystem: "Web",
   url: PAGE_URL,
@@ -110,7 +110,7 @@ const softwareSchema = {
     "Meta-approved Embedded Signup via Facebook Login for Business",
     "WhatsApp Cloud API webhook delivery in real time",
     "AI-drafted replies trained on your App Context Profile",
-    "Unified inbox alongside Play Store and Google reviews",
+    "Unified inbox alongside Play Store reviews (Google coming soon)",
     "Template management — read, create, submit",
     "Business profile management — about, description, email, address",
     "Multi-WABA and multi-phone-number support",
@@ -327,7 +327,7 @@ export default function WhatsAppAutomationPage() {
                 {
                   icon: Inbox,
                   title: "Unified inbox",
-                  body: "WhatsApp messages live alongside Play Store and Google reviews. One AI engine, one workflow.",
+                  body: "WhatsApp messages live alongside Play Store reviews — Google reviews coming soon. One AI engine, one workflow.",
                 },
                 {
                   icon: MessageCircle,
@@ -470,19 +470,19 @@ export default function WhatsAppAutomationPage() {
                 {
                   href: "/unified-inbox",
                   title: "Unified inbox",
-                  body: "WhatsApp + Play Store + Google reviews in one queue.",
+                  body: "WhatsApp + Play Store in one queue (Google reviews soon).",
                   icon: Inbox,
                 },
                 {
                   href: "/for-local-business",
                   title: "For local businesses",
-                  body: "Restaurants, salons, clinics — WhatsApp + Google reviews.",
+                  body: "Restaurants, salons, clinics — WhatsApp now, Google reviews soon.",
                   icon: Users,
                 },
                 {
                   href: "/integrations",
                   title: "All integrations",
-                  body: "Play Store, Google Business Profile, WhatsApp Business.",
+                  body: "Play Store, WhatsApp Business, Google Business Profile (soon).",
                   icon: Settings2,
                 },
               ].map((l) => {

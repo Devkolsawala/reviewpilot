@@ -58,7 +58,7 @@ const features = [
   "350-character reply limit auto-enforced",
   "Reviews polled every 2 hours via Vercel cron",
   "App Context Profile baked into every AI draft",
-  "Multi-language (8 Indian languages)",
+  "Multi-language (Indian languages)",
   "Bulk reply on Growth and Agency plans",
 ];
 

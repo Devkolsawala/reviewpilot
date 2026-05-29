@@ -12,7 +12,10 @@ import {
   Crown,
   Users,
   MessageCircle,
+  HeartPulse,
+  Brain,
 } from "lucide-react";
+import { featureById } from "@/lib/marketing/features";
 
 const WHATSAPP_GREEN = "#25D366";
 import { AuroraBackground } from "@/components/ui/aurora-background";
@@ -39,6 +42,16 @@ export const metadata: Metadata = {
 };
 
 const BENEFITS = [
+  {
+    icon: HeartPulse,
+    title: featureById("review_recovery_engine")!.title,
+    description: featureById("review_recovery_engine")!.description,
+  },
+  {
+    icon: Brain,
+    title: featureById("ai_insights")!.title,
+    description: featureById("ai_insights")!.description,
+  },
   {
     icon: Bot,
     title: "AI replies that know your app",

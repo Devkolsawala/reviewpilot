@@ -93,8 +93,9 @@ export default function AboutPage() {
               Indian founders eventually say:{" "}
               <em>&ldquo;We can build this ourselves.&rdquo;</em> So we did.
               ReviewPilot is what we wished existed — AI review management that
-              understands Play Store AND Google Business Profile, speaks Indian
-              languages, and costs $16 a month. A{" "}
+              understands Play Store and WhatsApp today (with Google Business
+              Profile coming soon), speaks Indian languages, and costs $16 a
+              month. A{" "}
               <span className="text-gradient-brand font-semibold">
                 seventeenth of Birdeye
               </span>
