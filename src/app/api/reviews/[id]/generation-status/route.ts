@@ -63,6 +63,8 @@ export async function GET(
     }
   }
 
+  console.log(`[gen] status reviewId=${reviewId} -> ${generationStatus ?? "idle"}`);
+
   return NextResponse.json({
     generation_status: generationStatus,
     reply_text: review.reply_text ?? null,

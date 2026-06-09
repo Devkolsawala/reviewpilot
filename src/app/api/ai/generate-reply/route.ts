@@ -105,6 +105,7 @@ export async function POST(request: Request) {
     if (stampErr) {
       return NextResponse.json({ error: stampErr.message }, { status: 500 });
     }
+    console.log(`[gen] async stamp reviewId=${reviewId} genId=${generationId}`);
 
     // Kick the worker fire-and-forget so the Grok call survives a client
     // disconnect. Same pattern as auto-classification. Falls back to running

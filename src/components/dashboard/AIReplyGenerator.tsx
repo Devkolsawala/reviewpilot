@@ -71,6 +71,55 @@ function deriveInitialState(r: Review): ReplyState {
  return "idle";
 }
 
+// A 'generating' job older than this is treated as dead. Shared by the DB
+// status endpoint (server-side) and the mock localStorage lifecycle below so
+// the spinner can never run forever after a refresh.
+const GEN_STALE_MS = 120_000;
+
+// ── Mock generation lifecycle (Branch B) ─────────────────────────────────────
+// Sample/demo reviews are client-only fixtures (ids like "mp-001") with NO row
+// in public.reviews, so they can't be stamped server-side. We mirror the exact
+// generating→completed→failed state machine in localStorage, keyed by review id,
+// so a refresh during/after generation rehydrates instead of losing the reply.
+// Real (DB-backed) reviews never touch this — they use the server async path.
+type MockGenLS = {
+ status: "generating" | "completed" | "failed";
+ replyText?: string;
+ tone?: string;
+ startedAt: number;
+};
+
+const MOCK_GEN_PREFIX = "rp:gen:";
+const mockGenKey = (reviewId: string) => `${MOCK_GEN_PREFIX}${reviewId}`;
+
+function readMockGen(reviewId: string): MockGenLS | null {
+ if (typeof window === "undefined") return null;
+ try {
+ const raw = window.localStorage.getItem(mockGenKey(reviewId));
+ return raw ? (JSON.parse(raw) as MockGenLS) : null;
+ } catch {
+ return null;
+ }
+}
+
+function writeMockGen(reviewId: string, value: MockGenLS): void {
+ if (typeof window === "undefined") return;
+ try {
+ window.localStorage.setItem(mockGenKey(reviewId), JSON.stringify(value));
+ } catch {
+ // ignore (e.g. private-browsing quota exceeded)
+ }
+}
+
+function clearMockGen(reviewId: string): void {
+ if (typeof window === "undefined") return;
+ try {
+ window.localStorage.removeItem(mockGenKey(reviewId));
+ } catch {
+ // ignore
+ }
+}
+
 export function AIReplyGenerator({
  review,
  isMock = false,
@@ -106,6 +155,9 @@ export function AIReplyGenerator({
  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
  const pollStartRef = useRef<number>(0);
  const currentGenerationIdRef = useRef<string | null>(null);
+ // Mock-only: schedules the stale→failed flip for a 'generating' fixture that
+ // was interrupted by a refresh (no server job exists to resume it).
+ const mockStaleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
  const stopPolling = useCallback(() => {
  if (pollRef.current) {
@@ -168,12 +220,60 @@ export function AIReplyGenerator({
  }, [review.id, review.reply_text, review.reply_status]);
 
  // On review select / page mount — READ the persisted generation status and
- // rehydrate. CRITICAL: this only reads; it must never start a new generation.
- // Skipped in mock mode (no real rows) and for published rows (terminal).
+ // rehydrate. CRITICAL: this only reads; it must NEVER start a new generation.
+ // Real reviews read the DB status endpoint; mock fixtures read localStorage.
+ // Published rows are terminal in both modes.
  useEffect(() => {
- if (isMock) return;
- if (review.reply_status === "published") return;
  let cancelled = false;
+ const cleanup = () => {
+ cancelled = true;
+ stopPolling();
+ if (mockStaleTimerRef.current) {
+ clearTimeout(mockStaleTimerRef.current);
+ mockStaleTimerRef.current = null;
+ }
+ };
+
+ if (review.reply_status === "published") return cleanup;
+
+ // ── Mock fixtures: rehydrate from localStorage ──────────────────────────
+ if (isMock) {
+ const g = readMockGen(review.id);
+ if (g) {
+ if (g.status === "generating") {
+ const age = Date.now() - (g.startedAt ?? 0);
+ if (age > GEN_STALE_MS) {
+ // Interrupted by a refresh and now stale — no job to resume.
+ writeMockGen(review.id, { ...g, status: "failed" });
+ setGenError("failed");
+ } else {
+ if (g.tone) setTone(g.tone);
+ setGenError(null);
+ setState("generating");
+ // There is no server worker for fixtures; flip to failed once the
+ // staleness window elapses so the spinner can't run forever.
+ mockStaleTimerRef.current = setTimeout(() => {
+ const cur = readMockGen(review.id);
+ if (cur) writeMockGen(review.id, { ...cur, status: "failed" });
+ setGenError("timeout");
+ setState((s) => (s === "generating" ? "idle" : s));
+ }, GEN_STALE_MS - age);
+ }
+ } else if (g.status === "completed") {
+ if (g.tone) setTone(g.tone);
+ if (g.replyText) {
+ setReply(g.replyText);
+ setState("review");
+ }
+ } else if (g.status === "failed") {
+ setGenError("failed");
+ }
+ }
+ // none → keep the state derived from reply_text/reply_status above
+ return cleanup;
+ }
+
+ // ── Real reviews: rehydrate from the DB status endpoint ─────────────────
  (async () => {
  try {
  const res = await fetch(`/api/reviews/${review.id}/generation-status`, {
@@ -200,15 +300,21 @@ export function AIReplyGenerator({
  // Ignore — derived state from reply_text/reply_status still applies.
  }
  })();
- return () => {
- cancelled = true;
- stopPolling();
- };
+ return cleanup;
  // eslint-disable-next-line react-hooks/exhaustive-deps -- per-review rehydrate on identity change only
  }, [review.id]);
 
- // Belt-and-suspenders: clear any live interval if we unmount mid-poll.
- useEffect(() => () => stopPolling(), [stopPolling]);
+ // Belt-and-suspenders: clear any live interval/timer if we unmount mid-poll.
+ useEffect(
+ () => () => {
+ stopPolling();
+ if (mockStaleTimerRef.current) {
+ clearTimeout(mockStaleTimerRef.current);
+ mockStaleTimerRef.current = null;
+ }
+ },
+ [stopPolling]
+ );
 
  const isPlayStore = review.source === "play_store";
  const charLimit = isPlayStore ? 350 : 4096;
@@ -282,7 +388,12 @@ export function AIReplyGenerator({
  return;
  }
 
- // ── Mock mode: synchronous, ephemeral (unchanged behaviour) ──────────────
+ // ── Mock mode: synchronous xAI call, lifecycle persisted to localStorage ──
+ // The fetch itself is unchanged. We additionally persist generating→
+ // completed→failed to localStorage (keyed by review id) so a refresh during
+ // or after generation rehydrates instead of losing the reply.
+ const startedAt = Date.now();
+ writeMockGen(review.id, { status: "generating", tone, startedAt });
  const controller = new AbortController();
  const timeout = setTimeout(() => controller.abort(), 30000);
  try {
@@ -306,6 +417,8 @@ export function AIReplyGenerator({
  clearTimeout(timeout);
  if (res.status === 429) {
  const data = await res.json().catch(() => ({}));
+ // No generation happened (limit) — don't leave a stuck 'generating' key.
+ clearMockGen(review.id);
  setState("idle");
  setLimitModal({
  open: true,
@@ -318,7 +431,9 @@ export function AIReplyGenerator({
  }
  if (!res.ok) throw new Error("API error");
  const data = await res.json();
- setReply(data.reply || fallbackReply(review));
+ const finalReply = data.reply || fallbackReply(review);
+ writeMockGen(review.id, { status: "completed", replyText: finalReply, tone, startedAt });
+ setReply(finalReply);
  // Notify sidebar + billing page to refresh usage counters
  window.dispatchEvent(new CustomEvent("reviewpilot:usage-updated"));
  setState("review");
@@ -326,16 +441,22 @@ export function AIReplyGenerator({
  clearTimeout(timeout);
  const e = err as { name?: string };
  if (e.name === "AbortError") {
+ writeMockGen(review.id, { status: "failed", tone, startedAt });
  toast({
  title: "AI is taking longer than usual",
  description: "Click Regenerate to try again.",
  variant: "destructive",
  });
  inFlightRef.current = false;
+ setGenError("failed");
  setState(reply ? "review" : "idle");
  return;
  }
- setReply(fallbackReply(review));
+ // Graceful fallback reply — persist it as completed so a refresh shows the
+ // same text (matches the on-screen result).
+ const fb = fallbackReply(review);
+ writeMockGen(review.id, { status: "completed", replyText: fb, tone, startedAt });
+ setReply(fb);
  inFlightRef.current = false;
  setState("review");
  return;
@@ -412,6 +533,8 @@ export function AIReplyGenerator({
  onPublish?.(review.id, reply);
  await onRefetch?.();
  }
+ // Published — generation lifecycle for this row is done.
+ clearMockGen(review.id);
  setState("done");
  toast({
  title: "Reply published",
@@ -435,6 +558,9 @@ export function AIReplyGenerator({
  } else {
  onDraft?.(review.id, reply);
  }
+ // Draft is now persisted (DB row, or mock-overrides localStorage) — the
+ // generation-lifecycle key is no longer the source of truth for this row.
+ clearMockGen(review.id);
  toast({ title: "Draft saved", description: "Reply saved as draft." });
  } catch (e: unknown) {
  const msg = e instanceof Error ? e.message : "Could not save draft.";
@@ -763,7 +889,10 @@ export function AIReplyGenerator({
  variant="ghost"
  onClick={async () => {
  setReply("");
+ setGenError(null);
  setState("idle");
+ // Discarding clears the generation lifecycle for this row.
+ clearMockGen(review.id);
  if (!isMock) {
  try {
  await persistDiscard();

@@ -155,6 +155,8 @@ export async function runAsyncGeneration(
       return;
     }
 
+    console.log(`[gen] worker done reviewId=${reviewId} status=completed`);
+
     // Cluster into an Active Issue when the AI flagged a concrete problem.
     // Best-effort — never affects generation status.
     if (
@@ -189,6 +191,7 @@ async function markFailed(
   generationId: string
 ): Promise<void> {
   try {
+    console.log(`[gen] worker done reviewId=${reviewId} status=failed`);
     await admin
       .from("reviews")
       .update({ generation_status: "failed" })

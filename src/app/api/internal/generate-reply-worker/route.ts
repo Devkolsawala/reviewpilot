@@ -53,6 +53,8 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  console.log(`[gen] worker entry reviewId=${reviewId} genId=${generationId}`);
+
   await runAsyncGeneration({
     reviewId,
     generationId,
