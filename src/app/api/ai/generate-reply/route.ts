@@ -3,8 +3,12 @@ import { createClient } from "@/lib/supabase/server";
 import { generateReplyWithRecovery } from "@/lib/ai/reply-generator";
 import { checkUsageLimit, incrementUsage } from "@/lib/usage";
 import { linkRecoverableReview } from "@/lib/reviews/issues";
+import { runAsyncGeneration } from "@/lib/ai/run-async-generation";
 import type { AppContext } from "@/types/database";
 import type { Review } from "@/types/review";
+
+// Grok call (sync path) plus retries needs more than the 10s default.
+export const maxDuration = 60;
 
 const EMPTY_CONTEXT = (tone: string): AppContext => ({
   id: "",
@@ -30,7 +34,7 @@ const EMPTY_CONTEXT = (tone: string): AppContext => ({
 
 export async function POST(request: Request) {
   const body = await request.json();
-  const { review, tone, source, appContext: bodyContext, connectionId, reviewId } = body;
+  const { review, tone, source, appContext: bodyContext, connectionId, reviewId, mode } = body;
 
   const supabase = createClient();
   const {
@@ -54,6 +58,89 @@ export async function POST(request: Request) {
         { status: 429 }
       );
     }
+  }
+
+  // ── Async (persisted) path ──────────────────────────────────────────────
+  // Opt-in via mode:"async" from the inbox loader flow. Unlike the synchronous
+  // default below (used by mock "Reply All", BulkReplyModal, AppContextForm —
+  // all of which depend on the { reply } response shape and pass no reviewId),
+  // this branch persists the in-flight status + result server-side so a refresh
+  // can rehydrate. The usage check above has already run; the actual Grok call
+  // + usage increment happen in the worker (runAsyncGeneration), never blocking
+  // this response. Disabled in mock mode (no real rows to persist to).
+  if (
+    user &&
+    reviewId &&
+    mode === "async" &&
+    process.env.NEXT_PUBLIC_USE_MOCK !== "true"
+  ) {
+    // RLS-scoped ownership check — the user can only select their own reviews.
+    const { data: ownRow, error: ownErr } = await supabase
+      .from("reviews")
+      .select("id")
+      .eq("id", reviewId)
+      .maybeSingle();
+    if (ownErr) {
+      return NextResponse.json({ error: ownErr.message }, { status: 500 });
+    }
+    if (!ownRow) {
+      return NextResponse.json({ error: "Review not found" }, { status: 404 });
+    }
+
+    const generationId = crypto.randomUUID();
+
+    // Stamp the in-flight state. Clearing reply_text ensures a mid-flight
+    // refresh shows the loader (driven by generation_status) rather than a
+    // stale prior draft. reply_status is intentionally left untouched.
+    const { error: stampErr } = await supabase
+      .from("reviews")
+      .update({
+        generation_status: "generating",
+        generation_id: generationId,
+        generation_started_at: new Date().toISOString(),
+        generation_tone: tone || "friendly",
+        reply_text: null,
+      })
+      .eq("id", reviewId);
+    if (stampErr) {
+      return NextResponse.json({ error: stampErr.message }, { status: 500 });
+    }
+
+    // Kick the worker fire-and-forget so the Grok call survives a client
+    // disconnect. Same pattern as auto-classification. Falls back to running
+    // inline (still non-blocking) when the worker env isn't configured, e.g.
+    // local dev — the long-lived dev server keeps the promise alive.
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+    const cronSecret = process.env.CRON_SECRET;
+    const payload = { reviewId, generationId, tone: tone || "friendly", userId: user.id };
+    if (appUrl && cronSecret) {
+      try {
+        void fetch(`${appUrl}/api/internal/generate-reply-worker`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${cronSecret}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        })
+          .then((res) => {
+            if (!res.ok) {
+              console.error("[ai-generate-async] worker non-ok", res.status);
+            }
+          })
+          .catch((err) => console.error("[ai-generate-async] worker kick failed", err));
+      } catch (err) {
+        console.error("[ai-generate-async] worker kick threw", err);
+        void runAsyncGeneration(payload);
+      }
+    } else {
+      console.warn(
+        "[ai-generate-async] NEXT_PUBLIC_APP_URL/CRON_SECRET unset — running inline fallback"
+      );
+      void runAsyncGeneration(payload);
+    }
+
+    return NextResponse.json({ generationId, status: "generating" });
   }
 
   let context: AppContext = bodyContext

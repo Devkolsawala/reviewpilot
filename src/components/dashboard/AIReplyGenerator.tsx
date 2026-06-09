@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -82,6 +82,10 @@ export function AIReplyGenerator({
  const [reply, setReply] = useState(review.reply_text || "");
  const [tone, setTone] = useState("friendly");
  const [copied, setCopied] = useState(false);
+ // Generation error surfaced by the async (persisted) flow: "failed" = the
+ // server job reported failure; "timeout" = the client gave up polling after
+ // ~90s. Cleared whenever a fresh Generate/Regenerate starts.
+ const [genError, setGenError] = useState<null | "failed" | "timeout">(null);
  const [limitModal, setLimitModal] = useState<{
  open: boolean;
  planName?: string;
@@ -95,11 +99,116 @@ export function AIReplyGenerator({
  // A ref updates synchronously so the second click sees `true` and bails out.
  const inFlightRef = useRef(false);
 
+ // Polling machinery for the async (persisted) generation flow.
+ // pollRef holds the active interval; currentGenerationIdRef pins the click we
+ // started so a status response from an older/newer job can be told apart;
+ // pollStartRef stamps when we began polling for the ~90s client timeout.
+ const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+ const pollStartRef = useRef<number>(0);
+ const currentGenerationIdRef = useRef<string | null>(null);
+
+ const stopPolling = useCallback(() => {
+ if (pollRef.current) {
+ clearInterval(pollRef.current);
+ pollRef.current = null;
+ }
+ }, []);
+
+ // Reads the server-side status for THIS review and advances the UI. Pure read
+ // — it never triggers a new generation. Used both by the active poll loop and
+ // (once) on mount/review-change to rehydrate after a refresh.
+ const pollStatus = useCallback(async () => {
+ // Client-side safety net so the spinner can't run forever.
+ if (pollStartRef.current && Date.now() - pollStartRef.current > 90_000) {
+ stopPolling();
+ setGenError("timeout");
+ inFlightRef.current = false;
+ setState((s) => (s === "generating" ? "idle" : s));
+ return;
+ }
+ try {
+ const res = await fetch(`/api/reviews/${review.id}/generation-status`, {
+ cache: "no-store",
+ });
+ if (!res.ok) return; // transient — keep polling
+ const data = await res.json();
+ if (data.generation_status === "completed") {
+ stopPolling();
+ inFlightRef.current = false;
+ setGenError(null);
+ if (data.reply_text) setReply(data.reply_text);
+ setState("review");
+ window.dispatchEvent(new CustomEvent("reviewpilot:usage-updated"));
+ await onRefetch?.();
+ } else if (data.generation_status === "failed") {
+ stopPolling();
+ inFlightRef.current = false;
+ setGenError("failed");
+ setState((s) => (s === "generating" ? "idle" : s));
+ }
+ // "generating" / "idle" / null → keep polling
+ } catch {
+ // Network blip — keep polling; the 90s timeout still bounds it.
+ }
+ }, [review.id, onRefetch, stopPolling]);
+
+ const startPolling = useCallback(() => {
+ stopPolling();
+ pollStartRef.current = Date.now();
+ pollRef.current = setInterval(() => {
+ void pollStatus();
+ }, 1500);
+ void pollStatus(); // immediate first check
+ }, [pollStatus, stopPolling]);
+
  useEffect(() => {
  setReply(review.reply_text || "");
  setState(deriveInitialState(review));
  // eslint-disable-next-line react-hooks/exhaustive-deps -- selected review identity / reply fields only
  }, [review.id, review.reply_text, review.reply_status]);
+
+ // On review select / page mount — READ the persisted generation status and
+ // rehydrate. CRITICAL: this only reads; it must never start a new generation.
+ // Skipped in mock mode (no real rows) and for published rows (terminal).
+ useEffect(() => {
+ if (isMock) return;
+ if (review.reply_status === "published") return;
+ let cancelled = false;
+ (async () => {
+ try {
+ const res = await fetch(`/api/reviews/${review.id}/generation-status`, {
+ cache: "no-store",
+ });
+ if (!res.ok || cancelled) return;
+ const data = await res.json();
+ if (cancelled) return;
+ if (data.generation_status === "generating") {
+ currentGenerationIdRef.current = data.generation_id ?? null;
+ setGenError(null);
+ setState("generating");
+ startPolling();
+ } else if (data.generation_status === "completed") {
+ if (data.reply_text) {
+ setReply(data.reply_text);
+ setState("review");
+ }
+ } else if (data.generation_status === "failed") {
+ setGenError("failed");
+ }
+ // idle/null → keep the state derived above
+ } catch {
+ // Ignore — derived state from reply_text/reply_status still applies.
+ }
+ })();
+ return () => {
+ cancelled = true;
+ stopPolling();
+ };
+ // eslint-disable-next-line react-hooks/exhaustive-deps -- per-review rehydrate on identity change only
+ }, [review.id]);
+
+ // Belt-and-suspenders: clear any live interval if we unmount mid-poll.
+ useEffect(() => () => stopPolling(), [stopPolling]);
 
  const isPlayStore = review.source === "play_store";
  const charLimit = isPlayStore ? 350 : 4096;
@@ -120,10 +229,62 @@ export function AIReplyGenerator({
  if (inFlightRef.current) return;
  if (state === "generating" || state === "posting") return;
  inFlightRef.current = true;
+ setGenError(null);
  setState("generating");
+
+ // Real reviews use the persisted async flow: the server stamps a
+ // generation_id, runs Grok off-request (survives a refresh), and we poll the
+ // status endpoint until it terminates. Mock mode keeps the old synchronous
+ // { reply } behaviour (no persistence, no real row to poll).
+ if (!isMock) {
+ try {
+ const res = await fetch("/api/ai/generate-reply", {
+ method: "POST",
+ headers: { "Content-Type": "application/json" },
+ body: JSON.stringify({
+ review: {
+ id: review.id,
+ author_name: review.author_name,
+ rating: review.rating,
+ review_text: review.review_text,
+ },
+ tone,
+ source: review.source,
+ connectionId: review.connection_id,
+ reviewId: review.id,
+ mode: "async",
+ }),
+ });
+ if (res.status === 429) {
+ const data = await res.json().catch(() => ({}));
+ inFlightRef.current = false;
+ setState("idle");
+ setLimitModal({
+ open: true,
+ planName: data.planName,
+ limit: data.limit,
+ resetDate: data.resetDate,
+ periodLabel: data.periodLabel,
+ });
+ return;
+ }
+ if (!res.ok) throw new Error("API error");
+ const data = await res.json();
+ currentGenerationIdRef.current = data.generationId ?? null;
+ // Generation now lives server-side; release the click guard and poll.
+ inFlightRef.current = false;
+ startPolling();
+ } catch {
+ inFlightRef.current = false;
+ setGenError("failed");
+ setState(reply ? "review" : "idle");
+ }
+ return;
+ }
+
+ // ── Mock mode: synchronous, ephemeral (unchanged behaviour) ──────────────
  const controller = new AbortController();
  const timeout = setTimeout(() => controller.abort(), 30000);
-
  try {
  const res = await fetch("/api/ai/generate-reply", {
  method: "POST",
@@ -449,6 +610,16 @@ export function AIReplyGenerator({
 
  {state === "idle" && (
  <div className="flex-1 flex flex-col items-center justify-center p-8 text-center gap-4 overflow-y-auto min-h-0">
+ {genError && (
+ <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/20 p-3 text-sm text-red-800 dark:text-red-300 max-w-sm text-left">
+ <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+ <p>
+ {genError === "timeout"
+ ? "Still working — the AI is taking longer than expected. Try again in a moment."
+ : "Reply generation failed. Please try again."}
+ </p>
+ </div>
+ )}
  <div className="rounded-2xl bg-accent/10 dark:bg-accent/10 p-5">
  <Bot className="h-10 w-10 text-accent mx-auto" />
  </div>
@@ -503,6 +674,16 @@ export function AIReplyGenerator({
  <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/20 p-3 text-sm text-red-800 dark:text-red-300">
  <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
  <p>Posting to the store failed. Edit the reply if needed and try again.</p>
+ </div>
+ )}
+ {genError && (
+ <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/20 p-3 text-sm text-red-800 dark:text-red-300">
+ <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+ <p>
+ {genError === "timeout"
+ ? "Still working — the AI is taking longer than expected. Click Regenerate to try again."
+ : "Reply generation failed. Click Regenerate to try again."}
+ </p>
  </div>
  )}
  <div className="flex items-center justify-between gap-2 flex-wrap">
