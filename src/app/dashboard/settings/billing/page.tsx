@@ -30,7 +30,7 @@ import {
  DialogHeader,
  DialogTitle,
 } from "@/components/ui/dialog";
-import { isUpgrade, isDowngrade } from "@/lib/plans";
+import { isUpgrade, isDowngrade, PLANS } from "@/lib/plans";
 
 declare global {
  interface Window {
@@ -63,6 +63,7 @@ const PLAN_CARDS = [
  features: [
  "3 locations or apps",
  "500 AI replies/week",
+ `ASO Analysis (${PLANS.growth.limits.aso_analyses_per_period} analyses/period)`,
  "200 SMS/week (Coming Soon)",
  "5 team seats",
  "Full analytics + sentiment",
@@ -76,6 +77,7 @@ const PLAN_CARDS = [
  features: [
  "10 locations or apps",
  "Unlimited AI replies",
+ `ASO Analysis (${PLANS.agency.limits.aso_analyses_per_period} analyses/period)`,
  "1,000 SMS/week (Coming Soon)",
  "10 team seats",
  "Priority support",
