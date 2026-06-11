@@ -21,6 +21,7 @@ import {
   BookOpen,
   MessageSquare,
   AlertTriangle,
+  Rocket,
   PanelLeftClose,
   PanelLeftOpen,
 } from "lucide-react";
@@ -157,13 +158,14 @@ function useActiveIssueCount() {
   return count;
 }
 
-type NavItem = { label: string; href: string; icon: typeof LayoutDashboard };
+type NavItem = { label: string; href: string; icon: typeof LayoutDashboard; badge?: string };
 
 const WORKSPACE_NAV: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Inbox", href: "/dashboard/inbox", icon: Inbox },
   { label: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
   { label: "AI Issue Tracker", href: "/dashboard/issues", icon: AlertTriangle },
+  { label: "ASO Analysis", href: "/dashboard/aso", icon: Rocket, badge: "Growth+" },
   { label: "Campaigns", href: "/dashboard/campaigns", icon: Megaphone },
 ];
 
@@ -283,6 +285,11 @@ export function Sidebar({
             {showBadge && item.href === "/dashboard/campaigns" && (
               <span className="flex items-center rounded-full bg-muted/60 px-1.5 py-0.5 font-mono text-[9px] font-medium uppercase tracking-wider text-muted-foreground">
                 Soon
+              </span>
+            )}
+            {showBadge && item.badge && (
+              <span className="flex items-center rounded-full bg-accent/15 px-1.5 py-0.5 font-mono text-[9px] font-medium uppercase tracking-wider text-accent ring-1 ring-accent/30">
+                {item.badge}
               </span>
             )}
           </>

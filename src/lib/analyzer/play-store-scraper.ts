@@ -136,6 +136,76 @@ export async function getAppMetadata(
   }
 }
 
+// ── ASO listing metadata ──────────────────────────────────────────────────────
+// Used by the paid ASO Analysis feature. Reuses the SAME google-play-scraper
+// dependency + memoized loader + timeout as getAppMetadata above — it just maps
+// the additional listing fields the ASO audit needs (short/long description,
+// installs bucket, category, screenshot count) which the analyzer's
+// AppMetadata shape doesn't carry. No new scraping dependency is introduced.
+
+export interface AsoListingMetadata {
+  packageId: string;
+  title: string;
+  shortDescription: string;   // Play "summary" — the 80-char tagline
+  longDescription: string;    // full store description
+  rating: number | null;      // 0..5, null when Play omits it
+  installs: string | null;    // human bucket, e.g. "1,000,000+"
+  category: string | null;    // genre, e.g. "Productivity"
+  screenshotCount: number;
+}
+
+export type AsoListingResult =
+  | { ok: true; data: AsoListingMetadata }
+  | { ok: false; reason: "not_found" | "crashed" };
+
+export async function getListingMetadata(
+  packageId: string
+): Promise<AsoListingResult> {
+  try {
+    const gplay = (await loadGplay()).default;
+    const data = await withTimeout(
+      gplay.app({ appId: packageId, lang: "en", country: "in" }),
+      SCRAPE_TIMEOUT_MS,
+      "aso-app"
+    );
+    const screenshots = Array.isArray(data.screenshots) ? data.screenshots : [];
+    return {
+      ok: true,
+      data: {
+        packageId,
+        title: data.title || packageId,
+        shortDescription: (data.summary || "").trim(),
+        // Cap the long description to bound the AI token budget; full Play
+        // descriptions can be 4000 chars and we never need more for the audit.
+        longDescription: (data.description || "").slice(0, 6000),
+        rating: typeof data.score === "number" ? data.score : null,
+        installs:
+          (typeof data.installs === "string" && data.installs) ||
+          (typeof data.minInstalls === "number"
+            ? `${data.minInstalls.toLocaleString("en-US")}+`
+            : null),
+        category: data.genre || null,
+        screenshotCount: screenshots.length,
+      },
+    };
+  } catch (err) {
+    if (isAppNotFoundError(err)) {
+      console.warn(
+        "[play-store-scraper] aso listing not found",
+        packageId,
+        (err as Error).message
+      );
+      return { ok: false, reason: "not_found" };
+    }
+    console.error(
+      "[play-store-scraper] getListingMetadata failed",
+      packageId,
+      (err as Error).message
+    );
+    return { ok: false, reason: "crashed" };
+  }
+}
+
 export async function getRecentReviews(
   packageId: string,
   count = 150

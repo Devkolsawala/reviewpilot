@@ -50,3 +50,84 @@ export interface Usage {
 }
 
 // Plan limits are defined in src/lib/plans.ts — that is the single source of truth.
+
+// ── ASO Analysis (paid feature) ───────────────────────────────────────────────
+// Mirrors public.aso_analyses (migration 041). Each row is one immutable
+// review-powered App Store Optimization audit for a user + package.
+
+/** A single audited listing factor and its status chip. */
+export interface AsoFactorScore {
+  /** Points awarded for this factor. */
+  score: number;
+  /** Max points this factor can contribute. */
+  max: number;
+  /** Status chip — reuses the resolved/active/at-risk vocabulary from the Theme Map. */
+  status: "good" | "warning" | "critical";
+  /** Short human-readable explanation of the score (≤120 chars). */
+  detail: string;
+}
+
+/** Deterministic, code-computed audit of the live listing (no AI). */
+export interface AsoScoreBreakdown {
+  title: AsoFactorScore;
+  short_desc: AsoFactorScore;
+  long_desc: AsoFactorScore;
+  rating: AsoFactorScore;
+  assets: AsoFactorScore;
+}
+
+/** Live Play Store listing captured at analysis time. */
+export interface AsoListingSnapshot {
+  title: string;
+  short_description: string;
+  long_description: string;
+  rating: number | null;
+  installs: string | null;
+  category: string | null;
+  screenshot_count: number;
+}
+
+export type AsoKeywordSource = "reviews" | "competitor" | "both";
+export type AsoKeywordPriority = "high" | "medium" | "low";
+
+/** One missing keyword opportunity grounded in real reviewer / competitor language. */
+export interface AsoKeywordGap {
+  keyword: string;
+  source: AsoKeywordSource;
+  priority: AsoKeywordPriority;
+  /** ≤120 chars. */
+  rationale: string;
+}
+
+/** One section of the suggested long description. */
+export interface AsoLongDescriptionSection {
+  heading: string;
+  body: string;
+}
+
+/** AI-generated rewrites + keyword gaps (post-validated in code before storage). */
+export interface AsoRecommendations {
+  /** Suggested title — enforced ≤30 chars. */
+  title: string;
+  /** Suggested short description — enforced ≤80 chars. */
+  short_description: string;
+  long_description: AsoLongDescriptionSection[];
+  /** Suggested "What's new" copy, derived only from shipped fixes. May be empty. */
+  whats_new: string;
+  /** Up to 12 gaps, highest priority first. */
+  keyword_gaps: AsoKeywordGap[];
+}
+
+export interface AsoAnalysis {
+  id: string;
+  user_id: string;
+  /** Nullable FK to connections(id); null if the connection was removed. */
+  app_id: string | null;
+  package_name: string;
+  listing_snapshot: AsoListingSnapshot;
+  /** 0..100 */
+  aso_score: number;
+  score_breakdown: AsoScoreBreakdown;
+  recommendations: AsoRecommendations;
+  created_at: string;
+}

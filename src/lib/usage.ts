@@ -29,7 +29,7 @@ export interface UsageCheck {
   upgradeNeeded: boolean;
 }
 
-export type UsageField = 'ai_replies_used' | 'sms_sent' | 'reviews_fetched' | 'auto_replies_used';
+export type UsageField = 'ai_replies_used' | 'sms_sent' | 'reviews_fetched' | 'auto_replies_used' | 'aso_analyses_used';
 
 // ── Shared helpers ─────────────────────────────────────────────────────────────
 
@@ -94,7 +94,7 @@ async function fetchUsage(
     .eq('user_id', userId)
     .eq('period_key', periodKey)
     .single();
-  return data ?? { ai_replies_used: 0, sms_sent: 0, reviews_fetched: 0, auto_replies_used: 0, period_key: periodKey };
+  return data ?? { ai_replies_used: 0, sms_sent: 0, reviews_fetched: 0, auto_replies_used: 0, aso_analyses_used: 0, period_key: periodKey };
 }
 
 async function fetchPlan(
@@ -146,7 +146,7 @@ export async function getUserPlan(userId: string, supabase?: SupabaseClient): Pr
 
 export async function checkUsageLimit(
   userId: string,
-  limitType: 'ai_replies' | 'sms' | 'connections',
+  limitType: 'ai_replies' | 'sms' | 'connections' | 'aso_analyses',
   supabase?: SupabaseClient
 ): Promise<UsageCheck> {
   const client = supabase ?? createClient();
@@ -169,6 +169,9 @@ export async function checkUsageLimit(
   } else if (limitType === 'sms') {
     current = (usage.sms_sent as number) ?? 0;
     limit = plan.limits.sms_per_period;
+  } else if (limitType === 'aso_analyses') {
+    current = (usage.aso_analyses_used as number) ?? 0;
+    limit = plan.limits.aso_analyses_per_period;
   } else {
     // connections — not period-based; scoped to the workspace owner so
     // an operator adding a connection still counts against the seat limit.

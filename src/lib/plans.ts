@@ -18,6 +18,7 @@ export const PLANS = {
       connections: 1,
       team_members: 1,  // total seats (owner only — no invites on free)
       reviews_stored: 100,
+      aso_analyses_per_period: 0,  // gated — Growth+ only
     },
     features: {
       auto_reply: false,
@@ -31,6 +32,7 @@ export const PLANS = {
       inbox_auto_reply: true,
       campaigns_sms: false,
       campaigns_email: false,
+      aso_analysis: false,
     },
   },
   starter: {
@@ -44,6 +46,7 @@ export const PLANS = {
       connections: 1,
       team_members: 3,  // total seats: owner + 2 members
       reviews_stored: 1000,
+      aso_analyses_per_period: 0,  // gated — Growth+ only
     },
     features: {
       auto_reply: true,
@@ -57,6 +60,7 @@ export const PLANS = {
       inbox_auto_reply: true,
       campaigns_sms: true,
       campaigns_email: true,
+      aso_analysis: false,
     },
   },
   growth: {
@@ -70,6 +74,7 @@ export const PLANS = {
       connections: 3,
       team_members: 5,  // total seats: owner + 4 members
       reviews_stored: 10000,
+      aso_analyses_per_period: 30,
     },
     features: {
       auto_reply: true,
@@ -83,6 +88,7 @@ export const PLANS = {
       inbox_auto_reply: true,
       campaigns_sms: true,
       campaigns_email: true,
+      aso_analysis: true,
     },
   },
   agency: {
@@ -96,6 +102,7 @@ export const PLANS = {
       connections: 10,
       team_members: 10, // total seats: owner + 9 members
       reviews_stored: -1, // unlimited
+      aso_analyses_per_period: 100,
     },
     features: {
       auto_reply: true,
@@ -109,6 +116,7 @@ export const PLANS = {
       inbox_auto_reply: true,
       campaigns_sms: true,
       campaigns_email: true,
+      aso_analysis: true,
     },
   },
 } as const;
