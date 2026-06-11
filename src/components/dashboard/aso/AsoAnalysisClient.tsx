@@ -191,12 +191,16 @@ export function AsoAnalysisClient() {
     setRunning(true);
     setError(null);
     try {
+      // Trim, drop blanks, dedupe, cap at 2 before sending.
+      const comps = Array.from(
+        new Set(competitors.map((c) => c.trim()).filter((c) => c.length > 0))
+      ).slice(0, 2);
       const res = await fetch("/api/aso/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           connectionId: selectedConn.id,
-          competitors: competitors.filter((c) => c.trim().length > 0),
+          competitors: comps,
           force,
         }),
       });

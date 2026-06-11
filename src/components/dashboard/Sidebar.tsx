@@ -41,6 +41,7 @@ import { useState, useEffect, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useUsage } from "@/hooks/useUsage";
 import { useTeamRole } from "@/hooks/useTeamRole";
+import { usePlan } from "@/hooks/usePlan";
 
 const MOCK_OVERRIDES_PREFIX = "reviewpilot_mock_overrides";
 const IS_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === "true";
@@ -165,7 +166,14 @@ const WORKSPACE_NAV: NavItem[] = [
   { label: "Inbox", href: "/dashboard/inbox", icon: Inbox },
   { label: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
   { label: "AI Issue Tracker", href: "/dashboard/issues", icon: AlertTriangle },
-  { label: "ASO Analysis", href: "/dashboard/aso", icon: Rocket, badge: "Growth+" },
+  // ASO Analysis is plan-gated (Growth/Agency). It is shown with NO badge to
+  // users who have access and hidden entirely from free/starter — see the
+  // plan filter in the component body. To instead surface it as an upsell
+  // "locked teaser" for non-access users later, drop the filter and give this
+  // item `badge: "Growth+"` only when !canAso (the generic badge renderer in
+  // NavRow already handles rendering it). UpgradeGate (page) + API 403 remain
+  // the real access controls regardless.
+  { label: "ASO Analysis", href: "/dashboard/aso", icon: Rocket },
   { label: "Campaigns", href: "/dashboard/campaigns", icon: Megaphone },
 ];
 
@@ -199,7 +207,15 @@ export function Sidebar({
   const issueCount = useActiveIssueCount();
   const { plan, totalAiUsed, aiLimit, isAiUnlimited, aiPercent, resetDate, periodLabel, isLoading: usageLoading } = useUsage();
   const { isOwner, canManageConnections, canEditAIConfig } = useTeamRole();
+  const { can } = usePlan();
   const reduceMotion = useReducedMotion();
+
+  // Plan-gated workspace items. ASO Analysis is hidden from free/starter (and
+  // during plan load, where `can` defaults to false) and shown badge-free to
+  // Growth/Agency — same `can("aso_analysis")` check the page's UpgradeGate uses.
+  const visibleWorkspaceNav = WORKSPACE_NAV.filter((item) =>
+    item.href === "/dashboard/aso" ? can("aso_analysis") : true
+  );
   // On mobile (in a Sheet), always render the fully-expanded layout.
   const isCollapsed = !mobile && !!collapsed;
   const [settingsOpen, setSettingsOpen] = useState(
@@ -369,7 +385,7 @@ export function Sidebar({
         isCollapsed ? "px-2" : "px-3"
       )}>
         <SectionLabel>Workspace</SectionLabel>
-        {WORKSPACE_NAV.map((item) => (
+        {visibleWorkspaceNav.map((item) => (
           <NavRow key={item.href} item={item} showBadge />
         ))}
 

@@ -7,6 +7,7 @@ import {
   parsePackageId,
 } from "@/lib/analyzer/play-store-scraper";
 import { getReviewData } from "@/lib/aso/review-data";
+import { extractListingKeywords } from "@/lib/aso/keywords";
 import { auditListing } from "@/lib/aso/audit";
 import { generateAsoRecommendations, type AsoGrokInput } from "@/lib/aso/grok";
 import type { AsoListingSnapshot } from "@/types/database";
@@ -75,11 +76,14 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));
   const force = body?.force === true;
   const competitorsRaw: unknown = body?.competitors;
-  const competitors = Array.isArray(competitorsRaw)
-    ? competitorsRaw
-        .map((c) => parsePackageId(String(c)))
-        .filter((c): c is string => !!c)
-        .slice(0, 2)
+  const competitorPackages = Array.isArray(competitorsRaw)
+    ? Array.from(
+        new Set(
+          competitorsRaw
+            .map((c) => parsePackageId(String(c)))
+            .filter((c): c is string => !!c)
+        )
+      ).slice(0, 2)
     : [];
 
   let connectionId: string | null = null;
@@ -124,8 +128,12 @@ export async function POST(request: Request) {
     );
   }
 
-  // (d) 7-day cache — return the latest analysis for this user+package unless forced.
-  if (!force) {
+  // (d) 7-day cache — return the latest analysis for this user+package unless
+  // forced. Competitor keyword-gap analysis is request-specific (it depends on
+  // the competitor packages entered), so any run WITH competitors bypasses the
+  // cache and runs fresh — costing one analysis from quota. A no-competitor run
+  // keeps the original 7-day cache behavior.
+  if (!force && competitorPackages.length === 0) {
     const { data: cached } = await supabase
       .from("aso_analyses")
       .select("id, package_name, listing_snapshot, aso_score, score_breakdown, recommendations, created_at")
@@ -160,6 +168,32 @@ export async function POST(request: Request) {
   }
   const meta = listing.data;
 
+  // (e2) Scrape each competitor's LISTING (not reviews — those aren't ours) and
+  // mine keywords from its title + descriptions. Resilient: a failed/invalid
+  // competitor is skipped with a warning and never fails the request. Runs the
+  // ≤2 competitors concurrently (small cap) via the same scraper + timeout, so
+  // total scrape time stays ~one scraper timeout, well under maxDuration.
+  let competitorKeywords: string[] = [];
+  if (competitorPackages.length > 0) {
+    const settled = await Promise.allSettled(
+      competitorPackages.map((pkg) => getListingMetadata(pkg))
+    );
+    const fragments: string[] = [];
+    settled.forEach((res, i) => {
+      if (res.status === "rejected") {
+        console.warn(`[aso/analyze] competitor scrape skipped ${competitorPackages[i]}: scrape_error`);
+        return;
+      }
+      if (res.value.ok) {
+        const c = res.value.data;
+        fragments.push(c.title, c.shortDescription, c.longDescription);
+        return;
+      }
+      console.warn(`[aso/analyze] competitor scrape skipped ${competitorPackages[i]}: ${res.value.reason}`);
+    });
+    competitorKeywords = extractListingKeywords(fragments);
+  }
+
   // (f) Read the user's stored review-derived data (READ ONLY).
   const reviewData = await getReviewData(supabase, user.id, connectionId);
 
@@ -190,7 +224,7 @@ export async function POST(request: Request) {
     review_keywords: reviewData.review_keywords,
     aspect_sentiment: reviewData.aspect_sentiment,
     issue_clusters: reviewData.issue_clusters,
-    competitor_keywords: competitors,
+    competitor_keywords: competitorKeywords,
   };
 
   const recommendations = await generateAsoRecommendations(grokInput);

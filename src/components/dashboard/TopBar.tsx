@@ -63,6 +63,7 @@ const SEGMENT_LABELS: Record<string, string> = {
   dashboard: "Dashboard",
   inbox: "Inbox",
   analytics: "Analytics",
+  aso: "ASO Analysis",
   campaigns: "Campaigns",
   docs: "Help & Docs",
   settings: "Settings",

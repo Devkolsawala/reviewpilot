@@ -74,7 +74,7 @@ export const PLANS = {
       connections: 3,
       team_members: 5,  // total seats: owner + 4 members
       reviews_stored: 10000,
-      aso_analyses_per_period: 30,
+      aso_analyses_per_period: 25,
     },
     features: {
       auto_reply: true,
@@ -102,7 +102,7 @@ export const PLANS = {
       connections: 10,
       team_members: 10, // total seats: owner + 9 members
       reviews_stored: -1, // unlimited
-      aso_analyses_per_period: 100,
+      aso_analyses_per_period: 50,
     },
     features: {
       auto_reply: true,
