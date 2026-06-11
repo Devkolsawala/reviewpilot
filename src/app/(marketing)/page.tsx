@@ -64,6 +64,7 @@ const softwareSchema = {
     "AI replies for Google Play Store reviews",
     "Review Recovery Engine — convert negative reviewers into promoters",
     "AI Insights — theme map and aspect-based sentiment",
+    "ASO Analysis — audit your Play Store listing against your own review data",
     "WhatsApp Business automation via official Cloud API",
     "Meta-approved Embedded Signup for WhatsApp",
     "Sentiment analytics with Net Sentiment Score",

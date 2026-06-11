@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import {
   Rocket,
   Loader2,
@@ -14,6 +15,8 @@ import {
   Star,
   ArrowRight,
   ChevronDown,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -48,6 +51,51 @@ import type {
 
 // Play Store metadata character limits — drive the live "x / max" counters.
 const LIMITS = { title: 30, short: 80, long: 4000, whats_new: 480 } as const;
+
+// ── Refresh resilience ────────────────────────────────────────────────────────
+// An analysis can take ~10–40s (scrape + Grok). The route runs to completion
+// server-side even if the client disconnects, so the analysis row is inserted
+// regardless of a refresh. We persist a small in-flight marker in localStorage
+// so that after a reload we (a) re-select the app being analyzed, (b) restore
+// the "analyzing" state, and (c) poll for the newly-inserted row — the same
+// "don't lose state on refresh" guarantee the AI reply flow gives.
+const PENDING_KEY = "reviewpilot_aso_pending_v1";
+const PENDING_TTL_MS = 120_000; // matches the route's maxDuration + headroom
+
+interface PendingRun {
+  packageName: string;
+  startedAt: number;
+  /** id of the latest analysis at run start — the new row will differ from it. */
+  prevLatestId: string | null;
+}
+
+function readPending(): PendingRun | null {
+  try {
+    const s = typeof window !== "undefined" ? window.localStorage.getItem(PENDING_KEY) : null;
+    if (!s) return null;
+    const p = JSON.parse(s);
+    if (p && typeof p.packageName === "string" && typeof p.startedAt === "number") {
+      return { packageName: p.packageName, startedAt: p.startedAt, prevLatestId: p.prevLatestId ?? null };
+    }
+  } catch {
+    /* ignore malformed marker */
+  }
+  return null;
+}
+function writePending(p: PendingRun) {
+  try {
+    window.localStorage.setItem(PENDING_KEY, JSON.stringify(p));
+  } catch {
+    /* storage unavailable — degrade silently */
+  }
+}
+function clearPending() {
+  try {
+    window.localStorage.removeItem(PENDING_KEY);
+  } catch {
+    /* ignore */
+  }
+}
 
 interface PlayConnection {
   id: string;
@@ -152,7 +200,12 @@ export function AsoAnalysisClient() {
           .filter((c) => !!c.external_id)
           .map((c) => ({ id: c.id as string, name: c.name as string, external_id: c.external_id as string }));
         setConnections(conns);
-        if (conns.length === 1) setSelectedId(conns[0].id);
+        // If a run was in flight when the page reloaded, re-select that app so
+        // the resume poll below picks it up. Otherwise auto-select a lone app.
+        const pending = readPending();
+        const pendingConn = pending ? conns.find((c) => c.external_id === pending.packageName) : null;
+        if (pendingConn) setSelectedId(pendingConn.id);
+        else if (conns.length === 1) setSelectedId(conns[0].id);
       } finally {
         if (!cancelled) setConnsLoading(false);
       }
@@ -191,6 +244,66 @@ export function AsoAnalysisClient() {
     };
   }, [selectedConn]);
 
+  // Resume after a refresh: if a run was in flight for the selected app, keep
+  // showing the "analyzing" state and poll for the newly-inserted analysis row.
+  const resumeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (!selectedConn) return;
+    const pending = readPending();
+    if (!pending || pending.packageName !== selectedConn.external_id) return;
+    if (Date.now() - pending.startedAt > PENDING_TTL_MS) {
+      clearPending();
+      return;
+    }
+
+    let cancelled = false;
+    setRunning(true);
+    setError(null);
+
+    async function poll() {
+      if (cancelled) return;
+      try {
+        const supabase = createClient();
+        const { data } = await supabase
+          .from("aso_analyses")
+          .select("id, package_name, listing_snapshot, aso_score, score_breakdown, recommendations, created_at")
+          .eq("package_name", pending!.packageName)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (cancelled) return;
+        const row = data as AnalysisRow | null;
+        // A row whose id differs from the one present at run start IS the new
+        // analysis (robust to client/server clock skew).
+        if (row && row.id !== pending!.prevLatestId) {
+          setResult(row);
+          setHistory((prev) => (prev.some((h) => h.id === row.id) ? prev : [row, ...prev].slice(0, 10)));
+          clearPending();
+          setRunning(false);
+          loadQuota();
+          window.dispatchEvent(new Event("reviewpilot:usage-updated"));
+          return;
+        }
+      } catch {
+        /* transient — keep polling */
+      }
+      if (cancelled) return;
+      if (Date.now() - pending!.startedAt > PENDING_TTL_MS) {
+        clearPending();
+        setRunning(false);
+        setError({ kind: "generic", message: "Your previous analysis didn't finish. Please run it again." });
+        return;
+      }
+      resumeTimer.current = setTimeout(poll, 3000);
+    }
+    poll();
+
+    return () => {
+      cancelled = true;
+      if (resumeTimer.current) clearTimeout(resumeTimer.current);
+    };
+  }, [selectedConn, loadQuota]);
+
   const quotaExhausted = quota ? quota.limit !== -1 && quota.remaining <= 0 : false;
   const canRun = !!selectedConn && !running && !quotaExhausted;
 
@@ -198,6 +311,13 @@ export function AsoAnalysisClient() {
     if (!selectedConn) return;
     setRunning(true);
     setError(null);
+    // Persist an in-flight marker so a mid-run refresh can resume (see the
+    // resume effect above). prevLatestId lets the poll recognise the new row.
+    writePending({
+      packageName: selectedConn.external_id,
+      startedAt: Date.now(),
+      prevLatestId: history[0]?.id ?? null,
+    });
     try {
       // Trim, drop blanks, dedupe, cap at 2 before sending.
       const comps = Array.from(
@@ -240,6 +360,10 @@ export function AsoAnalysisClient() {
     } catch {
       setError({ kind: "generic", message: "Something went wrong. Please try again." });
     } finally {
+      // The in-session request resolved (success or error) — drop the marker so
+      // a later refresh doesn't falsely resume. (After a refresh mid-run this
+      // block never runs in the new page; the resume poll clears it instead.)
+      clearPending();
       setRunning(false);
     }
   }
@@ -513,9 +637,33 @@ function ResultsView({
   const breakdown = result.score_breakdown;
   const hasHistory = history.length > 1;
 
+  // Score delta vs the chronologically previous analysis (the next-older entry
+  // relative to whichever run is currently displayed). null when there is no
+  // older analysis to compare against.
+  const currentIdx = history.findIndex((h) => h.id === result.id);
+  const previous =
+    currentIdx >= 0 && currentIdx + 1 < history.length ? history[currentIdx + 1] : null;
+  const scoreDelta = previous ? result.aso_score - previous.aso_score : null;
+
+  // Collapsible analysis body. Auto-expands whenever the displayed analysis
+  // changes (fresh run or picking another run from history); the user can
+  // collapse to declutter the page while keeping the header summary visible.
+  const [expanded, setExpanded] = useState(true);
+  const reduceMotion = useReducedMotion();
+  useEffect(() => {
+    setExpanded(true);
+  }, [result.id]);
+
+  const scoreTone =
+    result.aso_score >= 75
+      ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
+      : result.aso_score >= 45
+      ? "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400"
+      : "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400";
+
   return (
     <div className="space-y-5">
-      {/* Timestamp + history dropdown + re-run */}
+      {/* Timestamp + history dropdown + collapse + re-run */}
       <div className="flex flex-col gap-2 rounded-xl border border-border/60 bg-muted/30 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 items-center gap-1.5">
           <span className="shrink-0 text-xs text-muted-foreground">Analyzed</span>
@@ -553,28 +701,63 @@ function ResultsView({
               {formatDateTime(result.created_at)}
             </span>
           )}
-        </div>
-        <Button
-          variant="subtle"
-          size="sm"
-          onClick={onRerun}
-          disabled={rerunning}
-          className="min-h-[44px] sm:min-h-0 sm:h-9"
-        >
-          {rerunning ? (
-            <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-          ) : (
-            <RefreshCcw className="mr-1.5 h-3.5 w-3.5" />
+          {/* Keep the headline score visible while the body is collapsed. */}
+          {!expanded && (
+            <span
+              className={cn(
+                "ml-1 shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums",
+                scoreTone
+              )}
+            >
+              {result.aso_score}/100
+            </span>
           )}
-          Re-run
-        </Button>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            aria-expanded={expanded}
+            aria-controls="aso-analysis-body"
+            aria-label={expanded ? "Collapse analysis" : "Expand analysis"}
+            className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-border/60 text-muted-foreground transition-colors hover:bg-accent/10 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:h-9 sm:w-9"
+          >
+            <ChevronDown className={cn("h-4 w-4 transition-transform duration-200", expanded && "rotate-180")} aria-hidden />
+          </button>
+          <Button
+            variant="subtle"
+            size="sm"
+            onClick={onRerun}
+            disabled={rerunning}
+            className="min-h-[44px] sm:min-h-0 sm:h-9"
+          >
+            {rerunning ? (
+              <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <RefreshCcw className="mr-1.5 h-3.5 w-3.5" />
+            )}
+            Re-run
+          </Button>
+        </div>
       </div>
 
+      <AnimatePresence initial={false}>
+        {expanded && (
+          <motion.div
+            key="aso-body"
+            id="aso-analysis-body"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: reduceMotion ? 0 : 0.25, ease: "easeOut" }}
+            style={{ overflow: "hidden" }}
+          >
+            <div className="space-y-5">
       {/* Score + breakdown */}
       <Card>
         <CardContent className="p-4 sm:p-5">
           <div className="flex flex-col items-center gap-5 md:flex-row md:items-start md:gap-6">
-            <ScoreRing score={result.aso_score} />
+            <ScoreRing score={result.aso_score} delta={scoreDelta} />
             <div className="w-full min-w-0 space-y-2">
               {FACTOR_ORDER.map((key) => (
                 <BreakdownRow key={key} label={FACTOR_LABELS[key]} factor={breakdown[key]} />
@@ -615,11 +798,15 @@ function ResultsView({
           />
         ) : null}
       </section>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
 
-function ScoreRing({ score }: { score: number }) {
+function ScoreRing({ score, delta }: { score: number; delta?: number | null }) {
   const radius = 50;
   const stroke = 9;
   const c = 2 * Math.PI * radius;
@@ -650,7 +837,37 @@ function ScoreRing({ score }: { score: number }) {
         </div>
       </div>
       <span className="text-xs font-medium text-muted-foreground">ASO Score</span>
+      <ScoreDelta delta={delta} />
     </div>
+  );
+}
+
+function ScoreDelta({ delta }: { delta?: number | null }) {
+  if (delta === null || delta === undefined) return null;
+  const up = delta > 0;
+  const down = delta < 0;
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums",
+        up
+          ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
+          : down
+          ? "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400"
+          : "bg-muted text-muted-foreground"
+      )}
+      aria-label={
+        up
+          ? `Up ${delta} points since previous analysis`
+          : down
+          ? `Down ${Math.abs(delta)} points since previous analysis`
+          : "No change since previous analysis"
+      }
+    >
+      {up ? <ArrowUp className="h-3 w-3" aria-hidden /> : down ? <ArrowDown className="h-3 w-3" aria-hidden /> : null}
+      {up ? `+${delta}` : down ? delta : "±0"}
+      <span className="font-normal text-[9px] opacity-80">since last</span>
+    </span>
   );
 }
 

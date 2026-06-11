@@ -42,6 +42,7 @@ const LAYOUT: Record<
     iconAccent: WHATSAPP_GREEN,
   },
   sentiment_analytics: { visual: <SentimentVisual /> },
+  aso_analysis: { span: "lg:col-span-2", visual: <AsoVisual /> },
 };
 
 export function FeatureGrid() {
@@ -407,6 +408,52 @@ function SentimentVisual() {
       <div className="mt-2 flex items-center justify-between text-[10px] text-muted-foreground font-mono">
         <span>Mon</span>
         <span>Sun</span>
+      </div>
+    </div>
+  );
+}
+
+function AsoVisual() {
+  const elements = [
+    { label: "Title", pct: 72, tone: "bg-amber-500/70" },
+    { label: "Short desc", pct: 58, tone: "bg-rose-500/70" },
+    { label: "Long desc", pct: 88, tone: "bg-emerald-500/70" },
+  ];
+  return (
+    <div className="grid gap-2 sm:grid-cols-[auto_1fr] sm:items-center">
+      <div className="flex items-center gap-3 rounded-lg border border-border/60 bg-background/60 p-3">
+        <div className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-full border border-accent/40 bg-accent/5">
+          <span className="font-mono text-base font-semibold leading-none text-accent">
+            74
+          </span>
+          <span className="text-[8px] uppercase tracking-wider text-muted-foreground">
+            ASO
+          </span>
+        </div>
+        <div className="space-y-1 text-[11px]">
+          <p className="font-medium text-foreground/90">Listing health</p>
+          <p className="text-muted-foreground">
+            <span className="text-emerald-600 dark:text-emerald-400">+12</span>{" "}
+            keyword gaps found
+          </p>
+        </div>
+      </div>
+      <div className="space-y-2 rounded-lg border border-border/60 bg-background/60 p-3 text-[11px]">
+        {elements.map((e) => (
+          <div key={e.label} className="flex items-center gap-2">
+            <span className="w-16 shrink-0 text-foreground/80">{e.label}</span>
+            <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
+              <span
+                className={cn("block h-full rounded-full", e.tone)}
+                style={{ width: `${e.pct}%` }}
+              />
+            </span>
+          </div>
+        ))}
+        <div className="flex items-center gap-1.5 pt-0.5 text-accent">
+          <Sparkles className="h-3 w-3" />
+          AI rewrite ready
+        </div>
       </div>
     </div>
   );

@@ -40,8 +40,8 @@ const productSchema = {
   brand: { "@type": "Brand", name: "ReviewPilot" },
   offers: [
     { "@type": "Offer", name: "Starter", price: "16", priceCurrency: "USD", url: `${SITE_URL}/pricing`, availability: "https://schema.org/InStock", description: "1 location or 1 app, 100 AI replies/week, 3 team seats." },
-    { "@type": "Offer", name: "Growth", price: "32", priceCurrency: "USD", url: `${SITE_URL}/pricing`, availability: "https://schema.org/InStock", description: "3 locations or 3 apps, 500 AI replies/week, 5 team seats." },
-    { "@type": "Offer", name: "Agency", price: "85", priceCurrency: "USD", url: `${SITE_URL}/pricing`, availability: "https://schema.org/InStock", description: "10 locations or apps, unlimited AI replies, priority support." },
+    { "@type": "Offer", name: "Growth", price: "32", priceCurrency: "USD", url: `${SITE_URL}/pricing`, availability: "https://schema.org/InStock", description: "3 locations or 3 apps, 500 AI replies/week, 5 team seats, ASO Analysis (25 analyses/period)." },
+    { "@type": "Offer", name: "Agency", price: "85", priceCurrency: "USD", url: `${SITE_URL}/pricing`, availability: "https://schema.org/InStock", description: "10 locations or apps, unlimited AI replies, priority support, ASO Analysis (50 analyses/period)." },
   ],
 };
 

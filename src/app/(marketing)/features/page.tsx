@@ -22,6 +22,7 @@ import {
   Sparkles,
   MessageCircle,
   Inbox,
+  Rocket,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -78,6 +79,7 @@ const SECTIONS: { id: string; label: string }[] = [
   { id: "ai-replies", label: "AI replies" },
   { id: "unified-inbox", label: "Unified inbox" },
   { id: "play-store", label: "Play Store" },
+  { id: "aso", label: "ASO Analysis" },
   { id: "google-business", label: "Google Business" },
   { id: "whatsapp", label: "WhatsApp" },
   { id: "auto-reply", label: "Auto-reply" },
@@ -290,6 +292,21 @@ export default function FeaturesPage() {
               href: "/features/google-play-reviews",
               label: "Read the Play Store deep-dive",
             }}
+          />
+
+          {/* ASO Analysis */}
+          <FeatureSection
+            id="aso"
+            icon={Rocket}
+            kicker="ASO Analysis"
+            planBadge="Growth & Agency"
+            h2="Audit your Play Store listing against what your reviewers actually say"
+            body="ASO Analysis is the only listing optimizer powered by your own review data — not a generic keyword database. It audits your live Play Store listing, cross-references it against your real review keywords, aspect sentiment, and AI Issue Tracker clusters, then returns an ASO health score, keyword gaps, and AI-rewritten title, description, and What's New copy. It's optimization guidance, not a ranking guarantee."
+            bullets={[
+              "ASO score with per-element breakdown",
+              "Keyword opportunities from real reviewer language + competitors",
+              "One-click AI rewrites for title, descriptions & What's New",
+            ]}
           />
 
           {/* Google Business Profile */}
@@ -707,6 +724,7 @@ function FeatureSection({
   bullets,
   link,
   soon,
+  planBadge,
 }: {
   id: string;
   icon: typeof Bot;
@@ -716,6 +734,7 @@ function FeatureSection({
   bullets: string[];
   link?: { href: string; label: string; external?: boolean };
   soon?: boolean;
+  planBadge?: string;
 }) {
   return (
     <section
@@ -735,6 +754,11 @@ function FeatureSection({
             {soon && (
               <span className="inline-flex items-center rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-600 dark:text-amber-400">
                 Coming soon
+              </span>
+            )}
+            {planBadge && (
+              <span className="inline-flex items-center rounded-full border border-accent/30 bg-accent/10 px-2 py-0.5 text-[10px] font-medium text-accent">
+                {planBadge}
               </span>
             )}
           </div>

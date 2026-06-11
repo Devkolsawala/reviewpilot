@@ -17,6 +17,7 @@ import {
   HeartPulse,
   BarChart3,
   MapPinned,
+  Rocket,
   type LucideIcon,
 } from "lucide-react";
 
@@ -90,6 +91,15 @@ export const FEATURES: Feature[] = [
     description:
       "Net Sentiment Score, sentiment trend over time, and emotion + urgency tagging on every review.",
     icon: BarChart3,
+    status: "live",
+  },
+  {
+    id: "aso_analysis",
+    title: "ASO Analysis",
+    shortLabel: "ASO Analysis",
+    description:
+      "Get an ASO health score, keyword gaps mined from your real reviews, and AI-rewritten title, description, and What's New copy. The only listing optimizer powered by your own review data — not a generic keyword database.",
+    icon: Rocket,
     status: "live",
   },
   {

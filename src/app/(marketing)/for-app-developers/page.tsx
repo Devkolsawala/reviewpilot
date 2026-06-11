@@ -14,6 +14,7 @@ import {
   MessageCircle,
   HeartPulse,
   Brain,
+  Rocket,
 } from "lucide-react";
 import { featureById } from "@/lib/marketing/features";
 
@@ -57,6 +58,12 @@ const BENEFITS = [
     title: "AI replies that know your app",
     description:
       "Set up your App Context Profile once — features, known issues, FAQs. AI generates replies that actually help users.",
+  },
+  {
+    icon: Rocket,
+    title: "ASO Analysis (Growth & Agency)",
+    description:
+      "Audit your Play Store listing against what your reviewers actually say. Get an ASO score, keyword gaps mined from your real reviews, and AI-rewritten title, description, and What's New copy.",
   },
   {
     icon: Smartphone,
