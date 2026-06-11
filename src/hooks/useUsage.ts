@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { getPlan, USAGE_PERIOD } from '@/lib/plans';
+import { getPlan, canUseFeature, USAGE_PERIOD } from '@/lib/plans';
 import type { PlanId } from '@/lib/plans';
 
 export interface UsageData {
@@ -9,6 +9,7 @@ export interface UsageData {
   auto_replies_used: number;
   sms_sent: number;
   reviews_fetched: number;
+  aso_analyses_used: number;
   period_key: string;
 }
 
@@ -51,7 +52,7 @@ export function useUsage() {
       const userPeriodKey = USAGE_PERIOD.getUserPeriodKey(resolvedPeriodStart);
       const { data: usageRow } = await supabase
         .from('usage')
-        .select('ai_replies_used, auto_replies_used, sms_sent, reviews_fetched, period_key')
+        .select('ai_replies_used, auto_replies_used, sms_sent, reviews_fetched, aso_analyses_used, period_key')
         .eq('user_id', effectiveUserId)
         .eq('period_key', userPeriodKey)
         .single();
@@ -62,6 +63,7 @@ export function useUsage() {
           auto_replies_used: 0,
           sms_sent: 0,
           reviews_fetched: 0,
+          aso_analyses_used: 0,
           period_key: userPeriodKey,
         }
       );
@@ -87,6 +89,11 @@ export function useUsage() {
   const isAiUnlimited = aiLimit === -1;
   const smsLimit = plan.limits.sms_per_period as number;
   const isSmsUnlimited = smsLimit === -1;
+  // ASO Analysis usage — only meaningful on plans that include the feature.
+  const asoUsed = usage?.aso_analyses_used ?? 0;
+  const asoLimit = plan.limits.aso_analyses_per_period as number;
+  const isAsoUnlimited = asoLimit === -1;
+  const canUseAso = canUseFeature(planId, 'aso_analysis');
 
   return {
     usage,
@@ -103,6 +110,12 @@ export function useUsage() {
     smsLimit,
     isSmsUnlimited,
     smsPercent: isSmsUnlimited ? 0 : Math.min(100, ((usage?.sms_sent ?? 0) / smsLimit) * 100),
+    asoUsed,
+    asoLimit,
+    isAsoUnlimited,
+    canUseAso,
+    asoRemaining: isAsoUnlimited ? Infinity : Math.max(0, asoLimit - asoUsed),
+    asoPercent: isAsoUnlimited || asoLimit <= 0 ? 0 : Math.min(100, (asoUsed / asoLimit) * 100),
     resetDate: USAGE_PERIOD.getUserResetDate(periodStart),
     periodLabel: USAGE_PERIOD.label,
   };

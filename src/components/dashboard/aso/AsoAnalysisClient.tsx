@@ -13,6 +13,7 @@ import {
   Lightbulb,
   Star,
   ArrowRight,
+  ChevronDown,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,10 +27,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 import { toast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { getPlan, USAGE_PERIOD } from "@/lib/plans";
+import { formatDateTime, formatDateTimeShort } from "@/lib/format";
 import type {
   AsoAnalysis,
   AsoFactorScore,
@@ -88,7 +96,7 @@ export function AsoAnalysisClient() {
 
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<AnalysisRow | null>(null);
-  const [cached, setCached] = useState(false);
+  const [history, setHistory] = useState<AnalysisRow[]>([]);
   const [quota, setQuota] = useState<QuotaState | null>(null);
   const [error, setError] = useState<RunError | null>(null);
 
@@ -156,28 +164,28 @@ export function AsoAnalysisClient() {
     };
   }, [loadQuota]);
 
-  // When the selected app changes, load its most recent stored analysis (if any)
-  // so the user lands on the cached result with a "Re-run" affordance.
+  // When the selected app changes, load its recent stored analyses (most recent
+  // first) so the user lands on the latest result with a history dropdown +
+  // "Re-run" affordance.
   useEffect(() => {
     let cancelled = false;
     setResult(null);
     setError(null);
-    setCached(false);
+    setHistory([]);
     if (!selectedConn) return;
-    async function loadLatest(pkg: string) {
+    async function loadHistory(pkg: string) {
       const supabase = createClient();
       const { data } = await supabase
         .from("aso_analyses")
         .select("id, package_name, listing_snapshot, aso_score, score_breakdown, recommendations, created_at")
         .eq("package_name", pkg)
         .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (cancelled || !data) return;
-      setResult(data as AnalysisRow);
-      setCached(true);
+        .limit(10);
+      if (cancelled || !data || data.length === 0) return;
+      setHistory(data as AnalysisRow[]);
+      setResult(data[0] as AnalysisRow);
     }
-    loadLatest(selectedConn.external_id);
+    loadHistory(selectedConn.external_id);
     return () => {
       cancelled = true;
     };
@@ -212,9 +220,17 @@ export function AsoAnalysisClient() {
         return;
       }
 
-      setResult(data.analysis as AnalysisRow);
-      setCached(!!data.cached);
+      const analysis = data.analysis as AnalysisRow;
+      setResult(analysis);
+      // Prepend the run to history (dedupe in case a cache hit returned an
+      // already-listed row), keeping the 10 most recent.
+      setHistory((prev) =>
+        prev.some((h) => h.id === analysis.id) ? prev : [analysis, ...prev].slice(0, 10)
+      );
       if (data.quota) applyQuota(data.quota);
+      // Nudge any mounted useUsage consumer (sidebar, Billing) to refetch so the
+      // ASO usage metric stays in sync after a fresh run decrements quota.
+      if (!data.cached) window.dispatchEvent(new Event("reviewpilot:usage-updated"));
       toast({
         title: data.cached ? "Loaded cached analysis" : "Analysis complete",
         description: data.cached
@@ -347,7 +363,8 @@ export function AsoAnalysisClient() {
       ) : result ? (
         <ResultsView
           result={result}
-          cached={cached}
+          history={history}
+          onSelect={(a) => setResult(a)}
           onRerun={() => runAnalysis(true)}
           rerunning={running}
         />
@@ -480,46 +497,78 @@ function ResultsSkeleton() {
 
 function ResultsView({
   result,
-  cached,
+  history,
+  onSelect,
   onRerun,
   rerunning,
 }: {
   result: AnalysisRow;
-  cached: boolean;
+  history: AnalysisRow[];
+  onSelect: (a: AnalysisRow) => void;
   onRerun: () => void;
   rerunning: boolean;
 }) {
   const snap = result.listing_snapshot;
   const rec = result.recommendations;
   const breakdown = result.score_breakdown;
+  const hasHistory = history.length > 1;
 
   return (
     <div className="space-y-5">
-      {/* Cached banner */}
-      {cached && (
-        <div className="flex flex-col gap-2 rounded-xl border border-border/60 bg-muted/30 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-xs text-muted-foreground">
-            Last analyzed{" "}
-            <span className="font-medium text-foreground">
-              {new Date(result.created_at).toLocaleString()}
+      {/* Timestamp + history dropdown + re-run */}
+      <div className="flex flex-col gap-2 rounded-xl border border-border/60 bg-muted/30 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 items-center gap-1.5">
+          <span className="shrink-0 text-xs text-muted-foreground">Analyzed</span>
+          {hasHistory ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                aria-label="View previous analyses"
+                className="inline-flex min-w-0 items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-foreground transition-colors hover:bg-accent/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <span className="truncate">{formatDateTime(result.created_at)}</span>
+                <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-64">
+                {history.map((h) => (
+                  <DropdownMenuItem
+                    key={h.id}
+                    onClick={() => onSelect(h)}
+                    className="flex items-center justify-between gap-2"
+                  >
+                    <span className="truncate">{formatDateTimeShort(h.created_at)}</span>
+                    <span
+                      className={cn(
+                        "ml-2 shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums",
+                        h.id === result.id ? "bg-accent/15 text-accent" : "bg-muted text-muted-foreground"
+                      )}
+                    >
+                      {h.aso_score}
+                    </span>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <span className="truncate text-xs font-medium text-foreground">
+              {formatDateTime(result.created_at)}
             </span>
-          </p>
-          <Button
-            variant="subtle"
-            size="sm"
-            onClick={onRerun}
-            disabled={rerunning}
-            className="min-h-[44px] sm:min-h-0 sm:h-9"
-          >
-            {rerunning ? (
-              <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <RefreshCcw className="mr-1.5 h-3.5 w-3.5" />
-            )}
-            Re-run
-          </Button>
+          )}
         </div>
-      )}
+        <Button
+          variant="subtle"
+          size="sm"
+          onClick={onRerun}
+          disabled={rerunning}
+          className="min-h-[44px] sm:min-h-0 sm:h-9"
+        >
+          {rerunning ? (
+            <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <RefreshCcw className="mr-1.5 h-3.5 w-3.5" />
+          )}
+          Re-run
+        </Button>
+      </div>
 
       {/* Score + breakdown */}
       <Card>

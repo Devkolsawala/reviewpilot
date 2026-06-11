@@ -133,6 +133,11 @@ export default function BillingPage() {
  smsLimit,
  isSmsUnlimited,
  smsPercent,
+ asoUsed,
+ asoLimit,
+ isAsoUnlimited,
+ asoPercent,
+ canUseAso,
  resetDate,
  periodLabel,
  } = useUsage();
@@ -413,6 +418,10 @@ export default function BillingPage() {
  ) : (
  <>
  <UsageBar label="AI Replies" used={totalAiUsed} total={isAiUnlimited ? null : aiLimit} percent={aiPercent} />
+ {/* ASO Analyses — shown only to plans that include the feature (Growth/Agency). */}
+ {canUseAso && (
+ <UsageBar label="ASO Analyses" used={asoUsed} total={isAsoUnlimited ? null : asoLimit} percent={asoPercent} />
+ )}
  <UsageBar label="SMS Sent" used={smsUsed} total={isSmsUnlimited ? null : smsLimit} percent={smsPercent} comingSoon />
  <UsageBar label="Reviews Fetched" used={usage?.reviews_fetched ?? 0} total={null} percent={0} />
  </>
