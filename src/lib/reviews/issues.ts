@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { notifyIssueCreated } from "@/lib/alerts/run";
 
 /**
  * Active Issues clustering helpers.
@@ -117,6 +118,19 @@ export async function linkRecoverableReview(
       }
       issueId = created.id;
       matched = { review_count: 0, avg_rating: null };
+
+      // Additive bell notification for the freshly created cluster.
+      // notifyIssueCreated swallows its own errors (and uses a service-role
+      // client internally), so clustering can never be affected.
+      try {
+        await notifyIssueCreated({
+          userId,
+          issueId: created.id,
+          label: issueLabel,
+        });
+      } catch {
+        /* never block clustering */
+      }
     }
 
     // Insert the join row FIRST. Only on a confirmed new insert do we bump

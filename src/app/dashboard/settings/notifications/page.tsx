@@ -23,6 +23,16 @@ import { useRouter } from "next/navigation";
 import { getDigestCcLimit } from "@/lib/plans";
 import { X } from "lucide-react";
 
+type AlertPrefs = {
+  enabled: boolean;
+  min_rating: number;
+  keywords: string[];
+  daily_cap: number;
+};
+
+const MAX_ALERT_KEYWORDS = 10;
+const MAX_ALERT_KEYWORD_LEN = 30;
+
 type Prefs = {
   user_id: string;
   daily_enabled: boolean;
@@ -112,12 +122,14 @@ export default function NotificationsPage() {
   const ccLimit = getDigestCcLimit(planId);
 
   const [prefs, setPrefs] = useState<Prefs | null>(null);
+  const [alertPrefs, setAlertPrefs] = useState<AlertPrefs | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [logs, setLogs] = useState<LogRow[]>([]);
   const [testingDaily, setTestingDaily] = useState(false);
   const [testingWeekly, setTestingWeekly] = useState(false);
   const [ccDraft, setCcDraft] = useState("");
+  const [keywordDraft, setKeywordDraft] = useState("");
 
   async function refetchLogs() {
     try {
@@ -132,14 +144,17 @@ export default function NotificationsPage() {
   useEffect(() => {
     async function load() {
       try {
-        const [prefsRes, logsRes] = await Promise.all([
+        const [prefsRes, logsRes, alertsRes] = await Promise.all([
           fetch("/api/digest/preferences"),
           fetch("/api/digest/logs", { cache: "no-store" }),
+          fetch("/api/alerts/preferences"),
         ]);
         const p = await prefsRes.json();
         const l = await logsRes.json();
+        const a = await alertsRes.json();
         setPrefs(p.preferences);
         setLogs((l.logs || []).slice(0, 7));
+        setAlertPrefs(a.preferences ?? null);
       } catch {
         toast({ title: "Error", description: "Could not load notification settings.", variant: "destructive" });
       } finally {
@@ -171,6 +186,63 @@ export default function NotificationsPage() {
     } finally {
       setSaving(false);
     }
+  }
+
+  async function patchAlerts(update: Partial<AlertPrefs>) {
+    if (!alertPrefs) return;
+    const next = { ...alertPrefs, ...update };
+    setAlertPrefs(next);
+    setSaving(true);
+    try {
+      const res = await fetch("/api/alerts/preferences", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(update),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast({ title: "Error", description: data.error || "Could not save", variant: "destructive" });
+        return;
+      }
+      if (data.preferences) setAlertPrefs(data.preferences);
+    } catch {
+      toast({ title: "Error", description: "Could not save", variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function addKeyword() {
+    if (!alertPrefs) return;
+    const kw = keywordDraft.trim().toLowerCase();
+    if (!kw) return;
+    if (kw.length > MAX_ALERT_KEYWORD_LEN) {
+      toast({
+        title: "Keyword too long",
+        description: `Keywords can be at most ${MAX_ALERT_KEYWORD_LEN} characters.`,
+        variant: "destructive",
+      });
+      return;
+    }
+    if (alertPrefs.keywords.includes(kw)) {
+      setKeywordDraft("");
+      return;
+    }
+    if (alertPrefs.keywords.length >= MAX_ALERT_KEYWORDS) {
+      toast({
+        title: "Keyword limit reached",
+        description: `You can add up to ${MAX_ALERT_KEYWORDS} keywords.`,
+        variant: "destructive",
+      });
+      return;
+    }
+    patchAlerts({ keywords: [...alertPrefs.keywords, kw] });
+    setKeywordDraft("");
+  }
+
+  function removeKeyword(kw: string) {
+    if (!alertPrefs) return;
+    patchAlerts({ keywords: alertPrefs.keywords.filter((k) => k !== kw) });
   }
 
   async function sendTest(period: "daily" | "weekly") {
@@ -260,6 +332,122 @@ export default function NotificationsPage() {
         </div>
         {saving && <span className="text-xs text-muted-foreground">Saving…</span>}
       </div>
+
+      {/* ── Instant alerts ───────────────────────────────────────────────── */}
+      {alertPrefs && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <CardTitle>Instant alerts</CardTitle>
+                <CardDescription>
+                  Get an email the moment a damaging review lands — verified by AI so
+                  you&apos;re only paged when it matters.
+                </CardDescription>
+              </div>
+              <Switch
+                checked={alertPrefs.enabled}
+                onCheckedChange={(v) => patchAlerts({ enabled: v })}
+                aria-label="Enable instant alerts"
+              />
+            </div>
+          </CardHeader>
+          {alertPrefs.enabled && (
+            <CardContent className="space-y-4">
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="alert-min-rating">Alert me for reviews rated</Label>
+                  <Select
+                    value={String(alertPrefs.min_rating)}
+                    onValueChange={(v) => patchAlerts({ min_rating: parseInt(v, 10) })}
+                  >
+                    <SelectTrigger id="alert-min-rating">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">1★ only</SelectItem>
+                      <SelectItem value="2">2★ and below</SelectItem>
+                      <SelectItem value="3">3★ and below</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="alert-daily-cap">Daily email cap</Label>
+                  <Select
+                    value={String(alertPrefs.daily_cap)}
+                    onValueChange={(v) => patchAlerts({ daily_cap: parseInt(v, 10) })}
+                  >
+                    <SelectTrigger id="alert-daily-cap">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="3">3 emails / day</SelectItem>
+                      <SelectItem value="5">5 emails / day</SelectItem>
+                      <SelectItem value="10">10 emails / day</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[11px] text-muted-foreground">
+                    Past the cap, alerts still appear in your dashboard bell.
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label>Alert keywords</Label>
+                <p className="text-[11px] text-muted-foreground">
+                  Also alert when a negative review mentions any of these words
+                  (e.g. refund, scam, legal). Up to {MAX_ALERT_KEYWORDS}.
+                </p>
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {alertPrefs.keywords.map((kw) => (
+                    <span
+                      key={kw}
+                      className="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-0.5 text-xs"
+                    >
+                      {kw}
+                      <button
+                        onClick={() => removeKeyword(kw)}
+                        aria-label={`Remove ${kw}`}
+                        className="text-muted-foreground hover:text-foreground"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="refund"
+                    value={keywordDraft}
+                    maxLength={MAX_ALERT_KEYWORD_LEN}
+                    onChange={(e) => setKeywordDraft(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        addKeyword();
+                      }
+                    }}
+                    disabled={alertPrefs.keywords.length >= MAX_ALERT_KEYWORDS}
+                  />
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={addKeyword}
+                    disabled={alertPrefs.keywords.length >= MAX_ALERT_KEYWORDS}
+                  >
+                    Add
+                  </Button>
+                </div>
+              </div>
+
+              <p className="text-[11px] text-muted-foreground border-t pt-3">
+                Alerts are verified by AI sentiment first — a 1★ review with positive
+                feedback won&apos;t page you. Checked every sync (~2 hours).
+              </p>
+            </CardContent>
+          )}
+        </Card>
+      )}
 
       {/* ── Daily digest ─────────────────────────────────────────────────── */}
       <Card>

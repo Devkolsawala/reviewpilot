@@ -26,6 +26,7 @@ import {
   classifyReviewInsights,
   type ReviewInsights,
 } from "@/lib/ai/classifyReviewInsights";
+import { runAlertPass } from "@/lib/alerts/run";
 
 // Hobby plan: opt into the 60s function budget. Default is 10s which is too
 // tight for a batch of 15 xAI calls with the 12s per-call timeout.
@@ -274,6 +275,35 @@ export async function POST(request: NextRequest) {
   for (const r of results) {
     if (r.status === "fulfilled" && r.value.ok) processed++;
     else failed++;
+  }
+
+  // ── Instant-alert pass (additive) ───────────────────────────────────────────
+  // Pure post-processing of the ai_sentiment/ai_urgency values written above —
+  // no additional AI calls. Receives ONLY the review ids whose classification
+  // update succeeded in THIS run (fulfilled = the DB write landed), so old or
+  // re-synced reviews are never re-evaluated here. aspectsOnly is the one-time
+  // backfill mode over historical reviews — alerts are for fresh reviews only,
+  // so it is excluded. Strictly isolated: an alert failure must never affect
+  // the classification result or the self-drain chain below.
+  if (!aspectsOnly) {
+    try {
+      const classifiedIds = rows
+        .filter((_, i) => results[i].status === "fulfilled")
+        .map((r) => r.id);
+      if (classifiedIds.length > 0) {
+        const alertRes = await runAlertPass(classifiedIds);
+        if (alertRes.alerted > 0 || alertRes.skippedAlreadyAlerted > 0) {
+          console.log(
+            `[classify_insights] alert pass: alerted=${alertRes.alerted} emailed=${alertRes.emailed} already_alerted=${alertRes.skippedAlreadyAlerted}`
+          );
+        }
+      }
+    } catch (alertErr: unknown) {
+      const ae = alertErr as { message?: string };
+      console.error(
+        `[classify_insights] alert pass failed (isolated): ${ae.message}`
+      );
+    }
   }
 
   // ── Self-drain chain ────────────────────────────────────────────────────────

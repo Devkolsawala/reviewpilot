@@ -6,6 +6,7 @@ import { GBP_ENABLED } from "@/lib/feature-flags";
 import { extractCountryFromLocale } from "@/lib/utils/locale-to-country";
 import { classifyReviewOnly } from "@/lib/ai/reply-generator";
 import { linkRecoverableReview } from "@/lib/reviews/issues";
+import { notifyRecovery, maybeNotifyQuotaWarning } from "@/lib/alerts/run";
 import type { AppContext } from "@/types/database";
 
 // Issue-classifier pass budget — strict caps so the classification work
@@ -508,7 +509,23 @@ async function handleCron(request: NextRequest) {
                         recovery_detected_at: new Date().toISOString(),
                       })
                       .eq("id", row.id);
-                    if (!upErr) recoveredCount++;
+                    if (!upErr) {
+                      recoveredCount++;
+                      // Additive bell notification — notifyRecovery is
+                      // best-effort and swallows its own errors; the
+                      // try/catch is belt-and-braces so recovery handling
+                      // can never be affected.
+                      try {
+                        await notifyRecovery({
+                          userId: connection.user_id,
+                          reviewId: row.id,
+                          newRating,
+                          connectionName: connection.name,
+                        });
+                      } catch {
+                        /* never block recovery detection */
+                      }
+                    }
                   }
                 }
                 if (recoveredCount > 0) {
@@ -697,6 +714,25 @@ async function handleCron(request: NextRequest) {
           // affect connResult.skipped or sync results.
           log(`[CRON] Classifier pass error (isolated, sync result unchanged): ${ce.message}`);
           connResult.errors.push(`Classifier: ${ce.message}`);
+        }
+
+        // ── Quota warning bell (additive) ──────────────────────────────────
+        // After the passes above may have incremented AI usage, check whether
+        // the user crossed 80% of their period limit and drop AT MOST one
+        // quota_warning notification per period (existence-guarded inside).
+        // Strictly isolated — failure here cannot affect sync results.
+        try {
+          if (
+            connResult.classified +
+              connResult.autoReplied +
+              connResult.drafted >
+            0
+          ) {
+            await maybeNotifyQuotaWarning(connection.user_id);
+          }
+        } catch (qwErr: unknown) {
+          const qe = qwErr as { message?: string };
+          log(`[CRON] Quota warning check skipped (isolated): ${qe.message}`);
         }
 
         // ── Auto-classify AI insights (fire-and-forget) ────────────────────
