@@ -20,6 +20,7 @@ import {
   MessageSquare,
   Megaphone,
   BarChart3,
+  Bell,
   CheckCircle2,
   Link2,
   Bot,
@@ -81,6 +82,7 @@ export default function DashboardPage() {
   const [firstName, setFirstName] = useState<string | null>(null);
   const [seeding, setSeeding] = useState(false);
   const [activityFeed, setActivityFeed] = useState<ActivityItem[]>([]);
+  const [alertsEnabled, setAlertsEnabled] = useState(false);
 
   async function handleSeedTestData() {
     setSeeding(true);
@@ -118,6 +120,20 @@ export default function DashboardPage() {
       setFirstName(deriveFirstName(data?.full_name ?? null, email));
     }
     loadName();
+  }, []);
+
+  // Live done-state for the "Turn on review alerts" onboarding step. RLS
+  // scopes the read to the workspace owner's row; no row yet = not enabled.
+  useEffect(() => {
+    async function loadAlertPrefs() {
+      const supabase = createClient();
+      const { data } = await supabase
+        .from("alert_preferences")
+        .select("enabled")
+        .maybeSingle();
+      setAlertsEnabled(data?.enabled === true);
+    }
+    loadAlertPrefs();
   }, []);
 
   // Load real activity feed from Supabase
@@ -224,6 +240,7 @@ export default function DashboardPage() {
     { label: "Connect Google Business Profile or Play Store", href: "/dashboard/settings/connections", icon: Link2, done: hasConnections },
     { label: "Configure AI reply settings", href: "/dashboard/settings/ai-config", icon: Bot, done: false },
     { label: "Reply to your first review", href: "/dashboard/inbox", icon: Star, done: hasReplied },
+    { label: "Turn on review alerts", href: "/dashboard/settings/notifications", icon: Bell, done: alertsEnabled },
   ];
 
   const quickActions: QuickActionTile[] = [

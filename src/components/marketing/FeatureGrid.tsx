@@ -5,6 +5,7 @@ import {
   Star,
   Sparkles,
   ArrowRight,
+  Bell,
   Clock,
   Users,
   type LucideIcon,
@@ -42,6 +43,7 @@ const LAYOUT: Record<
     iconAccent: WHATSAPP_GREEN,
   },
   sentiment_analytics: { visual: <SentimentVisual /> },
+  review_alerts: { visual: <AlertsVisual /> },
   aso_analysis: { span: "lg:col-span-2", visual: <AsoVisual /> },
 };
 
@@ -409,6 +411,31 @@ function SentimentVisual() {
         <span>Mon</span>
         <span>Sun</span>
       </div>
+    </div>
+  );
+}
+
+function AlertsVisual() {
+  return (
+    <div className="space-y-2 rounded-lg border border-border/60 bg-background/60 p-3 font-mono text-[11px]">
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-muted-foreground">
+          <span className="text-rose-400">★</span>
+          <span className="text-border">★★★★</span>
+          {" · "}Asked for a refund weeks ago, nothing…
+        </p>
+        <span className="relative shrink-0 text-muted-foreground" aria-hidden="true">
+          <Bell className="h-3.5 w-3.5" />
+          <span className="absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-rose-500" />
+        </span>
+      </div>
+      <div className="flex items-center gap-1.5">
+        <span className="inline-flex items-center gap-1 rounded-md border border-rose-500/30 bg-rose-500/5 px-2 py-1 text-rose-600 dark:text-rose-400">
+          <Sparkles className="h-3 w-3" />
+          AI verified negative
+        </span>
+      </div>
+      <p className="text-foreground/70">Alert emailed · also in your bell</p>
     </div>
   );
 }

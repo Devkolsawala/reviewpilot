@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import {
   ArrowRight,
+  BellRing,
   Bot,
   Smartphone,
   Building2,
@@ -44,7 +45,7 @@ export const metadata: Metadata = {
   title:
     "Features — AI Replies, Unified Inbox, WhatsApp Automation",
   description:
-    "Every ReviewPilot feature: AI replies for Play Store and WhatsApp Business, Review Recovery Engine, AI Insights, unified inbox, team collaboration, sentiment analytics. Google Business Profile coming soon. Plans from $16/month.",
+    "Every ReviewPilot feature: AI replies for Play Store and WhatsApp Business, Review Recovery Engine, AI Insights, AI-verified review alerts, unified inbox, team collaboration, sentiment analytics. Google Business Profile coming soon. Plans from $16/month.",
   alternates: { canonical: "/features" },
   openGraph: {
     title:
@@ -87,6 +88,7 @@ const SECTIONS: { id: string; label: string }[] = [
   { id: "sentiment", label: "Sentiment" },
   { id: "analytics", label: "Analytics" },
   { id: "daily-digest", label: "Daily digest" },
+  { id: "review-alerts", label: "Review alerts" },
   { id: "team-collaboration", label: "Team" },
   { id: "onboarding", label: "Onboarding" },
   { id: "ai-config", label: "Brand voice" },
@@ -104,6 +106,10 @@ const FAQS: { q: string; a: string }[] = [
   {
     q: "Do you support Google Business Profile?",
     a: "Google Business Profile is marked Coming Soon. We're completing Google's API approval and it is not yet available to customers. Play Store review management is fully live today, so this page is honest about which surface is shipping versus in development.",
+  },
+  {
+    q: "How do review alerts work?",
+    a: "Enable instant alerts in Settings → Notifications — they're off by default and free to enable on every plan. New reviews are checked on each sync, roughly every two hours, so you hear about a damaging review within hours instead of at your next login. Before emailing you, the AI verifies the review's sentiment is genuinely negative — a 1★ rating with positive text won't page you. You can add keyword triggers like refund, scam, or legal, and set a daily email cap; past the cap, alerts still appear in your in-app notification bell.",
   },
   {
     q: "Can my whole team use one ReviewPilot account?",
@@ -416,6 +422,21 @@ export default function FeaturesPage() {
               "Opt-in from notification settings",
               "List-Unsubscribe header for one-click opt-out",
               "CC limit scales with plan: Starter 1, Growth 3, Agency 5",
+            ]}
+          />
+
+          {/* Review Alerts */}
+          <FeatureSection
+            id="review-alerts"
+            icon={BellRing}
+            kicker="Alerts"
+            h2="AI-verified negative review alerts"
+            body="Turn on alerts and ReviewPilot emails you when a genuinely negative review lands — so you know within hours, not at your next login. Every new review is checked on your regular sync (about every two hours), and the AI verifies the sentiment before paging you: a 1★ rating with positive text doesn't trigger an alert. Alerts are the urgent channel; your daily digest stays the summary. Off by default — enable it in Settings → Notifications."
+            bullets={[
+              "AI sentiment verification — no false alarms",
+              "Custom keyword triggers (refund, scam, legal…)",
+              "Daily email cap — past it, alerts land in the in-app bell",
+              "Complements digests: alerts for urgent, digest for the summary",
             ]}
           />
 

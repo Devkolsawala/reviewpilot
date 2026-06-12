@@ -16,6 +16,7 @@ import {
   Brain,
   HeartPulse,
   BarChart3,
+  BellRing,
   MapPinned,
   Rocket,
   type LucideIcon,
@@ -91,6 +92,15 @@ export const FEATURES: Feature[] = [
     description:
       "Net Sentiment Score, sentiment trend over time, and emotion + urgency tagging on every review.",
     icon: BarChart3,
+    status: "live",
+  },
+  {
+    id: "review_alerts",
+    title: "AI-Verified Review Alerts",
+    shortLabel: "AI-verified review alerts",
+    description:
+      "Get emailed when a genuinely negative review lands — AI checks the sentiment first, so a 1★ “great app btw” never pages you.",
+    icon: BellRing,
     status: "live",
   },
   {

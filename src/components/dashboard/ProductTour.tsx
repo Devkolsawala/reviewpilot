@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import {
  ArrowRight,
  ArrowLeft,
+ Bell,
  Inbox,
  BarChart3,
  Megaphone,
@@ -70,6 +71,12 @@ const TOUR_STEPS: TourStep[] = [
  icon: <Megaphone className="h-6 w-6 text-white" />,
  target: 'a[href="/dashboard/campaigns"]',
  comingSoon: true,
+ },
+ {
+ title: "Alerts & activity",
+ description: "Your alerts and activity land here. Turn on AI-verified negative review alerts in Settings → Notifications.",
+ icon: <Bell className="h-6 w-6 text-white" />,
+ target: 'button[aria-label="Notifications"]',
  },
  {
  title: "Settings",
