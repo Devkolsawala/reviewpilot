@@ -48,6 +48,84 @@ function ratingBar(star: number, count: number, max: number): string {
     </tr>`;
 }
 
+// ── Weekly-only sections (rating trend + recovery) ──────────────────────────
+// Rendered ONLY when payload.weekly is present, which buildDigest sets for
+// weekly sends exclusively — the daily digest output is unchanged.
+
+function trendDirection(
+  thisAvg: number | null,
+  lastAvg: number | null
+): { arrow: string; color: string; label: string } {
+  if (thisAvg == null || lastAvg == null) {
+    return { arrow: "—", color: MUTED, label: "" };
+  }
+  const diff = Math.round((thisAvg - lastAvg) * 10) / 10;
+  if (diff > 0) return { arrow: "▲", color: "#16A34A", label: `+${diff.toFixed(1)}` };
+  if (diff < 0) return { arrow: "▼", color: "#DC2626", label: `−${Math.abs(diff).toFixed(1)}` };
+  return { arrow: "—", color: MUTED, label: "±0.0" };
+}
+
+function dayCellColor(avg: number | null): string {
+  if (avg == null) return "#F1F5F9";
+  if (avg >= 4) return TEAL;
+  if (avg >= 3) return "#F59E0B";
+  return "#DC2626";
+}
+
+function weeklyRatingTrendBlock(payload: DigestPayload): string {
+  const w = payload.weekly;
+  if (!w || w.avgThisWeek == null) return "";
+  const dir = trendDirection(w.avgThisWeek, w.avgLastWeek);
+
+  // 7 per-day cells across the window. Days with no rated reviews render gray.
+  const byDate = new Map(w.ratingTrend.map((t) => [t.date, t.avg_rating]));
+  const dayMs = 86_400_000;
+  const cells: string[] = [];
+  const labels: string[] = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(payload.periodStart.getTime() + i * dayMs);
+    const key = d.toISOString().split("T")[0];
+    const avg = byDate.get(key) ?? null;
+    cells.push(
+      `<td style="padding:0 2px;"><div style="height:10px;border-radius:3px;background:${dayCellColor(avg)};font-size:0;line-height:0;">&nbsp;</div></td>`
+    );
+    labels.push(
+      `<td style="padding:2px 2px 0 2px;text-align:center;font:9px ${FONT_STACK};color:${MUTED};">${d.toLocaleDateString("en-US", { weekday: "narrow" })}</td>`
+    );
+  }
+
+  const vsLine =
+    w.avgLastWeek != null
+      ? `<span style="font:13px ${FONT_STACK};color:${MUTED};margin-left:8px;">vs ${w.avgLastWeek.toFixed(1)} ★ last week <span style="color:${dir.color};font-weight:600;">${dir.arrow} ${dir.label}</span></span>`
+      : `<span style="font:13px ${FONT_STACK};color:${MUTED};margin-left:8px;">no rated reviews last week</span>`;
+
+  return `
+    <div style="padding:14px 16px;background:${WARM_WHITE};border:1px solid ${BORDER};border-radius:8px;margin-bottom:16px;">
+      <div style="font:11px ${FONT_STACK};color:${MUTED};text-transform:uppercase;letter-spacing:0.5px;">Rating Trend</div>
+      <div style="font:600 22px ${FONT_STACK};color:${NAVY};margin-top:4px;">
+        ${w.avgThisWeek.toFixed(1)} ★${vsLine}
+      </div>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:10px;">
+        <tr>${cells.join("")}</tr>
+        <tr>${labels.join("")}</tr>
+      </table>
+    </div>`;
+}
+
+function weeklyRecoveryBlock(payload: DigestPayload): string {
+  const r = payload.weekly?.recovery;
+  // Zero monitored negative reviews → omit entirely rather than showing 0%.
+  if (!r || r.totalNegative === 0) return "";
+  return `
+    <div style="padding:14px 16px;background:#ECFDF5;border:1px solid #A7F3D0;border-radius:8px;margin-bottom:16px;">
+      <div style="font:11px ${FONT_STACK};color:#065F46;text-transform:uppercase;letter-spacing:0.5px;">Recovery</div>
+      <div style="font:600 22px ${FONT_STACK};color:${NAVY};margin-top:4px;">${r.rate}%</div>
+      <div style="font:13px ${FONT_STACK};color:#047857;margin-top:4px;">
+        ${r.recovered} of ${r.totalNegative} negative review${r.totalNegative === 1 ? "" : "s"} improved their rating this week.
+      </div>
+    </div>`;
+}
+
 function deltaBadge(delta: number | null): string {
   if (delta == null) return "";
   const positive = delta >= 0;
@@ -90,6 +168,28 @@ function buildText(
           ? ` (${payload.totals.avgRatingDelta >= 0 ? "+" : ""}${payload.totals.avgRatingDelta} vs prior)`
           : "";
       lines.push(`Avg rating: ${payload.totals.avgRating.toFixed(1)}★${delta}`);
+    }
+    // Weekly-only sections — payload.weekly is never set for daily sends.
+    const w = payload.weekly;
+    if (w && w.avgThisWeek != null) {
+      const dir =
+        w.avgLastWeek == null
+          ? ""
+          : w.avgThisWeek > w.avgLastWeek
+          ? " (up from last week)"
+          : w.avgThisWeek < w.avgLastWeek
+          ? " (down from last week)"
+          : " (flat vs last week)";
+      lines.push(
+        `Rating trend: ${w.avgThisWeek.toFixed(1)}★ this week${
+          w.avgLastWeek != null ? ` vs ${w.avgLastWeek.toFixed(1)}★ last week` : ""
+        }${dir}`
+      );
+    }
+    if (w?.recovery && w.recovery.totalNegative > 0) {
+      lines.push(
+        `Recovery: ${w.recovery.rate}% — ${w.recovery.recovered} of ${w.recovery.totalNegative} negative reviews improved`
+      );
     }
     if (payload.lowestRatedReview) {
       lines.push("");
@@ -301,6 +401,8 @@ export function renderDailyDigest(
               ${quietState}
               ${payload.hasActivity ? heroStats : ""}
               ${payload.hasActivity ? avgRatingBlock : ""}
+              ${payload.hasActivity ? weeklyRatingTrendBlock(payload) : ""}
+              ${weeklyRecoveryBlock(payload)}
               ${payload.hasActivity ? ratingBars : ""}
               ${payload.hasActivity ? sentimentBlock : ""}
               ${lowestBlock}

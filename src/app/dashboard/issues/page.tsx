@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -53,7 +54,7 @@ function timeAgo(iso: string): string {
   return `${Math.floor(days / 30)}mo ago`;
 }
 
-export default function IssuesPage() {
+function IssuesPageInner() {
   const { can, isLoading: planLoading } = usePlan();
   // Starter and above get the full drill-down. Free plan sees a teaser.
   const fullAccess = can("auto_reply") || planLoading;
@@ -89,6 +90,22 @@ export default function IssuesPage() {
     loadTab(tab);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab]);
+
+  // Deep link from global search: /dashboard/issues?issueId=<id> auto-expands
+  // that issue's drill-down once the active tab has loaded. Applied at most
+  // once per id so manual collapse isn't fought by the effect.
+  const searchParams = useSearchParams();
+  const issueIdFromUrl = (searchParams?.get("issueId") || "").trim();
+  const issueDeepLinkRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!issueIdFromUrl || loading) return;
+    if (issueDeepLinkRef.current === issueIdFromUrl) return;
+    const found = issues[tab].find((i) => i.id === issueIdFromUrl);
+    if (!found) return;
+    issueDeepLinkRef.current = issueIdFromUrl;
+    toggleExpand(issueIdFromUrl);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [issueIdFromUrl, loading, issues, tab]);
 
   async function toggleExpand(issueId: string) {
     if (expandedId === issueId) {
@@ -475,5 +492,13 @@ export default function IssuesPage() {
         )}
       </div>
     </PageTransition>
+  );
+}
+
+export default function IssuesPage() {
+  return (
+    <Suspense fallback={<div className="h-32" />}>
+      <IssuesPageInner />
+    </Suspense>
   );
 }

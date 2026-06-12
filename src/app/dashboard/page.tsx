@@ -9,6 +9,7 @@ import { GettingStartedCard, type OnboardingStep } from "@/components/dashboard/
 import { QuickActionTiles, type QuickActionTile } from "@/components/dashboard/QuickActionTiles";
 import { ActiveIssues } from "@/components/dashboard/ActiveIssues";
 import { RecoveryRateCard } from "@/components/dashboard/RecoveryRateCard";
+import { WeeklyGlanceCard } from "@/components/dashboard/WeeklyGlanceCard";
 import { PageTransition } from "@/components/dashboard/PageTransition";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -376,11 +377,13 @@ export default function DashboardPage() {
           oldestConnectionDaysAgo={isMock ? null : analytics.connectionAgeDays}
         />
 
-        {/* Recovery Rate — second stat row. Mock mode skips it since the
-            recovery engine only runs on real data. */}
+        {/* Second stat row — Recovery Rate + AI weekly summary. Mock mode
+            skips it since both run on real data only. WeeklyGlanceCard
+            renders null when DIGEST_EXECUTIVE_SUMMARY_ENABLED is off. */}
         {!isMock && (
           <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
             <RecoveryRateCard />
+            <WeeklyGlanceCard className="sm:col-span-1 lg:col-span-3" />
           </div>
         )}
 

@@ -17,6 +17,8 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getPlan } from "@/lib/plans";
 import { startOfTodayInTzAsUtc } from "./tz";
+import { computeTrend, type MinReview } from "@/lib/analytics/aggregates";
+import { countNegativeAndRecovered, recoveryRatePct } from "@/lib/recovery";
 
 export type DigestPeriod = "daily" | "weekly";
 
@@ -50,6 +52,21 @@ export type DigestPayload = {
     aiRepliesLimit: number;
     plan: string;
   };
+  // Weekly-only extras (rating trend + recovery sections). ALWAYS undefined
+  // for the daily digest, so the daily email stays byte-identical — the
+  // template renders these sections only when the field is present.
+  weekly?: WeeklyExtras;
+};
+
+export type WeeklyExtras = {
+  // Per-day rating buckets across the 7-day window (days with no rated
+  // reviews are absent — the template fills the gaps).
+  ratingTrend: { date: string; avg_rating: number; count: number }[];
+  avgThisWeek: number | null;
+  avgLastWeek: number | null;
+  // null when the user has zero monitored negative reviews in the window —
+  // the template omits the Recovery section entirely rather than showing 0%.
+  recovery: { rate: number; recovered: number; totalNegative: number } | null;
 };
 
 type ReviewRow = {
@@ -159,6 +176,30 @@ function pickLowestRated(rows: ReviewRow[]): DigestPayload["lowestRatedReview"] 
   };
 }
 
+function avgOf(rows: ReviewRow[]): number | null {
+  const rated = rows.filter((r) => r.rating != null);
+  if (!rated.length) return null;
+  return (
+    Math.round(
+      (rated.reduce((s, r) => s + (r.rating || 0), 0) / rated.length) * 10
+    ) / 10
+  );
+}
+
+function buildWeeklyExtras(
+  rows: ReviewRow[],
+  priorRows: ReviewRow[],
+  recovery: WeeklyExtras["recovery"]
+): WeeklyExtras {
+  return {
+    // "7d" range = per-day buckets, same math as the analytics rating trend.
+    ratingTrend: computeTrend(rows as MinReview[], "7d"),
+    avgThisWeek: avgOf(rows),
+    avgLastWeek: avgOf(priorRows),
+    recovery,
+  };
+}
+
 // ── Mock builder ──────────────────────────────────────────────────────────────
 
 async function buildMockPayload(period: DigestPeriod, now: Date): Promise<DigestPayload> {
@@ -206,6 +247,17 @@ async function buildMockPayload(period: DigestPeriod, now: Date): Promise<Digest
       aiRepliesLimit: 100,
       plan: "starter",
     },
+    // Canned recovery numbers — mock mode has no recovery engine data, but
+    // weekly test sends should still render the new sections.
+    ...(period === "weekly"
+      ? {
+          weekly: buildWeeklyExtras(sample, prior, {
+            rate: 40,
+            recovered: 2,
+            totalNegative: 5,
+          }),
+        }
+      : {}),
   };
 }
 
@@ -306,6 +358,31 @@ export async function buildDigest(
     totals.repliesSent > 0 ||
     totals.pendingReplies > 0;
 
+  // Weekly-only: rating trend + recovery for the two extra email sections.
+  // Recovery reuses the exact /api/dashboard/recovery-rate math via
+  // lib/recovery — one source of truth.
+  let weekly: WeeklyExtras | undefined;
+  if (period === "weekly") {
+    const counts = await countNegativeAndRecovered(
+      supabase,
+      connIds,
+      periodStart.toISOString(),
+      periodEnd.toISOString()
+    );
+    const rate = recoveryRatePct(counts);
+    weekly = buildWeeklyExtras(
+      rows,
+      priorRows,
+      counts.total > 0 && rate != null
+        ? {
+            rate,
+            recovered: counts.recovered,
+            totalNegative: counts.total,
+          }
+        : null
+    );
+  }
+
   return {
     period,
     periodStart,
@@ -318,5 +395,6 @@ export async function buildDigest(
       aiRepliesLimit: aiLimit,
       plan: planId,
     },
+    ...(weekly ? { weekly } : {}),
   };
 }

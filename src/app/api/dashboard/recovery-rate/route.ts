@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { countNegativeAndRecovered, recoveryRatePct } from "@/lib/recovery";
 
 /**
  * GET /api/dashboard/recovery-rate?connection_id=...&days=30
@@ -65,36 +66,11 @@ export async function GET(request: NextRequest) {
   const previousStart = new Date(now - 2 * days * 86400000).toISOString();
   const previousEnd = currentStart;
 
-  async function countNegativeAndRecovered(fromIso: string, toIso?: string) {
-    let baseQuery = supabase
-      .from("reviews")
-      .select("recovery_status", { count: "exact" })
-      .in("connection_id", connectionIds)
-      .lte("original_rating", 3)
-      .neq("recovery_status", "none")
-      .gte("created_at", fromIso);
-    if (toIso) baseQuery = baseQuery.lt("created_at", toIso);
-    const { data, error } = await baseQuery;
-    if (error) {
-      console.error("[recovery-rate] query error:", error.message);
-      return { total: 0, recovered: 0 };
-    }
-    const total = data?.length ?? 0;
-    const recovered = (data ?? []).filter((r) => r.recovery_status === "recovered").length;
-    return { total, recovered };
-  }
+  const current = await countNegativeAndRecovered(supabase, connectionIds, currentStart);
+  const previous = await countNegativeAndRecovered(supabase, connectionIds, previousStart, previousEnd);
 
-  const current = await countNegativeAndRecovered(currentStart);
-  const previous = await countNegativeAndRecovered(previousStart, previousEnd);
-
-  const rate =
-    current.total > 0
-      ? Math.round((current.recovered / current.total) * 100)
-      : null;
-  const previousRate =
-    previous.total > 0
-      ? Math.round((previous.recovered / previous.total) * 100)
-      : null;
+  const rate = recoveryRatePct(current);
+  const previousRate = recoveryRatePct(previous);
 
   return NextResponse.json({
     rate,

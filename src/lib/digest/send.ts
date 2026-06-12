@@ -29,8 +29,9 @@ import { renderDailyDigest } from "@/lib/email/templates/dailyDigest";
 import {
   generateExecutiveSummary,
   type ExecutiveSummary,
-  type ExecutiveSummaryMetrics,
 } from "@/lib/ai/generateExecutiveSummary";
+import { buildExecutiveMetrics } from "./execMetrics";
+import { getInsightsModel } from "@/lib/ai/xai-client";
 import {
   startOfTodayInTzAsUtc,
   mostRecentWeeklySlotAsUtc,
@@ -205,27 +206,47 @@ export async function sendDigestForUser(opts: {
   let executiveSummary: ExecutiveSummary | null = null;
   if (period === "weekly") {
     try {
-      const metrics: ExecutiveSummaryMetrics = {
-        totalReviews: payload.totals.newReviews,
-        totalReviewsPrev: 0, // not currently aggregated; safe baseline
-        avgRating: payload.totals.avgRating ?? 0,
-        avgRatingPrev:
-          payload.totals.avgRating != null &&
-          payload.totals.avgRatingDelta != null
-            ? payload.totals.avgRating - payload.totals.avgRatingDelta
-            : 0,
-        responseRate: 0,
-        responseRatePrev: 0,
-        topThemes: [],
-        criticalCount: 0,
-        topNegativeAspect: null,
-        topPositiveAspect: null,
-      };
+      // Real inputs — same window the digest payload itself covers
+      // (rolling 7 days ending now; see buildDigest's weekly branch).
+      const metrics = await buildExecutiveMetrics(
+        userId,
+        payload.periodStart,
+        payload.periodEnd
+      );
       executiveSummary = await generateExecutiveSummary({
         userId,
         period: "weekly",
         metrics,
       });
+
+      // Persist for the dashboard "This week at a glance" card. Keyed on the
+      // REAL weekly slot (not the test-send's unique period_start) so cron
+      // retries AND test sends for the same week upsert one row instead of
+      // accumulating duplicates. Mock mode skips the write.
+      if (
+        executiveSummary &&
+        process.env.NEXT_PUBLIC_USE_MOCK !== "true"
+      ) {
+        const { error: persistErr } = await supabase
+          .from("executive_summaries")
+          .upsert(
+            {
+              user_id: userId,
+              period_start: realPeriodStart.toISOString(),
+              period_end: periodEnd.toISOString(),
+              summary: executiveSummary.summary,
+              top_action: executiveSummary.topAction,
+              model: getInsightsModel(),
+            },
+            { onConflict: "user_id,period_start" }
+          );
+        if (persistErr) {
+          console.error(
+            "[digest] executive_summaries upsert failed:",
+            persistErr.message
+          );
+        }
+      }
     } catch (err) {
       console.error(
         "[digest] exec summary failed for user",
