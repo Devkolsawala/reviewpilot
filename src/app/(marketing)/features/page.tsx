@@ -24,6 +24,7 @@ import {
   MessageCircle,
   Inbox,
   Rocket,
+  GitCompareArrows,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -45,7 +46,7 @@ export const metadata: Metadata = {
   title:
     "Features — AI Replies, Unified Inbox, WhatsApp Automation",
   description:
-    "Every ReviewPilot feature: AI replies for Play Store and WhatsApp Business, Review Recovery Engine, AI Insights, AI-verified review alerts, unified inbox, team collaboration, sentiment analytics. Google Business Profile coming soon. Plans from $16/month.",
+    "Every ReviewPilot feature: AI replies for Play Store and WhatsApp Business, Review Recovery Engine, AI Insights, AI-verified review alerts, version impact analysis, unified inbox, team collaboration, sentiment analytics. Google Business Profile coming soon. Plans from $16/month.",
   alternates: { canonical: "/features" },
   openGraph: {
     title:
@@ -81,6 +82,7 @@ const SECTIONS: { id: string; label: string }[] = [
   { id: "unified-inbox", label: "Unified inbox" },
   { id: "play-store", label: "Play Store" },
   { id: "aso", label: "ASO Analysis" },
+  { id: "version-impact", label: "Version Impact" },
   { id: "google-business", label: "Google Business" },
   { id: "whatsapp", label: "WhatsApp" },
   { id: "auto-reply", label: "Auto-reply" },
@@ -110,6 +112,10 @@ const FAQS: { q: string; a: string }[] = [
   {
     q: "How do review alerts work?",
     a: "Enable instant alerts in Settings → Notifications — they're off by default and free to enable on every plan. New reviews are checked on each sync, roughly every two hours, so you hear about a damaging review within hours instead of at your next login. Before emailing you, the AI verifies the review's sentiment is genuinely negative — a 1★ rating with positive text won't page you. You can add keyword triggers like refund, scam, or legal, and set a daily email cap; past the cap, alerts still appear in your in-app notification bell.",
+  },
+  {
+    q: "Which app versions can I compare, and what's the AI verdict?",
+    a: "The Version Impact Analyzer breaks your Play Store reviews down by app version and lets you compare any two releases — not just the latest two. For each version you get the review count, average rating, positive/neutral/negative split, and the theme deltas (which complaints rose or fell between releases). This deterministic analysis is free on every plan. The AI verdict — a one-line, plain-English diagnosis of what a release did to your rating, with a recommended next step — is available on the Growth and Agency plans. A few honest limits: it uses Play Store reviews only (they're the ones that carry version codes, so WhatsApp and Google Business reviews are excluded), you need at least two releases with enough reviews to compare, and the figures update on your normal sync (about every two hours), not the moment a review lands.",
   },
   {
     q: "Can my whole team use one ReviewPilot account?",
@@ -313,6 +319,25 @@ export default function FeaturesPage() {
               "Keyword opportunities from real reviewer language + competitors",
               "One-click AI rewrites for title, descriptions & What's New",
             ]}
+          />
+
+          {/* Version Impact Analyzer */}
+          <FeatureSection
+            id="version-impact"
+            icon={GitCompareArrows}
+            kicker="Version Impact"
+            h2="See exactly how each app release moved your rating"
+            body="When your rating slips after a release, a lifetime star average won't tell you which version did it. Version Impact breaks your Play Store reviews down by app version and compares any two releases — the rating change, the positive/neutral/negative split, and the theme deltas (which complaints rose or fell). The per-version comparison is free on every plan. On Growth and Agency, an AI verdict adds a one-line, plain-English diagnosis of what a release did to your rating plus a recommended next step. Play Store reviews only — they're the ones that carry version data — and figures update on your regular sync, roughly every two hours. You need at least two releases with enough reviews to compare."
+            bullets={[
+              "Per-version rating, sentiment & theme deltas — free on every plan",
+              "Compare any two releases, not just the latest",
+              "AI verdict: a plain-English diagnosis of what a release did to your rating — Growth & Agency",
+              "Play Store releases only · updates on your regular sync",
+            ]}
+            link={{
+              href: "/blog/app-update-hurt-play-store-rating",
+              label: "Read: how to tell if your latest update hurt your rating",
+            }}
           />
 
           {/* Google Business Profile */}

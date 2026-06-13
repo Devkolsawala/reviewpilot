@@ -131,3 +131,37 @@ export interface AsoAnalysis {
   recommendations: AsoRecommendations;
   created_at: string;
 }
+
+// ── Version Impact Analyzer ────────────────────────────────────────────────────
+// The deterministic per-version metrics + theme deltas are computed live (see
+// src/lib/version-impact/analyze.ts) and are NOT persisted. Only the on-demand,
+// Growth/Agency-gated AI verdict is cached in public.version_impact_verdicts
+// (migration 045).
+
+/** Validated AI verdict for a version pair. */
+export interface VersionVerdict {
+  /** One-line headline read (<=140 chars). */
+  verdict: string;
+  /** 2-4 sentence diagnosis (<=600 chars). */
+  diagnosis: string;
+  /** Recommended next step (<=280 chars), or null when nothing stands out. */
+  action: string | null;
+}
+
+/** Mirrors public.version_impact_verdicts (migration 045). */
+export interface VersionImpactVerdict {
+  id: string;
+  /** Workspace owner id — the cache is pooled across the team. */
+  user_id: string;
+  /** Nullable FK to connections(id); null if the connection was removed. */
+  connection_id: string | null;
+  /** Older release label (app_version_name). */
+  version_a: string;
+  /** Newer release label. */
+  version_b: string;
+  /** Hash of the deltas the verdict was generated from (cache invalidation). */
+  data_hash: string;
+  verdict: VersionVerdict;
+  model: string | null;
+  created_at: string;
+}

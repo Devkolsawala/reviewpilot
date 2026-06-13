@@ -99,6 +99,8 @@ module.exports = {
       '/blog/psychology-of-1-star-app-reviews-what-users-really-mean': { priority: 0.8, changefreq: 'monthly' },
       '/blog/how-to-ask-for-app-reviews-without-violating-google-policies-2026': { priority: 0.7, changefreq: 'monthly' },
       '/blog/competitive-review-analysis-how-to-mine-competitor-app-reviews-in-2026': { priority: 0.7, changefreq: 'monthly' },
+      // Version Impact Analyzer launch post
+      '/blog/app-update-hurt-play-store-rating': { priority: 0.8, changefreq: 'monthly' },
     };
 
     const pathConfig = priorities[path];

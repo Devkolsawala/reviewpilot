@@ -25,6 +25,7 @@ import {
 } from "@/components/marketing/JsonLd";
 import Script from "next/script";
 import { Analytics } from "@vercel/analytics/next";
+import { Clarity } from "@/components/analytics/Clarity";
 import "./globals.css";
 
 const dmSans = DM_Sans({
@@ -163,6 +164,7 @@ export default function RootLayout({
           strategy="lazyOnload"
         />
         <Analytics />
+        <Clarity />
       </body>
     </html>
   );

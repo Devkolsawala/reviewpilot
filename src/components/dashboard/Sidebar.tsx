@@ -22,6 +22,7 @@ import {
   MessageSquare,
   AlertTriangle,
   Rocket,
+  GitCompareArrows,
   PanelLeftClose,
   PanelLeftOpen,
 } from "lucide-react";
@@ -174,6 +175,10 @@ const WORKSPACE_NAV: NavItem[] = [
   // NavRow already handles rendering it). UpgradeGate (page) + API 403 remain
   // the real access controls regardless.
   { label: "ASO Analysis", href: "/dashboard/aso", icon: Rocket },
+  // Version Impact is visible to ALL plans (the comparison + theme deltas are
+  // free). Unlike ASO, its row is NOT plan-filtered below — only the AI verdict
+  // panel inside the page is gated to Growth/Agency.
+  { label: "Version Impact", href: "/dashboard/version-impact", icon: GitCompareArrows },
   { label: "Campaigns", href: "/dashboard/campaigns", icon: Megaphone },
 ];
 

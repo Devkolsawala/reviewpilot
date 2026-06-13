@@ -8,6 +8,8 @@ import {
   Bell,
   Clock,
   Users,
+  Lock,
+  ArrowDown,
   type LucideIcon,
 } from "lucide-react";
 
@@ -45,6 +47,7 @@ const LAYOUT: Record<
   sentiment_analytics: { visual: <SentimentVisual /> },
   review_alerts: { visual: <AlertsVisual /> },
   aso_analysis: { span: "lg:col-span-2", visual: <AsoVisual /> },
+  version_impact: { span: "lg:col-span-3", visual: <VersionImpactVisual /> },
 };
 
 export function FeatureGrid() {
@@ -481,6 +484,52 @@ function AsoVisual() {
           <Sparkles className="h-3 w-3" />
           AI rewrite ready
         </div>
+      </div>
+    </div>
+  );
+}
+
+function VersionImpactVisual() {
+  const themes = [
+    { label: "crashes", delta: "▲ +210%", tone: "border-rose-500/30 bg-rose-500/5 text-rose-600 dark:text-rose-400" },
+    { label: "performance", delta: "▲ +40%", tone: "border-amber-500/30 bg-amber-500/5 text-amber-600 dark:text-amber-400" },
+    { label: "login", delta: "▼ −60%", tone: "border-emerald-500/30 bg-emerald-500/5 text-emerald-600 dark:text-emerald-400" },
+  ];
+  return (
+    <div className="grid gap-2 sm:grid-cols-[auto_1fr_auto] sm:items-stretch">
+      {/* Per-version rating delta (free core) */}
+      <div className="flex items-center gap-3 rounded-lg border border-border/60 bg-background/60 p-3">
+        <div className="flex items-center gap-1 text-rose-500">
+          <ArrowDown className="h-6 w-6" aria-hidden="true" />
+          <span className="font-mono text-2xl font-semibold leading-none">0.4</span>
+          <span className="text-amber-500">★</span>
+        </div>
+        <div className="text-[11px] leading-tight">
+          <p className="font-medium text-foreground/90">v2.4.1</p>
+          <p className="text-muted-foreground">vs v2.4.0</p>
+        </div>
+      </div>
+      {/* Theme deltas (free core) */}
+      <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-border/60 bg-background/60 p-3 font-mono text-[11px]">
+        {themes.map((t) => (
+          <span
+            key={t.label}
+            className={cn("inline-flex items-center gap-1 rounded-full border px-2 py-0.5", t.tone)}
+          >
+            {t.label} {t.delta}
+          </span>
+        ))}
+      </div>
+      {/* AI verdict — premium layer, telegraphed without implying the whole card is paid */}
+      <div className="flex items-center gap-2 rounded-lg border border-accent/30 bg-accent/[0.04] p-3 text-[11px]">
+        <Sparkles className="h-3.5 w-3.5 shrink-0 text-accent" aria-hidden="true" />
+        <span className="flex-1 text-foreground/85">
+          AI verdict: “v2.4.1 tripled crash complaints.”
+        </span>
+        <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-accent/30 bg-accent/10 px-1.5 py-0.5 text-[9px] font-medium text-accent">
+          <Lock className="h-2.5 w-2.5" aria-hidden="true" />
+          Growth
+        </span>
       </div>
     </div>
   );

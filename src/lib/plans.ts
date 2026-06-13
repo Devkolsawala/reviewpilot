@@ -33,6 +33,7 @@ export const PLANS = {
       campaigns_sms: false,
       campaigns_email: false,
       aso_analysis: false,
+      version_impact_ai: false,  // gated — Growth+ only (page itself is free)
     },
   },
   starter: {
@@ -61,6 +62,7 @@ export const PLANS = {
       campaigns_sms: true,
       campaigns_email: true,
       aso_analysis: false,
+      version_impact_ai: false,  // gated — Growth+ only (page itself is free)
     },
   },
   growth: {
@@ -89,6 +91,7 @@ export const PLANS = {
       campaigns_sms: true,
       campaigns_email: true,
       aso_analysis: true,
+      version_impact_ai: true,
     },
   },
   agency: {
@@ -117,6 +120,7 @@ export const PLANS = {
       campaigns_sms: true,
       campaigns_email: true,
       aso_analysis: true,
+      version_impact_ai: true,
     },
   },
 } as const;

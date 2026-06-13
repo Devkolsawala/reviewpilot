@@ -19,6 +19,7 @@ import {
   BellRing,
   MapPinned,
   Rocket,
+  GitCompareArrows,
   type LucideIcon,
 } from "lucide-react";
 
@@ -113,6 +114,15 @@ export const FEATURES: Feature[] = [
     status: "live",
   },
   {
+    id: "version_impact",
+    title: "Version Impact Analyzer",
+    shortLabel: "Version impact analysis",
+    description:
+      "See exactly what each release did to your rating — which version cost you stars and which complaints spiked, release by release. Play Store reviews only.",
+    icon: GitCompareArrows,
+    status: "live",
+  },
+  {
     id: "google_business_profile",
     title: "Google Business Profile",
     shortLabel: "Google Business Profile",
@@ -167,6 +177,7 @@ export const REVIEWPILOT: Competitor = {
     play_store_reviews: "yes",
     whatsapp_business_automation: "yes",
     sentiment_analytics: "yes",
+    version_impact: "yes",
     google_business_profile: "soon",
     sms_collection: "soon",
   },
@@ -226,6 +237,7 @@ export const COMPARISON_ROW_ORDER: string[] = [
   "play_store_reviews",
   "whatsapp_business_automation",
   "sentiment_analytics",
+  "version_impact",
   "google_business_profile",
   "sms_collection",
 ];
