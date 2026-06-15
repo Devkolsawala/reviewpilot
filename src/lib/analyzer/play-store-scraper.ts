@@ -255,6 +255,43 @@ export async function getRecentReviews(
   }
 }
 
+// Asset/file extensions and crawler-probe suffixes. Strings like "script.js",
+// "script.js.map", "robots.txt", and "sitemap.xml" are dot-separated lowercase
+// tokens, so the naive reverse-domain regex below treats them as valid package
+// ids. When that happens on /insights/[packageId] they get appended to the
+// rate-limiter's unique_packages array and burn the 20/day hard cap. Rejecting
+// any id whose final segment is a known asset extension fixes that without a
+// TLD allowlist (real package ids aren't real domains).
+const ASSET_EXTENSIONS = new Set([
+  "js", "mjs", "cjs", "jsx", "ts", "tsx", "map", "css", "scss",
+  "png", "jpg", "jpeg", "gif", "ico", "svg", "webp", "avif", "bmp",
+  "txt", "json", "xml", "webmanifest", "csv", "pdf", "wasm",
+  "html", "htm", "php", "woff", "woff2", "ttf", "eot", "otf",
+  "mp4", "webm", "mp3", "wav", "zip", "gz",
+]);
+
+// Reverse-domain shape: at least two dot-separated segments, each starting
+// with a letter. Mirrors Android application-id rules closely enough for a
+// public validator. NOTE: this alone still matches "script.js" — the asset
+// extension check in isValidPackageId is what rejects those.
+const PACKAGE_ID_RE = /^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+$/i;
+
+// True only for plausible Android application ids. Used both to validate user
+// input (parsePackageId) and to guard the /insights/[packageId] route before
+// it reserves any quota.
+export function isValidPackageId(input: unknown): boolean {
+  if (typeof input !== "string") return false;
+  const trimmed = input.trim();
+  if (!trimmed || trimmed.length > 255) return false;
+  if (!PACKAGE_ID_RE.test(trimmed)) return false;
+
+  const lastDot = trimmed.lastIndexOf(".");
+  const finalSegment = trimmed.slice(lastDot + 1).toLowerCase();
+  if (ASSET_EXTENSIONS.has(finalSegment)) return false;
+
+  return true;
+}
+
 // Parse a Play Store URL and return the package id, or null if the URL is not
 // a recognizable Play Store app URL. Accepts:
 //   https://play.google.com/store/apps/details?id=com.example.app
@@ -266,12 +303,12 @@ export function parsePackageId(input: string): string | null {
   const trimmed = input.trim();
 
   // Bare package id like "com.example.app"
-  if (/^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+$/i.test(trimmed)) return trimmed;
+  if (isValidPackageId(trimmed)) return trimmed;
 
   // URL forms — pull id= query param without constructing URL to tolerate
   // market:// scheme and tracker garbage.
   const match = trimmed.match(/[?&]id=([a-zA-Z0-9_.]+)/);
-  if (match && match[1]) return match[1];
+  if (match && match[1] && isValidPackageId(match[1])) return match[1];
 
   return null;
 }

@@ -46,6 +46,21 @@ const MAX_DISTINCT_EMAILS_PER_IP_PER_DAY = 3;
 interface EmailReportBody {
   email?: unknown;
   packageId?: unknown;
+  // Where the capture happened, for funnel attribution. Free-text but we clamp
+  // it to a short known set before persisting. Optional — older callers omit it.
+  context?: unknown;
+}
+
+// Known capture contexts. Anything else (or absent) is stored as null so the
+// column never holds unbounded user-controlled strings.
+const KNOWN_CONTEXTS = new Set([
+  "value_gate", // first-result email gate (Phase 3)
+  "quota_gate", // hit the 3/day anon wall
+  "pdf_button", // legacy opt-in PDF button
+]);
+
+function normalizeContext(raw: unknown): string | null {
+  return typeof raw === "string" && KNOWN_CONTEXTS.has(raw) ? raw : null;
 }
 
 function jsonError(message: string, code: string, status = 400) {
@@ -230,11 +245,19 @@ export async function POST(req: Request) {
   }
 
   // Persist the lead. Composite PK (email, package_id) makes this idempotent
-  // for the same (email, app) pair.
+  // for the same (email, app) pair. unlock_context / captured_at are additive
+  // nullable columns (see migration 034) — older deployments without them
+  // would error, but they ship together.
   const { error: insertError } = await supabase
     .from("analyzer_leads")
     .upsert(
-      { email, package_id: packageId, ip_hash: ipHash },
+      {
+        email,
+        package_id: packageId,
+        ip_hash: ipHash,
+        unlock_context: normalizeContext(body.context),
+        captured_at: new Date().toISOString(),
+      },
       { onConflict: "email,package_id" }
     );
   if (insertError) {

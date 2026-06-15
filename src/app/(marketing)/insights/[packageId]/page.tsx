@@ -1,18 +1,27 @@
 /* eslint-disable react/no-unescaped-entities */
 // Permanent SEO-friendly URL for a Play Store app's analyzer report.
 //
-// Cache hit  → render immediately, free.
-// Cache miss → run a fresh analysis subject to per-IP daily rate limit. If
-//              the IP is over quota or the scrape fails, render a graceful
-//              empty state with a link back to /tools/play-store-analyzer.
+// CACHE-ONLY (Phase 1, Option A). This page reads public_app_analyses and
+// NEVER reserves quota or runs a fresh scrape. A cache miss → graceful
+// EmptyState with a link back to /tools/play-store-analyzer.
 //
-// Touches the scraper pipeline indirectly via Supabase reads, so must run on
-// the Node.js runtime — google-play-scraper depends on Node-only APIs.
+// Why: this route is force-dynamic, so search/social crawlers discovering an
+// /insights link could previously trigger a full scrape + AI run on cache
+// miss, burning quota for nobody's benefit. Removing the fresh-on-view path
+// closes that crawler-scrape vector entirely. Fresh analyses now originate
+// ONLY from the user-initiated POST /api/tools/analyze-app, which is
+// unchanged — it still reserves quota and runs the pipeline exactly as before.
+//
+// Still pinned to the Node.js runtime — readCachedAnalysis goes through the
+// pipeline module, which imports the Node-only scraper.
 
 import type { Metadata } from "next";
 import Link from "next/link";
-import { headers } from "next/headers";
+import { notFound } from "next/navigation";
 import { Star } from "lucide-react";
+import { isValidPackageId } from "@/lib/analyzer/play-store-scraper";
+import { ReviewHealthScore } from "@/components/tools/ReviewHealthScore";
+import { ShareReport } from "@/components/tools/ShareReport";
 import { JsonLd } from "@/components/marketing/JsonLd";
 import {
   softwareApplicationSchema,
@@ -21,14 +30,8 @@ import {
 } from "@/lib/seo/schema";
 import {
   readCachedAnalysis,
-  runFreshAnalysis,
   type AnalysisResult,
 } from "@/lib/analyzer/pipeline";
-import {
-  hashIp,
-  releaseQuota,
-  reserveQuota,
-} from "@/lib/analyzer/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -41,35 +44,9 @@ interface PageProps {
   params: RouteParams;
 }
 
-// Reuse Phase A's IP helper without coupling client/server — headers() lives
-// only on the server.
-function ipFromHeaders(): string {
-  const h = headers();
-  const xff = h.get("x-forwarded-for");
-  if (xff) {
-    const first = xff.split(",")[0];
-    if (first) return first.trim();
-  }
-  return h.get("x-real-ip")?.trim() ?? "unknown";
-}
-
+// Cache-only: no reserveQuota, no runFreshAnalysis. See file header.
 async function loadAnalysis(packageId: string): Promise<AnalysisResult | null> {
-  const cached = await readCachedAnalysis(packageId).catch(() => null);
-  if (cached) return cached;
-
-  const ipHash = hashIp(ipFromHeaders());
-  // Atomic reserve — matches the POST route. If we get a slot but the
-  // pipeline fails, refund so the user does not lose quota to a scrape
-  // error on a public crawl.
-  const reservation = await reserveQuota(ipHash, packageId).catch(() => null);
-  if (!reservation || !reservation.accepted) return null;
-
-  const outcome = await runFreshAnalysis(packageId).catch(() => null);
-  if (!outcome || !outcome.ok) {
-    await releaseQuota(ipHash).catch(() => undefined);
-    return null;
-  }
-  return outcome.result;
+  return readCachedAnalysis(packageId).catch(() => null);
 }
 
 // Don't try to scrape from generateMetadata — it runs on every request, has
@@ -78,6 +55,13 @@ async function loadAnalysis(packageId: string): Promise<AnalysisResult | null> {
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
+  // Asset/crawler paths (script.js, robots.txt, …) get caught by this dynamic
+  // segment. Never index them and never read cache for them — the page itself
+  // returns 404 via notFound().
+  if (!isValidPackageId(params.packageId)) {
+    return { title: "Not found", robots: { index: false, follow: false } };
+  }
+
   const cached = await readCachedAnalysis(params.packageId).catch(() => null);
   const url = `${SITE_URL}/insights/${params.packageId}`;
 
@@ -110,6 +94,13 @@ export async function generateMetadata({
 }
 
 export default async function InsightsPage({ params }: PageProps) {
+  // Validate BEFORE loadAnalysis — loadAnalysis reserves quota, and an invalid
+  // id (asset path, crawler probe) must never touch reserveQuota /
+  // unique_packages / runFreshAnalysis. 404 + noindex (set in generateMetadata).
+  if (!isValidPackageId(params.packageId)) {
+    notFound();
+  }
+
   const result = await loadAnalysis(params.packageId);
 
   if (!result) {
@@ -209,7 +200,19 @@ export default async function InsightsPage({ params }: PageProps) {
 
         <h2 className="sr-only">Review analysis summary</h2>
 
-        <div className="mt-8 grid gap-3 sm:grid-cols-3">
+        <div className="mt-8">
+          <ReviewHealthScore
+            input={{
+              responseRate: analysis.metrics.responseRate,
+              unrepliedNegativeCount: analysis.metrics.unrepliedNegativeCount,
+              sentimentBreakdown: analysis.metrics.sentimentBreakdown,
+              ratingTrend90d: analysis.metrics.ratingTrend90d,
+              reviewCount: total,
+            }}
+          />
+        </div>
+
+        <div className="mt-6 grid gap-3 sm:grid-cols-3">
           <Metric label="Response rate" value={`${responsePct}%`} />
           <Metric
             label="Unreplied negatives"
@@ -315,7 +318,11 @@ export default async function InsightsPage({ params }: PageProps) {
           </div>
         )}
 
-        <div className="mt-10 rounded-2xl border border-border/60 bg-card/40 p-5 text-sm text-muted-foreground">
+        <div className="mt-8">
+          <ShareReport url={url} title={`${app.appName} — Review Health Report`} />
+        </div>
+
+        <div className="mt-6 rounded-2xl border border-border/60 bg-card/40 p-5 text-sm text-muted-foreground">
           Want this audit on your own app every week?{" "}
           <Link href="/pricing" className="font-medium text-foreground underline">
             Try ReviewPilot
@@ -355,10 +362,8 @@ function EmptyState({ packageId }: { packageId: string }) {
           </span>
         </h1>
         <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-          We couldn't load a fresh analysis right now — either today's daily
-          limit has been reached for your IP, or Play Store is rate-limiting our
-          scraper. Try again in a few minutes, or run a fresh analysis from the
-          tool page.
+          We don't have a saved analysis for this app yet. Run it once from the
+          free tool and a shareable report will appear here automatically.
         </p>
         <Link
           href="/tools/play-store-analyzer"

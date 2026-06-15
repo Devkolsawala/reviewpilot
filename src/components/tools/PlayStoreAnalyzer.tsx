@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   Loader2,
@@ -10,12 +10,18 @@ import {
   AlertTriangle,
   Mail,
   Check,
+  Lock,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   EMAIL_RE as STRICT_EMAIL_RE,
   suggestEmailCorrection,
 } from "@/lib/analyzer/email-validation";
+import { ReviewHealthScore } from "@/components/tools/ReviewHealthScore";
+import { ShareReport } from "@/components/tools/ShareReport";
+import { computeHealthScore } from "@/lib/analyzer/health-score";
+import { SITE_URL } from "@/lib/seo/schema";
 
 interface TopicCluster {
   label: string;
@@ -29,11 +35,18 @@ interface SentimentBreakdown {
   negative: number;
 }
 
+interface RatingTrendPoint {
+  date: string;
+  avg: number;
+  count: number;
+}
+
 interface AnalysisPayload {
   metrics: {
     responseRate: number;
     unrepliedNegativeCount: number;
     sentimentBreakdown: SentimentBreakdown;
+    ratingTrend90d: RatingTrendPoint[];
     recoverableCount: number;
   };
   complaints: TopicCluster[];
@@ -247,6 +260,20 @@ export function PlayStoreAnalyzer() {
   const [usage, setUsage] = useState<UsageInfo | null>(null);
   const [cooldownEndsAt, setCooldownEndsAt] = useState<number | null>(null);
   const [secondsLeft, setSecondsLeft] = useState(0);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // "No, this isn't my app" → clear the result and refocus the input so the
+  // visitor can paste their own app. Used by the qualification control in
+  // ResultView.
+  function focusInputForOwnApp() {
+    setResult(null);
+    setError(null);
+    setUrl("");
+    requestAnimationFrame(() => {
+      inputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      inputRef.current?.focus();
+    });
+  }
 
   // Fetch baseline usage on mount so the copy under the input is accurate
   // even before the user runs anything. No quota consumed.
@@ -372,6 +399,7 @@ export function PlayStoreAnalyzer() {
         </label>
         <div className="flex flex-col gap-2 sm:flex-row">
           <input
+            ref={inputRef}
             id="play-store-url"
             type="text"
             inputMode="url"
@@ -471,7 +499,13 @@ export function PlayStoreAnalyzer() {
         </div>
       )}
 
-      {result && <ResultView result={result} />}
+      {result && (
+        <ResultView
+          key={result.packageId}
+          result={result}
+          onAnalyzeYours={focusInputForOwnApp}
+        />
+      )}
     </div>
   );
 }
@@ -526,7 +560,11 @@ function EmailGate({
       const res = await fetch("/api/tools/analyze-app/email-report", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim(), packageId }),
+        body: JSON.stringify({
+          email: email.trim(),
+          packageId,
+          context: "quota_gate",
+        }),
       });
       const body = (await res.json().catch(() => null)) as
         | { error?: string; code?: string; suggestion?: string }
@@ -628,9 +666,16 @@ function LoadingSkeleton() {
 
 // ── Result view ──────────────────────────────────────────────────────────────
 
-function ResultView({ result }: { result: AnalysisResult }) {
+function ResultView({
+  result,
+  onAnalyzeYours,
+}: {
+  result: AnalysisResult;
+  onAnalyzeYours: () => void;
+}) {
   const { app, analysis } = result;
   const total = analysis.reviewCount;
+  const [unlocked, setUnlocked] = useState(false);
 
   if (total === 0) {
     return (
@@ -651,9 +696,35 @@ function ResultView({ result }: { result: AnalysisResult }) {
   const neutralPct = total ? Math.round((sent.neutral / total) * 100) : 0;
   const negativePct = Math.max(0, 100 - positivePct - neutralPct);
 
+  const health = computeHealthScore({
+    responseRate: analysis.metrics.responseRate,
+    unrepliedNegativeCount: analysis.metrics.unrepliedNegativeCount,
+    sentimentBreakdown: analysis.metrics.sentimentBreakdown,
+    ratingTrend90d: analysis.metrics.ratingTrend90d,
+    reviewCount: total,
+  });
+
+  // Top 3 issues stay public (shareable). Everything else is value-gated.
+  const topComplaints = analysis.complaints.slice(0, 3);
+  const lockedComplaints = analysis.complaints.slice(3);
+  const hasGatedContent =
+    lockedComplaints.length > 0 ||
+    analysis.praises.length > 0 ||
+    !!analysis.sampleReply;
+
   return (
     <div className="mt-6 space-y-5">
       <AppHeader app={app} cached={result.cached} />
+
+      <ReviewHealthScore
+        input={{
+          responseRate: analysis.metrics.responseRate,
+          unrepliedNegativeCount: analysis.metrics.unrepliedNegativeCount,
+          sentimentBreakdown: analysis.metrics.sentimentBreakdown,
+          ratingTrend90d: analysis.metrics.ratingTrend90d,
+          reviewCount: total,
+        }}
+      />
 
       <div className="grid gap-3 sm:grid-cols-3">
         <Metric label="Response rate" value={`${responsePct}%`} />
@@ -695,52 +766,206 @@ function ResultView({ result }: { result: AnalysisResult }) {
         </div>
       </div>
 
-      <ClusterGrid title="Top complaints" clusters={analysis.complaints} tone="negative" />
-      <ClusterGrid title="Top praises" clusters={analysis.praises} tone="positive" />
+      {/* Qualification — "Is this your app?" → segmented CTA. */}
+      <QualificationCard
+        score={health.score}
+        unrepliedNegativeCount={analysis.metrics.unrepliedNegativeCount}
+        onAnalyzeYours={onAnalyzeYours}
+      />
 
-      {analysis.sampleReply && (
-        <div className="rounded-xl border border-border/60 bg-background/40 p-4">
-          <div className="flex items-center gap-2">
-            <MessageSquare className="h-4 w-4 text-muted-foreground" />
-            <p className="text-xs uppercase tracking-wider text-muted-foreground">
-              Sample AI reply
-            </p>
-          </div>
-          <blockquote className="mt-3 rounded-lg border-l-2 border-border/60 bg-muted/30 px-3 py-2 text-sm italic text-muted-foreground">
-            <span className="mr-1.5 text-xs text-amber-500">
-              {"★".repeat(analysis.sampleReply.reviewRating)}
-              {"☆".repeat(5 - analysis.sampleReply.reviewRating)}
-            </span>
-            {analysis.sampleReply.reviewText}
-          </blockquote>
-          <p className="mt-3 text-sm leading-relaxed text-foreground">
-            {analysis.sampleReply.reply}
-          </p>
-        </div>
+      {/* Public: top 3 issues. */}
+      <ClusterGrid title="Top issues" clusters={topComplaints} tone="negative" />
+
+      {/* Value gate: full breakdown + sample reply + PDF behind email. */}
+      {hasGatedContent && !unlocked && (
+        <ValueGate
+          packageId={result.packageId}
+          lockedComplaintCount={lockedComplaints.length}
+          praiseCount={analysis.praises.length}
+          hasSampleReply={!!analysis.sampleReply}
+          onUnlocked={() => setUnlocked(true)}
+        />
       )}
 
-      <EmailPdfButton packageId={result.packageId} />
+      {hasGatedContent && unlocked && (
+        <>
+          {lockedComplaints.length > 0 && (
+            <ClusterGrid
+              title="More issues"
+              clusters={lockedComplaints}
+              tone="negative"
+            />
+          )}
+          {analysis.praises.length > 0 && (
+            <ClusterGrid
+              title="Top praises"
+              clusters={analysis.praises}
+              tone="positive"
+            />
+          )}
+          {analysis.sampleReply && (
+            <SampleReply reply={analysis.sampleReply} />
+          )}
+          <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/5 p-4">
+            <div className="flex items-center gap-2 text-sm text-foreground">
+              <Check className="h-4 w-4 text-emerald-500" />
+              Full report unlocked — we&rsquo;ve emailed you the PDF too.
+            </div>
+          </div>
+        </>
+      )}
 
-      <div className="rounded-xl border border-border/60 bg-card/40 p-4">
-        <p className="text-sm text-foreground">
-          Share this analysis at a permanent URL:
-        </p>
-        <Link
-          href={result.insightUrl}
-          className="mt-1 inline-block text-sm font-medium text-accent underline underline-offset-2"
-        >
-          reviewpilot.co.in{result.insightUrl}
-        </Link>
-      </div>
+      <ShareReport
+        url={`${SITE_URL}${result.insightUrl}`}
+        title={`${app.appName} — Review Health Report`}
+      />
     </div>
   );
 }
 
-function EmailPdfButton({ packageId }: { packageId: string }) {
-  const [open, setOpen] = useState(false);
+// ── Sample AI reply (gated) ──────────────────────────────────────────────────
+
+function SampleReply({
+  reply,
+}: {
+  reply: NonNullable<AnalysisPayload["sampleReply"]>;
+}) {
+  return (
+    <div className="rounded-xl border border-border/60 bg-background/40 p-4">
+      <div className="flex items-center gap-2">
+        <MessageSquare className="h-4 w-4 text-muted-foreground" />
+        <p className="text-xs uppercase tracking-wider text-muted-foreground">
+          Sample AI reply to the worst unanswered review
+        </p>
+      </div>
+      <blockquote className="mt-3 rounded-lg border-l-2 border-border/60 bg-muted/30 px-3 py-2 text-sm italic text-muted-foreground">
+        <span className="mr-1.5 text-xs text-amber-500">
+          {"★".repeat(reply.reviewRating)}
+          {"☆".repeat(5 - reply.reviewRating)}
+        </span>
+        {reply.reviewText}
+      </blockquote>
+      <p className="mt-3 text-sm leading-relaxed text-foreground">
+        {reply.reply}
+      </p>
+      <p className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-accent">
+        <Sparkles className="h-3.5 w-3.5" />
+        ReviewPilot posts replies like this automatically.
+      </p>
+    </div>
+  );
+}
+
+// ── Qualification + segmented CTA ─────────────────────────────────────────────
+
+// "Weak" = anything below a B. Above that, the app is well-managed and the
+// pitch shifts from "fix this" to "keep it this way".
+const WEAK_SCORE_BELOW = 70;
+
+function QualificationCard({
+  score,
+  unrepliedNegativeCount,
+  onAnalyzeYours,
+}: {
+  score: number;
+  unrepliedNegativeCount: number;
+  onAnalyzeYours: () => void;
+}) {
+  const [answer, setAnswer] = useState<"yes" | "no" | null>(null);
+
+  if (answer === null) {
+    return (
+      <div className="rounded-xl border border-border/60 bg-card/40 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm font-medium text-foreground">
+            Is this your app?
+          </p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setAnswer("yes")}
+              className="rounded-lg border border-border/60 bg-background/60 px-4 py-1.5 text-sm font-medium text-foreground hover:bg-background/80"
+            >
+              Yes
+            </button>
+            <button
+              type="button"
+              onClick={() => setAnswer("no")}
+              className="rounded-lg border border-border/60 bg-background/60 px-4 py-1.5 text-sm font-medium text-foreground hover:bg-background/80"
+            >
+              No
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (answer === "no") {
+    return (
+      <div className="rounded-xl border border-border/60 bg-card/40 p-4">
+        <p className="text-sm text-muted-foreground">
+          No problem — run the same audit on your own app.
+        </p>
+        <button
+          type="button"
+          onClick={onAnalyzeYours}
+          className="mt-3 inline-flex items-center gap-2 rounded-lg border border-border/60 bg-background/60 px-4 py-2 text-sm font-medium text-foreground hover:bg-background/80"
+        >
+          <Search className="h-4 w-4" />
+          Now analyze YOUR app
+        </button>
+      </div>
+    );
+  }
+
+  // answer === "yes"
+  const weak = score < WEAK_SCORE_BELOW;
+  const headline = weak
+    ? "These reviews are costing you ratings."
+    : "Your reviews are in great shape.";
+  const body =
+    weak && unrepliedNegativeCount > 0
+      ? `Let ReviewPilot reply to these ${unrepliedNegativeCount} unanswered negative ${
+          unrepliedNegativeCount === 1 ? "review" : "reviews"
+        } for you — in your tone, automatically.`
+      : weak
+        ? "Let ReviewPilot keep your reviews answered and your score climbing — automatically."
+        : "Keep them that way on autopilot — ReviewPilot answers every new review in your tone.";
+
+  return (
+    <div className="rounded-xl border border-accent/40 bg-accent/5 p-4">
+      <p className="text-sm font-medium text-foreground">{headline}</p>
+      <p className="mt-1 text-sm text-muted-foreground">{body}</p>
+      <Link
+        href="/signup"
+        className="mt-3 inline-flex items-center justify-center rounded-lg border border-accent/50 bg-accent/10 px-4 py-2 text-sm font-medium text-foreground hover:bg-accent/20"
+      >
+        {weak
+          ? "Let ReviewPilot reply to these — 7-day free trial"
+          : "Start your 7-day free trial"}
+      </Link>
+    </div>
+  );
+}
+
+// ── Value gate (email unlocks full breakdown + sample reply + PDF) ────────────
+
+function ValueGate({
+  packageId,
+  lockedComplaintCount,
+  praiseCount,
+  hasSampleReply,
+  onUnlocked,
+}: {
+  packageId: string;
+  lockedComplaintCount: number;
+  praiseCount: number;
+  hasSampleReply: boolean;
+  onUnlocked: () => void;
+}) {
   const [email, setEmail] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [sent, setSent] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [typoSuggestion, setTypoSuggestion] = useState<string | null>(null);
 
@@ -764,30 +989,6 @@ function EmailPdfButton({ packageId }: { packageId: string }) {
     setErr(null);
   }
 
-  if (sent) {
-    return (
-      <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/5 p-4">
-        <div className="flex items-center gap-2 text-sm text-foreground">
-          <Check className="h-4 w-4 text-emerald-500" />
-          Sent! Check your inbox in a minute.
-        </div>
-      </div>
-    );
-  }
-
-  if (!open) {
-    return (
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-2 rounded-lg border border-border/60 bg-card/60 px-4 py-2 text-sm font-medium text-foreground hover:bg-card/80"
-      >
-        <Mail className="h-4 w-4" />
-        Email me this report (PDF)
-      </button>
-    );
-  }
-
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setErr(null);
@@ -795,12 +996,20 @@ function EmailPdfButton({ packageId }: { packageId: string }) {
       setErr("Please enter a valid email address.");
       return;
     }
+    if (!packageId) {
+      setErr("Missing app id — please paste the Play Store URL again.");
+      return;
+    }
     setSubmitting(true);
     try {
       const res = await fetch("/api/tools/analyze-app/email-report", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim(), packageId }),
+        body: JSON.stringify({
+          email: email.trim(),
+          packageId,
+          context: "value_gate",
+        }),
       });
       const body = (await res.json().catch(() => null)) as
         | { error?: string; code?: string; suggestion?: string }
@@ -814,7 +1023,7 @@ function EmailPdfButton({ packageId }: { packageId: string }) {
         setErr(mapEmailReportError(body?.code, body?.error));
         return;
       }
-      setSent(true);
+      onUnlocked();
     } catch {
       setErr("Network error. Please try again.");
     } finally {
@@ -822,14 +1031,42 @@ function EmailPdfButton({ packageId }: { packageId: string }) {
     }
   }
 
+  // Build the teaser line from what's actually still locked.
+  const teasers: string[] = [];
+  if (lockedComplaintCount > 0) {
+    teasers.push(
+      `${lockedComplaintCount} more issue ${
+        lockedComplaintCount === 1 ? "theme" : "themes"
+      }`
+    );
+  }
+  if (praiseCount > 0) {
+    teasers.push(
+      `${praiseCount} praise ${praiseCount === 1 ? "theme" : "themes"}`
+    );
+  }
+  if (hasSampleReply) {
+    teasers.push("the exact AI reply ReviewPilot would post");
+  }
+  teasers.push("a PDF of the full report");
+  const teaserLine = formatList(teasers);
+
   return (
     <form
       onSubmit={onSubmit}
-      className="rounded-xl border border-border/60 bg-card/40 p-4"
+      className="rounded-xl border border-accent/40 bg-accent/5 p-4"
     >
-      <p className="text-sm font-medium text-foreground">
-        Email me this report (PDF)
-      </p>
+      <div className="flex items-start gap-3">
+        <Lock className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+        <div className="flex-1">
+          <p className="text-sm font-medium text-foreground">
+            Unlock the full breakdown
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Drop your email to reveal {teaserLine}. Free — no card.
+          </p>
+        </div>
+      </div>
       <div className="mt-3 flex flex-col gap-2 sm:flex-row">
         <input
           type="email"
@@ -845,15 +1082,16 @@ function EmailPdfButton({ packageId }: { packageId: string }) {
           onBlur={handleBlur}
           className="flex-1 rounded-lg border border-border/60 bg-background/60 px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/60 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
           disabled={submitting}
+          aria-invalid={err ? "true" : "false"}
         />
-        <Button type="submit" disabled={submitting} className="sm:w-40">
+        <Button type="submit" disabled={submitting} className="sm:w-44">
           {submitting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Sending
+              Unlocking
             </>
           ) : (
-            "Send PDF"
+            "Unlock full report"
           )}
         </Button>
       </div>
@@ -877,6 +1115,14 @@ function EmailPdfButton({ packageId }: { packageId: string }) {
       )}
     </form>
   );
+}
+
+// Join a list with commas and a trailing "and": ["a","b","c"] → "a, b, and c".
+function formatList(items: string[]): string {
+  if (items.length === 0) return "";
+  if (items.length === 1) return items[0];
+  if (items.length === 2) return `${items[0]} and ${items[1]}`;
+  return `${items.slice(0, -1).join(", ")}, and ${items[items.length - 1]}`;
 }
 
 function AppHeader({
