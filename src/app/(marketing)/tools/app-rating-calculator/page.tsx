@@ -178,6 +178,13 @@ export default function AppRatingCalculatorPage() {
         <RatingCalculator />
 
         <ToolCTA
+          headline="Want real numbers for your own app? Analyze it free."
+          body="The free Play Store analyzer reads your current rating, review count, recent sentiment, and unreplied negatives — so you can plan recovery with real data instead of estimates. No signup."
+          buttonLabel="Analyze your app free"
+          href="/tools/play-store-analyzer"
+        />
+
+        <ToolCTA
           headline="Need more than a rating estimate? ReviewPilot helps recover reviews."
           body="Connect Play Store, triage negative reviews, draft replies, and track recovery workflows before rating damage compounds."
         />

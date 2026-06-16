@@ -12,6 +12,7 @@ import {
 } from "@/components/marketing/JsonLd";
 import { CATEGORY_STYLES, getBlogCategory } from "@/components/blog/category";
 import { ReadingProgress } from "@/components/blog/ReadingProgress";
+import { ToolCTA } from "@/components/tools/ToolCTA";
 import {
   Accordion,
   AccordionContent,
@@ -145,6 +146,25 @@ function renderMarkdown(md: string): React.ReactNode {
         <h3 key={nodes.length} className="font-sans text-xl font-semibold tracking-tight mt-6 mb-3">
           {line.replace("### ", "")}
         </h3>
+      );
+      continue;
+    }
+    if (line.startsWith("::analyzer-cta")) {
+      flushParagraph();
+      // Sentinel: ::analyzer-cta|<headline>|<body>:: — renders the shared
+      // design-system CTA mid-article. Lines without this prefix are untouched,
+      // so every other post renders byte-identically.
+      const fields = line.replace(/::$/, "").split("|");
+      const headline = fields[1]?.trim();
+      const body = fields[2]?.trim();
+      nodes.push(
+        <ToolCTA
+          key={nodes.length}
+          headline={headline}
+          body={body}
+          buttonLabel="Analyze your app free"
+          href="/tools/play-store-analyzer"
+        />
       );
       continue;
     }
