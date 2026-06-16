@@ -1,5 +1,5 @@
 /**
- * Lifecycle engine orchestrator: enroll → process due → send/advance.
+ * Lifecycle engine orchestrator: enroll → plan → capped send → advance.
  *
  * One entry point, two modes (gated by DRY_RUN):
  *   - DRY_RUN (default): NO writes, NO mail. Logs the full plan — who would be
@@ -8,19 +8,24 @@
  *     sendLifecycleEmail (which re-checks suppression + logs send-once), and
  *     advances enrollment state. Fully idempotent — safe to re-run.
  *
- * Safety re-checks happen immediately before every send decision: suppression
- * (email_suppression + digest list='all') and live paid/seat status (active
- * paid → mark 'converted' and skip).
+ * Two throttles protect deliverability on the Resend Free tier:
+ *   - FREE_BACKFILL_CAP_PER_RUN — how many EXISTING free users join the funnel
+ *     per run (new signups are exempt and always enrolled);
+ *   - SEND_CAP_PER_RUN — a hard ceiling on emails actually sent per run, across
+ *     all sequences. Sends are ordered most-overdue-first so time-critical
+ *     trial-countdown mail is never starved behind welcome/value nudges; any
+ *     overflow defers to the next run.
  *
- * Cross-audience dedup: the free-user sequence wins. A registered email is
- * never enrolled as an analyzer lead, and an existing analyzer-lead enrollment
- * is suppressed when that email becomes a free user.
+ * Safety re-checks happen before every send: suppression (email_suppression +
+ * digest list='all') and live paid/seat status (active paid → 'converted',
+ * skip). Cross-audience dedup: the free-user sequence wins.
  */
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   DRY_RUN,
-  FREE_ENROLL_CAP_PER_RUN,
+  FREE_BACKFILL_CAP_PER_RUN,
+  SEND_CAP_PER_RUN,
   NEW_SIGNUP_WINDOW_DAYS,
   SEQUENCE,
 } from "./config";
@@ -35,6 +40,7 @@ import {
   FREE_STEPS,
   type AnalyzerCtx,
   type FreeCtx,
+  type StepRender,
 } from "./sequences";
 import { decideNextStep } from "./engine";
 import { sendLifecycleEmail } from "./send";
@@ -55,6 +61,17 @@ interface WorkItem {
   isCandidate: boolean;
 }
 
+/** A due step ready to send, deferred to the capped send phase. */
+interface SendIntent {
+  w: WorkItem;
+  step: number;
+  key: string;
+  dueAt: Date;
+  render: (s: number) => StepRender | null;
+  recompute: (handled: Set<number>) => ReturnType<typeof decideNextStep>;
+  handled: Set<number>;
+}
+
 export interface LogEntry {
   email: string;
   audience: Audience;
@@ -67,6 +84,7 @@ export interface LogEntry {
     | "complete"
     | "suppressed"
     | "converted"
+    | "deferred"
     | "hold";
   step?: number;
   key?: string;
@@ -83,6 +101,7 @@ export interface RunSummary {
     suppressedSuperseded: number;
     wouldSend: number;
     sent: number;
+    deferred: number;
     skippedSteps: number;
     suppressed: number;
     converted: number;
@@ -100,6 +119,25 @@ function maskEmail(email: string): string {
   return `${head}${"*".repeat(Math.max(1, local.length - 2))}@${domain}`;
 }
 
+function addLog(
+  log: LogEntry[],
+  w: WorkItem,
+  action: LogEntry["action"],
+  reason: string,
+  step?: number,
+  key?: string
+): void {
+  log.push({
+    email: maskEmail(w.email),
+    audience: w.audience,
+    sequence: w.sequenceKey,
+    action,
+    step,
+    key,
+    reason,
+  });
+}
+
 export async function runLifecycle(now: Date = new Date()): Promise<RunSummary> {
   const admin = createAdminClient();
   const execute = !DRY_RUN;
@@ -111,6 +149,7 @@ export async function runLifecycle(now: Date = new Date()): Promise<RunSummary> 
     suppressedSuperseded: 0,
     wouldSend: 0,
     sent: 0,
+    deferred: 0,
     skippedSteps: 0,
     suppressed: 0,
     converted: 0,
@@ -147,7 +186,7 @@ export async function runLifecycle(now: Date = new Date()): Promise<RunSummary> 
     );
   }
 
-  // ── ENROLL: free users (new signups + capped backfill) ────────────────────
+  // ── ENROLL: free users (new signups always; backfill capped) ──────────────
   const freeOwners = index.accounts.filter(
     (a) => a.plan === "free" && a.ownerId === null && !suppressed.has(a.email)
   );
@@ -158,20 +197,18 @@ export async function runLifecycle(now: Date = new Date()): Promise<RunSummary> 
   const newSignups = freeNotEnrolled.filter(
     (a) => a.createdAt.getTime() >= cutoff
   );
+  // Backfill only the historical backlog, oldest first, capped per run.
   const backfillPool = freeNotEnrolled
     .filter((a) => a.createdAt.getTime() < cutoff)
     .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
-  const backfillTake = Math.max(0, FREE_ENROLL_CAP_PER_RUN - newSignups.length);
   const freeToEnroll: Account[] = [
     ...newSignups,
-    ...backfillPool.slice(0, backfillTake),
+    ...backfillPool.slice(0, FREE_BACKFILL_CAP_PER_RUN),
   ];
   const freeEnrollEmails = new Set(freeToEnroll.map((a) => a.email));
 
   // ── ENROLL: analyzer leads (distinct emails; free wins; skip registered) ──
-  const { data: leadRows } = await admin
-    .from("analyzer_leads")
-    .select("email");
+  const { data: leadRows } = await admin.from("analyzer_leads").select("email");
   const leadEmails = new Set(
     (leadRows ?? []).map((r) => normalizeEmail(r.email as string))
   );
@@ -203,7 +240,9 @@ export async function runLifecycle(now: Date = new Date()): Promise<RunSummary> 
       sequence: SEQUENCE.FREE_USER,
       action: "enroll",
       reason:
-        a.createdAt.getTime() >= cutoff ? "new free signup" : "backfill (existing free user)",
+        a.createdAt.getTime() >= cutoff
+          ? "new free signup"
+          : "backfill (existing free user)",
     });
   }
   for (const email of analyzerToEnroll) {
@@ -314,26 +353,105 @@ export async function runLifecycle(now: Date = new Date()): Promise<RunSummary> 
     .map((w) => w.userId as string);
   const { connected, active } = await fetchFreeUserState(admin, freeUserIds);
 
-  // ── PROCESS each work item ────────────────────────────────────────────────
+  const deps: PlanDeps = {
+    admin,
+    index,
+    suppressed,
+    connected,
+    active,
+    now,
+    execute,
+    log,
+    counts: c,
+  };
+
+  // ── PHASE A: plan every work item (apply non-send effects, collect sends) ──
+  const intents: SendIntent[] = [];
   for (const w of working) {
-    await processItem(w, {
-      admin,
-      index,
-      suppressed,
-      connected,
-      active,
-      now,
-      execute,
-      log,
-      counts: c,
-    });
+    const intent = await planItem(w, deps);
+    if (intent) intents.push(intent);
   }
 
-  // Emit a compact console summary for the cron logs.
+  // ── PHASE B: capped send, most-overdue first; overflow defers to next run ──
+  intents.sort((a, b) => a.dueAt.getTime() - b.dueAt.getTime());
+  let sentThisRun = 0;
+  for (const si of intents) {
+    if (sentThisRun >= SEND_CAP_PER_RUN) {
+      c.deferred++;
+      addLog(log, si.w, "deferred", "send cap reached — deferred to next run", si.step, si.key);
+      if (execute && si.w.id) {
+        await admin
+          .from("lifecycle_enrollments")
+          .update({ next_send_at: new Date(now.getTime() + DAY_MS).toISOString() })
+          .eq("id", si.w.id);
+      }
+      continue;
+    }
+
+    if (!execute) {
+      c.wouldSend++;
+      addLog(log, si.w, "send", "due now (dry-run — not sent)", si.step, si.key);
+      sentThisRun++;
+      continue;
+    }
+
+    const content = si.render(si.step);
+    if (!content) {
+      // Should not happen post-Phase 3 (all steps have templates). Never send
+      // contentless mail; don't consume a send-cap slot.
+      c.held++;
+      addLog(log, si.w, "hold", "no template for step", si.step, si.key);
+      continue;
+    }
+
+    const res = await sendLifecycleEmail({
+      to: si.w.email,
+      enrollmentId: si.w.id as string,
+      sequenceKey: si.w.sequenceKey,
+      step: si.step,
+      subject: content.subject,
+      html: content.html,
+      text: content.text,
+    });
+
+    if (res.ok || res.status === "already_sent") {
+      if (res.ok) c.sent++;
+      addLog(log, si.w, "send", res.ok ? "sent" : "already sent", si.step, si.key);
+      sentThisRun++;
+      si.handled.add(si.step);
+      const next = si.recompute(si.handled);
+      const update: Record<string, unknown> = {
+        current_step: si.step,
+        last_sent_at: now.toISOString(),
+      };
+      if (next.terminal.type === "wait") {
+        update.next_send_at = next.terminal.at.toISOString();
+      } else if (next.terminal.type === "complete") {
+        update.status = "completed";
+      } else {
+        update.next_send_at = now.toISOString(); // another step already due
+      }
+      await admin
+        .from("lifecycle_enrollments")
+        .update(update)
+        .eq("id", si.w.id as string);
+    } else if (res.status === "suppressed") {
+      c.suppressed++;
+      addLog(log, si.w, "suppressed", "suppressed at send-time", si.step, si.key);
+      await admin
+        .from("lifecycle_enrollments")
+        .update({ status: "suppressed" })
+        .eq("id", si.w.id as string);
+    } else {
+      addLog(log, si.w, "hold", `send failed: ${res.error ?? "unknown"}`, si.step, si.key);
+    }
+  }
+
+  // Compact console summary for the cron logs.
   console.log(
     `[lifecycle] ${DRY_RUN ? "DRY-RUN" : "LIVE"} now=${now.toISOString()} ` +
       `accounts=${c.accounts} enrollFree=${c.enrollFree} enrollAnalyzer=${c.enrollAnalyzer} ` +
-      `wouldSend=${c.wouldSend} sent=${c.sent} skips=${c.skippedSteps} ` +
+      `wouldSend=${c.wouldSend} sent=${c.sent} deferred=${c.deferred} skips=${c.skippedSteps} ` +
       `suppressed=${c.suppressed} converted=${c.converted} wait=${c.waiting} done=${c.completed} held=${c.held}`
   );
   for (const e of log) {
@@ -347,7 +465,7 @@ export async function runLifecycle(now: Date = new Date()): Promise<RunSummary> 
   return { dryRun: DRY_RUN, now: now.toISOString(), counts: c, log };
 }
 
-interface ProcessDeps {
+interface PlanDeps {
   admin: AdminClient;
   index: AccountIndex;
   suppressed: Set<string>;
@@ -359,36 +477,25 @@ interface ProcessDeps {
   counts: RunSummary["counts"];
 }
 
-async function processItem(w: WorkItem, d: ProcessDeps): Promise<void> {
+/**
+ * Plan one work item: apply all non-send effects (suppressed / converted /
+ * skips / wait / complete) and return a SendIntent if a step is due now.
+ * Sending itself is deferred to the capped Phase B.
+ */
+async function planItem(w: WorkItem, d: PlanDeps): Promise<SendIntent | null> {
   const { admin, index, suppressed, connected, active, now, execute, log, counts } = d;
-
-  const push = (
-    action: LogEntry["action"],
-    reason: string,
-    step?: number,
-    key?: string
-  ) =>
-    log.push({
-      email: maskEmail(w.email),
-      audience: w.audience,
-      sequence: w.sequenceKey,
-      action,
-      step,
-      key,
-      reason,
-    });
 
   // 1. Suppression re-check.
   if (suppressed.has(w.email)) {
     counts.suppressed++;
-    push("suppressed", "on suppression list");
+    addLog(log, w, "suppressed", "on suppression list");
     if (execute && w.id) {
       await admin
         .from("lifecycle_enrollments")
         .update({ status: "suppressed" })
         .eq("id", w.id);
     }
-    return;
+    return null;
   }
 
   // 2. Free-user live paid / team-seat re-check.
@@ -398,7 +505,7 @@ async function processItem(w: WorkItem, d: ProcessDeps): Promise<void> {
     const isSeat = !!account?.ownerId;
     if (isPaid || isSeat) {
       counts.converted++;
-      push("converted", isPaid ? "active paid customer" : "now a team-member seat");
+      addLog(log, w, "converted", isPaid ? "active paid customer" : "now a team-member seat");
       if (execute && w.id) {
         await admin
           .from("lifecycle_enrollments")
@@ -413,7 +520,7 @@ async function processItem(w: WorkItem, d: ProcessDeps): Promise<void> {
             );
         }
       }
-      return;
+      return null;
     }
   }
 
@@ -428,16 +535,19 @@ async function processItem(w: WorkItem, d: ProcessDeps): Promise<void> {
     for (const s of sends ?? []) handled.add(s.step as number);
   }
 
-  // 4. Build ctx + decide. Each branch keeps a typed `recompute` closure so the
-  // post-send next-step calculation reuses the same ctx without unsafe casts.
+  // 4. Build ctx + decide. Each branch keeps a typed render/recompute/dueAt
+  // bound to the same ctx (no unsafe casts).
   let decision: ReturnType<typeof decideNextStep>;
-  let render: (s: number) => { subject: string; html: string; text?: string } | null;
+  let render: (s: number) => StepRender | null;
   let recompute: (handledSet: Set<number>) => ReturnType<typeof decideNextStep>;
+  let dueAtFor: (s: number) => Date;
   if (w.audience === "analyzer_lead") {
     const ctx: AnalyzerCtx = { email: w.email };
     decision = decideNextStep(w.enrolledAt, ctx, ANALYZER_STEPS, handled, now);
     render = (s) => ANALYZER_STEPS.find((x) => x.step === s)?.render(ctx) ?? null;
     recompute = (h) => decideNextStep(w.enrolledAt, ctx, ANALYZER_STEPS, h, now);
+    dueAtFor = (s) =>
+      ANALYZER_STEPS.find((x) => x.step === s)?.dueAt(w.enrolledAt, ctx) ?? now;
   } else {
     const ctx: FreeCtx = {
       email: w.email,
@@ -448,107 +558,62 @@ async function processItem(w: WorkItem, d: ProcessDeps): Promise<void> {
       hasConnection: w.userId ? connected.has(w.userId) : false,
       hasActivity: w.userId ? active.has(w.userId) : false,
       onboardingCompleted: account?.onboardingCompleted ?? false,
+      createdAt: account?.createdAt ?? w.enrolledAt,
     };
     decision = decideNextStep(w.enrolledAt, ctx, FREE_STEPS, handled, now);
     render = (s) => FREE_STEPS.find((x) => x.step === s)?.render(ctx) ?? null;
     recompute = (h) => decideNextStep(w.enrolledAt, ctx, FREE_STEPS, h, now);
+    dueAtFor = (s) =>
+      FREE_STEPS.find((x) => x.step === s)?.dueAt(w.enrolledAt, ctx) ?? now;
   }
 
-  // 5. Record skips.
+  // 5. Record skips (independent of the send cap).
   for (const sk of decision.skips) {
     counts.skippedSteps++;
-    push("skip_step", "condition already met / not applicable", sk.step, sk.key);
+    addLog(log, w, "skip_step", "condition already met / not applicable", sk.step, sk.key);
     if (execute && w.id) {
-      await admin
-        .from("lifecycle_sends")
-        .insert({
-          enrollment_id: w.id,
-          sequence_key: w.sequenceKey,
-          step: sk.step,
-          status: "skipped",
-        });
+      await admin.from("lifecycle_sends").insert({
+        enrollment_id: w.id,
+        sequence_key: w.sequenceKey,
+        step: sk.step,
+        status: "skipped",
+      });
     }
   }
 
-  // 6. Terminal action.
+  // 6. Terminal.
   const t = decision.terminal;
   if (t.type === "complete") {
     counts.completed++;
-    push("complete", "no further steps");
+    addLog(log, w, "complete", "no further steps");
     if (execute && w.id) {
       await admin
         .from("lifecycle_enrollments")
         .update({ status: "completed" })
         .eq("id", w.id);
     }
-    return;
+    return null;
   }
-
   if (t.type === "wait") {
     counts.waiting++;
-    push("wait", `next step due ${t.at.toISOString()}`, t.step, t.key);
+    addLog(log, w, "wait", `next step due ${t.at.toISOString()}`, t.step, t.key);
     if (execute && w.id) {
       await admin
         .from("lifecycle_enrollments")
         .update({ next_send_at: t.at.toISOString() })
         .eq("id", w.id);
     }
-    return;
+    return null;
   }
 
-  // t.type === 'send'
-  if (!execute) {
-    counts.wouldSend++;
-    push("send", "due now (dry-run — not sent)", t.step, t.key);
-    return;
-  }
-
-  // Live send path.
-  const content = render(t.step);
-  if (!content) {
-    // Phase 2: no templates yet. Never send contentless mail.
-    counts.held++;
-    push("hold", "no template yet (awaiting Phase 3)", t.step, t.key);
-    return;
-  }
-
-  const res = await sendLifecycleEmail({
-    to: w.email,
-    enrollmentId: w.id as string,
-    sequenceKey: w.sequenceKey,
+  // t.type === 'send' → hand to the capped send phase.
+  return {
+    w,
     step: t.step,
-    subject: content.subject,
-    html: content.html,
-    text: content.text,
-  });
-
-  if (res.ok || res.status === "already_sent") {
-    counts.sent += res.ok ? 1 : 0;
-    push("send", res.ok ? "sent" : "already sent", t.step, t.key);
-    handled.add(t.step);
-    // Recompute the next due time from the freshly-handled set.
-    const next = recompute(handled);
-    const update: Record<string, unknown> = {
-      current_step: t.step,
-      last_sent_at: now.toISOString(),
-    };
-    if (next.terminal.type === "wait") {
-      update.next_send_at = next.terminal.at.toISOString();
-    } else if (next.terminal.type === "complete") {
-      update.status = "completed";
-    } else {
-      update.next_send_at = now.toISOString(); // another step already due
-    }
-    await admin.from("lifecycle_enrollments").update(update).eq("id", w.id as string);
-  } else if (res.status === "suppressed") {
-    counts.suppressed++;
-    push("suppressed", "suppressed at send-time", t.step, t.key);
-    await admin
-      .from("lifecycle_enrollments")
-      .update({ status: "suppressed" })
-      .eq("id", w.id as string);
-  } else {
-    // failed — leave for retry next run.
-    push("hold", `send failed: ${res.error ?? "unknown"}`, t.step, t.key);
-  }
+    key: t.key,
+    dueAt: dueAtFor(t.step),
+    render,
+    recompute,
+    handled,
+  };
 }

@@ -12,12 +12,25 @@ export const DRY_RUN = process.env.LIFECYCLE_DRY_RUN !== "false";
 export const TRIAL_LENGTH_DAYS = 7;
 
 /**
- * Max NEW free-user enrollments written per run. New signups (recent) are
- * always enrolled; the remaining capacity backfills the oldest un-enrolled
- * free users. Kept conservative for the Resend Free tier (100/day).
+ * Max EXISTING free users (backfill) enrolled per run. New signups within
+ * NEW_SIGNUP_WINDOW_DAYS are always enrolled and do NOT count against this — so
+ * recent users start their flow promptly while the historical backlog drips in
+ * a few per day. Lower this to drip the backlog more slowly.
  */
-export const FREE_ENROLL_CAP_PER_RUN = Number(
-  process.env.LIFECYCLE_FREE_ENROLL_CAP ?? 40
+export const FREE_BACKFILL_CAP_PER_RUN = Number(
+  process.env.LIFECYCLE_FREE_BACKFILL_CAP ?? 10
+);
+
+/**
+ * Hard ceiling on emails actually SENT per run, across all sequences. This is
+ * the deliverability throttle (separate from the enrollment cap): even if many
+ * steps are due, only this many send; the rest defer to the next run. Send
+ * intents are ordered most-overdue-first so time-critical trial-countdown
+ * emails are never starved behind welcome/value nudges. Kept well under the
+ * Resend Free tier's 100/day, which is shared with digest/alerts/analyzer mail.
+ */
+export const SEND_CAP_PER_RUN = Number(
+  process.env.LIFECYCLE_SEND_CAP ?? 25
 );
 
 /** A free signup newer than this is treated as "new" (always enrolled). */

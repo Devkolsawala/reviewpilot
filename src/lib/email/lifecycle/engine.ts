@@ -13,7 +13,7 @@
  *       complete  — no steps remain.
  *
  * Recomputed from scratch every run, so live state changes (e.g. the user just
- * connected Play Console) are reflected immediately and idempotently.
+ * connected Play Console) are reflected on the next run and idempotently.
  */
 
 import type { StepDef } from "./sequences";

@@ -10,6 +10,16 @@
  */
 
 import { SEQUENCE, TRIAL_LENGTH_DAYS } from "./config";
+import {
+  renderAnalyzerRecap,
+  renderAnalyzerCommonFixes,
+  renderAnalyzerTrialPitch,
+  renderFreeWelcomeSetup,
+  renderFreeValueNudge,
+  renderTrialEnding2d,
+  renderTrialEnding1d,
+  renderWinback,
+} from "./templates";
 
 export interface StepRender {
   subject: string;
@@ -35,6 +45,8 @@ export interface FreeCtx {
   hasConnection: boolean;
   hasActivity: boolean;
   onboardingCompleted: boolean;
+  /** Account signup date — used to pick the fresh-vs-backfill first-touch copy. */
+  createdAt: Date;
 }
 
 export interface StepDef<Ctx> {
@@ -63,21 +75,21 @@ export const ANALYZER_STEPS: StepDef<AnalyzerCtx>[] = [
     key: "recap",
     dueAt: (enrolledAt) => enrolledAt,
     applies: () => true,
-    render: () => null, // Phase 3
+    render: () => renderAnalyzerRecap(),
   },
   {
     step: 1,
     key: "common_fixes",
     dueAt: (enrolledAt) => addDays(enrolledAt, 2),
     applies: () => true,
-    render: () => null, // Phase 3
+    render: () => renderAnalyzerCommonFixes(),
   },
   {
     step: 2,
     key: "trial_pitch",
     dueAt: (enrolledAt) => addDays(enrolledAt, 5),
     applies: () => true,
-    render: () => null, // Phase 3
+    render: () => renderAnalyzerTrialPitch(),
   },
 ];
 
@@ -91,17 +103,18 @@ export const FREE_STEPS: StepDef<FreeCtx>[] = [
     key: "welcome_setup",
     // Send promptly on enrollment.
     dueAt: (enrolledAt) => enrolledAt,
-    // Skip if they have already connected Play Console.
+    // Skip if they have already connected Play Console. Content branches on
+    // signup age (fresh welcome vs established re-engagement) inside render.
     applies: (ctx) => !ctx.hasConnection,
-    render: () => null, // Phase 3
+    render: (ctx) => renderFreeWelcomeSetup(ctx),
   },
   {
     step: 1,
     key: "value_nudge",
     dueAt: (enrolledAt) => addDays(enrolledAt, 2),
-    // Always applies; Phase 3 branches content on hasActivity ("next win" variant).
+    // Always applies; content branches on hasActivity ("next win" variant).
     applies: () => true,
-    render: () => null, // Phase 3
+    render: (ctx) => renderFreeValueNudge(ctx),
   },
   {
     step: 2,
@@ -111,7 +124,7 @@ export const FREE_STEPS: StepDef<FreeCtx>[] = [
     // Only while genuinely still in trial and not paid.
     applies: (ctx) =>
       !ctx.isPaid && !!ctx.trialEndsAt && ctx.trialEndsAt.getTime() > Date.now(),
-    render: () => null, // Phase 3
+    render: (ctx) => renderTrialEnding2d(ctx),
   },
   {
     step: 3,
@@ -120,7 +133,7 @@ export const FREE_STEPS: StepDef<FreeCtx>[] = [
       ctx.trialEndsAt ? addDays(ctx.trialEndsAt, -1) : null,
     applies: (ctx) =>
       !ctx.isPaid && !!ctx.trialEndsAt && ctx.trialEndsAt.getTime() > Date.now(),
-    render: () => null, // Phase 3
+    render: (ctx) => renderTrialEnding1d(ctx),
   },
   {
     step: 4,
@@ -129,7 +142,7 @@ export const FREE_STEPS: StepDef<FreeCtx>[] = [
       ctx.trialEndsAt ? addDays(ctx.trialEndsAt, 3) : null,
     // Soft win-back after the trial ended, only if they never converted.
     applies: (ctx) => !ctx.isPaid && !!ctx.trialEndsAt,
-    render: () => null, // Phase 3
+    render: () => renderWinback(),
   },
 ];
 
