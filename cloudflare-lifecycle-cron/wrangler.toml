@@ -1,0 +1,9 @@
+name = "reviewpilot-lifecycle-cron"
+main = "src/index.ts"
+compatibility_date = "2024-09-23"
+
+# SEPARATE worker from reviewpilot-cron — does NOT touch the digest/poll-reviews
+# cron. Runs once daily and calls the lifecycle endpoint.
+# Cron syntax: minute hour day-of-month month day-of-week (UTC).
+[triggers]
+crons = ["30 7 * * *"]
