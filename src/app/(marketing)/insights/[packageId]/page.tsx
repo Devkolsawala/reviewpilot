@@ -26,6 +26,7 @@ import { JsonLd } from "@/components/marketing/JsonLd";
 import {
   softwareApplicationSchema,
   breadcrumbSchema,
+  faqSchema,
   SITE_URL,
 } from "@/lib/seo/schema";
 import {
@@ -33,6 +34,7 @@ import {
   INSIGHTS_INDEXABLE,
   INSIGHTS_NOINDEX,
 } from "@/lib/seo/insights-quality-gate";
+import { buildInsightsCopy } from "@/lib/seo/insights-copy";
 import {
   readCachedAnalysis,
   type AnalysisResult,
@@ -130,6 +132,10 @@ export default async function InsightsPage({ params }: PageProps) {
 
   const { app, analysis } = result;
   const url = `${SITE_URL}/insights/${params.packageId}`;
+  // Enrichment is for indexable pages only — don't invest crawl value in pages
+  // we're hiding (cache-miss/thin/flagged are noindex). Same gate as the robots
+  // decision in generateMetadata, so what we render and what we index agree.
+  const copy = passesInsightsQualityGate(result) ? buildInsightsCopy(result) : null;
   const total = analysis.reviewCount;
   const responsePct = Math.round(analysis.metrics.responseRate * 100);
   const sent = analysis.metrics.sentimentBreakdown;
@@ -175,6 +181,16 @@ export default async function InsightsPage({ params }: PageProps) {
       operatingSystem: "Any (web)",
     }),
   ];
+
+  // FAQ JSON-LD is built from the SAME copy.faqs the page renders, so schema and
+  // visible content can never diverge. Only emitted on gated (indexable) pages.
+  if (copy) {
+    schemas.push(
+      faqSchema(
+        copy.faqs.map((f) => ({ question: f.q, answer: f.a }))
+      ) as Record<string, unknown>
+    );
+  }
 
   return (
     <section className="relative overflow-hidden py-16 sm:py-20">
@@ -337,6 +353,54 @@ export default async function InsightsPage({ params }: PageProps) {
               {analysis.sampleReply.reply}
             </p>
           </div>
+        )}
+
+        {copy && (
+          <>
+            <section className="mt-10">
+              <h2 className="font-sans text-xl font-semibold tracking-tight">
+                What users report about {app.appName}
+              </h2>
+              <div className="mt-4 space-y-4">
+                {copy.summary.map((para, i) => (
+                  <p
+                    key={i}
+                    className="text-sm leading-relaxed text-muted-foreground"
+                  >
+                    {para}
+                  </p>
+                ))}
+              </div>
+            </section>
+
+            <section className="mt-10">
+              <h2 className="font-sans text-xl font-semibold tracking-tight">
+                Frequently asked questions
+              </h2>
+              <div className="mt-4 space-y-3">
+                {copy.faqs.map((f, i) => (
+                  <div
+                    key={i}
+                    className="rounded-xl border border-border/60 bg-card/40 p-4"
+                  >
+                    <h3 className="text-sm font-semibold text-foreground">
+                      {f.q}
+                    </h3>
+                    <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+                      {f.a}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <p className="mt-8 text-xs leading-relaxed text-muted-foreground">
+              <span className="font-medium text-foreground">
+                Last updated {copy.lastUpdatedDisplay}.
+              </span>{" "}
+              {copy.methodologyNote}
+            </p>
+          </>
         )}
 
         <div className="mt-8">
