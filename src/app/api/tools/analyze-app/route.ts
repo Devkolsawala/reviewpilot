@@ -72,7 +72,11 @@ export async function POST(req: Request) {
   // cached:true flag drives a distinct copy variant).
   try {
     const cached = await readCachedAnalysis(packageId);
-    if (cached) {
+    // Soft-miss a flagged row (clustering previously failed): fall through to a
+    // fresh run so themes can populate, instead of serving the broken cache.
+    // The fresh run overwrites the row — on success the flag clears and future
+    // hits serve normally; the reserveQuota gate below bounds repeat attempts.
+    if (cached && !cached.analysis.clusteringFailed) {
       const ipHashCached = debugHashIp(req);
       const usage = await getUsage(ipHashCached);
       return NextResponse.json(

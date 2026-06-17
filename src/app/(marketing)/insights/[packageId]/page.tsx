@@ -29,6 +29,11 @@ import {
   SITE_URL,
 } from "@/lib/seo/schema";
 import {
+  passesInsightsQualityGate,
+  INSIGHTS_INDEXABLE,
+  INSIGHTS_NOINDEX,
+} from "@/lib/seo/insights-quality-gate";
+import {
   readCachedAnalysis,
   type AnalysisResult,
 } from "@/lib/analyzer/pipeline";
@@ -45,8 +50,12 @@ interface PageProps {
 }
 
 // Cache-only: no reserveQuota, no runFreshAnalysis. See file header.
+// includeExpired keeps this permanent URL populated after the 7-day TTL lapses;
+// display-only, the tool still re-scrapes fresh on its own path.
 async function loadAnalysis(packageId: string): Promise<AnalysisResult | null> {
-  return readCachedAnalysis(packageId).catch(() => null);
+  return readCachedAnalysis(packageId, { includeExpired: true }).catch(
+    () => null
+  );
 }
 
 // Don't try to scrape from generateMetadata — it runs on every request, has
@@ -62,7 +71,9 @@ export async function generateMetadata({
     return { title: "Not found", robots: { index: false, follow: false } };
   }
 
-  const cached = await readCachedAnalysis(params.packageId).catch(() => null);
+  const cached = await readCachedAnalysis(params.packageId, {
+    includeExpired: true,
+  }).catch(() => null);
   const url = `${SITE_URL}/insights/${params.packageId}`;
 
   const appName = cached?.app.appName || params.packageId;
@@ -75,10 +86,20 @@ export async function generateMetadata({
       )}% developer response rate, top complaints, and a sample AI reply.`
     : `Free Play Store analysis for ${params.packageId}: sentiment breakdown, response rate, top complaints, and a sample AI reply.`;
 
+  // Quality gate: only substantive pages stay indexable. Cache-miss/expired-
+  // with-no-row (cached === null) and below-threshold pages get noindex so thin
+  // or templated reports never enter the index. follow:true keeps equity flowing.
+  // Shared with the page body via passesInsightsQualityGate — single source of
+  // truth, so the robots decision can never disagree across the route.
+  const robots = passesInsightsQualityGate(cached)
+    ? INSIGHTS_INDEXABLE
+    : INSIGHTS_NOINDEX;
+
   return {
     title,
     description,
     alternates: { canonical: url },
+    robots,
     openGraph: {
       title,
       description,

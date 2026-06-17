@@ -56,6 +56,21 @@ export interface AnalysisPayload {
   } | null;
   reviewCount: number;
   generatedAt: string;
+  // Set only when AI theme-clustering failed (timeout/parse/error) — distinct
+  // from a genuine empty result. A flagged row is still cached (metrics +
+  // sample reply are preserved) but is treated as noindex by the quality gate
+  // and as a soft cache-miss by the tool so it re-runs. Absent/false => the
+  // clustering call completed (themes may legitimately be empty).
+  clusteringFailed?: boolean;
+}
+
+// Discriminated clustering outcome. `ok: false` means the AI call failed
+// (timeout/parse/error/garbage); `ok: true` with empty arrays means the model
+// genuinely found no themes. Callers must treat these two cases differently.
+export interface ClusterResult {
+  complaints: TopicCluster[];
+  praises: TopicCluster[];
+  ok: boolean;
 }
 
 export interface AnalysisResult {
@@ -146,24 +161,104 @@ function coerceClusters(raw: RawClusters["complaints"]): TopicCluster[] {
       const quotesRaw = Array.isArray(c?.quotes) ? c.quotes : [];
       const sampleQuotes = quotesRaw
         .filter((q): q is string => typeof q === "string")
-        .map((q) => q.trim().slice(0, 240))
+        .map((q) => q.trim().slice(0, 120))
         .filter((q) => q.length >= 3)
-        .slice(0, 3);
+        .slice(0, 2);
       return { label, count, sampleQuotes };
     })
     .filter((c) => c.label.length > 0);
 }
 
+// max_completion_tokens for the clustering call. A full 5+5 cluster response
+// (with quotes) plus low-effort reasoning tokens overruns the old 900 cap and
+// truncates the JSON — the root cause of silently-empty themes. ~2800 leaves
+// comfortable headroom for the tightened A2 contract (≤2 quotes, ≤120 chars).
+const CLUSTER_MAX_TOKENS = 2800;
+
+// One retryable clustering attempt. Returns a ClusterResult on success
+// (including a genuine empty result), or null when the attempt failed in a way
+// worth retrying (timeout/error, no JSON, parse error, or a parsed-but-all-
+// dropped response). Every failure path logs so future misfires leave a trail.
+async function attemptClusterTopics(
+  system: string,
+  user: string,
+  attempt: number
+): Promise<ClusterResult | null> {
+  const tag = `attempt ${attempt}`;
+  let raw = "";
+  try {
+    raw = await withTimeout(
+      toolCompletion({
+        system,
+        user,
+        maxTokens: CLUSTER_MAX_TOKENS,
+        context: attempt > 1 ? "analyzer-clusters-retry" : "analyzer-clusters",
+      }),
+      XAI_TIMEOUT_MS,
+      "clusterTopics"
+    );
+  } catch (err) {
+    console.error(
+      `[analyzer-pipeline] clusterTopics call failed (${tag})`,
+      (err as Error).message
+    );
+    return null;
+  }
+
+  const cleaned = raw
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```$/i, "")
+    .trim();
+  const start = cleaned.indexOf("{");
+  const end = cleaned.lastIndexOf("}");
+  if (start === -1 || end === -1) {
+    console.error(
+      `[analyzer-pipeline] clusterTopics no JSON braces in output (${tag}, len ${cleaned.length})`
+    );
+    return null;
+  }
+
+  let parsed: RawClusters;
+  try {
+    parsed = JSON.parse(cleaned.slice(start, end + 1)) as RawClusters;
+  } catch (err) {
+    console.error(
+      `[analyzer-pipeline] clusterTopics JSON parse failed (${tag}, len ${cleaned.length})`,
+      (err as Error).message
+    );
+    return null;
+  }
+
+  const complaints = coerceClusters(parsed.complaints);
+  const praises = coerceClusters(parsed.praises);
+
+  // Genuine empty: the model returned no cluster entries at all → ok, not a
+  // failure. But if it DID return entries and coercion dropped them all, the
+  // payload was malformed → treat as a retryable failure, not a real result.
+  const rawCount =
+    (Array.isArray(parsed.complaints) ? parsed.complaints.length : 0) +
+    (Array.isArray(parsed.praises) ? parsed.praises.length : 0);
+  if (complaints.length === 0 && praises.length === 0 && rawCount > 0) {
+    console.error(
+      `[analyzer-pipeline] clusterTopics all clusters dropped after coercion (${tag}, raw ${rawCount})`
+    );
+    return null;
+  }
+
+  return { complaints, praises, ok: true };
+}
+
 export async function clusterTopics(
   reviews: PublicReview[]
-): Promise<{ complaints: TopicCluster[]; praises: TopicCluster[] }> {
+): Promise<ClusterResult> {
   const sampled = reviews
     .filter((r) => (r.text || "").trim().length >= 8)
     .slice(0, 80)
     .map((r, i) => `[${i + 1}] (${r.rating}★) ${r.text.replace(/\s+/g, " ").slice(0, 280)}`)
     .join("\n");
 
-  if (!sampled) return { complaints: [], praises: [] };
+  // Nothing to cluster is a genuine (ok) empty, not a failure — don't flag it.
+  if (!sampled) return { complaints: [], praises: [], ok: true };
 
   const system = `You analyze app reviews for an Indian SaaS called ReviewPilot. Reviewers may write in English, Hindi, Hinglish, or other Indian languages. Group reviews into recurring COMPLAINT clusters and PRAISE clusters.
 
@@ -174,46 +269,20 @@ Rules:
 - Up to 5 complaint clusters and up to 5 praise clusters, ordered by frequency.
 - "label" is 2–4 lowercase English words naming the specific theme (e.g. "payment failures", "slow checkout", "great delivery", "polite staff"). Never generic like "bad app" or "good service".
 - "count" is the number of reviews in the input that belong to the cluster.
-- "quotes" is up to 3 verbatim short snippets (≤200 chars each) from the input that exemplify the cluster.
+- "quotes" is up to 2 verbatim short snippets (≤120 chars each) from the input that exemplify the cluster.
 - Complaints come from negative-tone reviews, praises from positive-tone reviews. Ignore reviews too vague to cluster.
 - If there are no complaints or no praises, return that side as an empty array.`;
 
   const user = `Reviews:\n${sampled}\n\nReturn the JSON object now.`;
 
-  let raw = "";
-  try {
-    raw = await withTimeout(
-      toolCompletion({
-        system,
-        user,
-        maxTokens: 900,
-        context: "analyzer-clusters",
-      }),
-      XAI_TIMEOUT_MS,
-      "clusterTopics"
-    );
-  } catch (err) {
-    console.error("[analyzer-pipeline] clusterTopics failed", (err as Error).message);
-    return { complaints: [], praises: [] };
+  // A3: retry once on a retryable failure, mirroring toolVariations.
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    const result = await attemptClusterTopics(system, user, attempt);
+    if (result) return result;
   }
 
-  const cleaned = raw
-    .replace(/^```(?:json)?\s*/i, "")
-    .replace(/\s*```$/i, "")
-    .trim();
-  const start = cleaned.indexOf("{");
-  const end = cleaned.lastIndexOf("}");
-  if (start === -1 || end === -1) return { complaints: [], praises: [] };
-
-  try {
-    const parsed = JSON.parse(cleaned.slice(start, end + 1)) as RawClusters;
-    return {
-      complaints: coerceClusters(parsed.complaints),
-      praises: coerceClusters(parsed.praises),
-    };
-  } catch {
-    return { complaints: [], praises: [] };
-  }
+  console.error("[analyzer-pipeline] clusterTopics failed after retry");
+  return { complaints: [], praises: [], ok: false };
 }
 
 // ── Sample reply preview ─────────────────────────────────────────────────────
@@ -266,8 +335,14 @@ interface CachedAnalysisRow {
   expires_at: string;
 }
 
+// `includeExpired` is DISPLAY-ONLY. The public /insights page passes true so a
+// permanent SEO URL keeps serving its last analysis after the 7-day TTL lapses
+// (the page is read-only and never scrapes). The analyzer tool and email-report
+// routes must NOT pass it: they rely on expired rows reading as a miss so they
+// fall through to a fresh re-scrape. Default false preserves that exactly.
 export async function readCachedAnalysis(
-  packageId: string
+  packageId: string,
+  options?: { includeExpired?: boolean }
 ): Promise<AnalysisResult | null> {
   const supabase = createAdminClient();
   const { data, error } = await supabase
@@ -282,7 +357,8 @@ export async function readCachedAnalysis(
   const row = data as CachedAnalysisRow;
   if (!row.analysis) return null;
 
-  if (Date.parse(row.expires_at) <= Date.now()) return null;
+  const isExpired = Date.parse(row.expires_at) <= Date.now();
+  if (isExpired && !options?.includeExpired) return null;
 
   return {
     packageId,
@@ -396,8 +472,17 @@ export async function runFreshAnalysis(
       .sort((a, b) => a.rating - b.rating)[0] ??
     null;
 
+  // Time the clustering call in isolation (it runs concurrently with the sample
+  // reply, so the Promise.all duration alone wouldn't attribute it). Lands the
+  // real per-call wall-clock in logs on every organic analysis.
+  const clusterStart = Date.now();
   const [clusters, sampleReplyText] = await Promise.all([
-    clusterTopics(reviews),
+    clusterTopics(reviews).then((r) => {
+      console.log(
+        `[analyzer-pipeline] clusterMs ${Date.now() - clusterStart} ok=${r.ok} packageId=${packageId}`
+      );
+      return r;
+    }),
     worst ? generateSampleReply(worst, app) : Promise.resolve(""),
   ]);
 
@@ -405,6 +490,10 @@ export async function runFreshAnalysis(
     metrics,
     complaints: clusters.complaints,
     praises: clusters.praises,
+    // Flag (don't drop) a failed clustering run: metrics + sample reply are
+    // still useful, but the row must not lock in as a permanent empty. Genuine
+    // empty results (clusters.ok) are cached unflagged and serve normally.
+    ...(clusters.ok ? {} : { clusteringFailed: true }),
     sampleReply:
       worst && sampleReplyText
         ? {

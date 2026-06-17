@@ -80,7 +80,9 @@ async function loadFonts(): Promise<FontData> {
 }
 
 export default async function Image({ params }: ImageParams) {
-  const cached = await readCachedAnalysis(params.packageId).catch(() => null);
+  const cached = await readCachedAnalysis(params.packageId, {
+    includeExpired: true,
+  }).catch(() => null);
   const fonts = await loadFonts();
   const fontFamily = fonts.length ? "Plus Jakarta Sans" : "sans-serif";
 
