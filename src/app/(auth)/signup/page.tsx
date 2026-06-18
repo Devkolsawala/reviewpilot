@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PasswordField } from "@/components/ui/password-field";
@@ -32,6 +32,28 @@ function isBlockedDomain(email: string): boolean {
 }
 
 const RESEND_COOLDOWN_SECONDS = 30;
+
+// Paid plans a visitor can arrive with via /signup?plan={key} from the pricing
+// page. Captured to a cookie for later analytics + a soft in-app nudge. This is
+// capture-only: it does NOT alter signUp, the DB default (plan='free'), or
+// checkout. Reading the cookie elsewhere is a separate, out-of-scope ticket.
+const VALID_PLAN_INTENTS = new Set(["starter", "growth", "agency"]);
+
+/**
+ * Reads `?plan=` and, if it's a valid paid plan, stores it in a 30-day
+ * `plan_intent` cookie (SameSite=Lax). Wrapped in <Suspense> by the caller
+ * because useSearchParams() requires a suspense boundary during prerender.
+ */
+function PlanIntentCapture() {
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    const plan = searchParams.get("plan");
+    if (plan && VALID_PLAN_INTENTS.has(plan)) {
+      document.cookie = `plan_intent=${plan}; path=/; max-age=${60 * 60 * 24 * 30}; SameSite=Lax`;
+    }
+  }, [searchParams]);
+  return null;
+}
 
 function BrandLogo() {
   return (
@@ -297,6 +319,9 @@ export default function SignupPage() {
 
   return (
     <div>
+      <Suspense fallback={null}>
+        <PlanIntentCapture />
+      </Suspense>
       <BrandLogo />
 
       <h1 className="font-sans text-2xl font-semibold tracking-tight sm:text-3xl">
