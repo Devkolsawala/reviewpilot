@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { PricingTable } from "@/components/marketing/PricingTable";
+import { PricingComparison } from "@/components/marketing/PricingComparison";
+import { Button } from "@/components/ui/button";
 import {
   Accordion,
   AccordionContent,
@@ -94,7 +97,8 @@ export default function PricingPage() {
       </section>
 
       <div className="px-4 pb-24 sm:px-6 lg:px-8">
-        <PricingTable />
+        <PricingTable includeFree />
+        <PricingComparison />
       </div>
 
       {/* FAQ */}
@@ -124,6 +128,27 @@ export default function PricingPage() {
               </AccordionItem>
             ))}
           </Accordion>
+        </div>
+      </section>
+
+      {/* Final CTA */}
+      <section className="relative py-24">
+        <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="font-sans text-3xl font-semibold tracking-tight sm:text-4xl">
+            Start replying in minutes
+          </h2>
+          <p className="mx-auto mt-4 max-w-xl text-lg text-muted-foreground">
+            Connect your Play Store and WhatsApp Business, train the AI on your
+            voice, and watch your ratings recover. Free for 7 days.
+          </p>
+          <div className="mt-8 flex justify-center">
+            <Button variant="default" size="xl" asChild>
+              <Link href="/signup?plan=growth">Start your free trial</Link>
+            </Button>
+          </div>
+          <p className="mt-4 text-xs text-muted-foreground">
+            Prices in USD. Billed in INR (₹) at checkout via Razorpay.
+          </p>
         </div>
       </section>
     </>
