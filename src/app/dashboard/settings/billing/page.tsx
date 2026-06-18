@@ -253,7 +253,7 @@ export default function BillingPage() {
  },
  },
  prefill: { email: userEmail, name: userName },
- theme: { color: "#14B8A6" },
+ theme: { color: "#4338CA" },
  };
 
  const rzp = new window.Razorpay(options);
