@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -40,6 +40,11 @@ declare global {
  };
  }
 }
+
+// Mirrors VALID_PLAN_INTENTS in src/app/(auth)/signup/page.tsx — the exact set
+// the plan_intent cookie is written from at signup. Keep these in sync. Used only
+// to validate the cookie for the soft pre-highlight below (never for checkout).
+const PLAN_INTENT_KEYS = new Set(["starter", "growth", "agency"]);
 
 const PLAN_CARDS = [
  {
@@ -147,6 +152,42 @@ export default function BillingPage() {
 
  const isTestMode = process.env.NEXT_PUBLIC_TEST_MODE === "true";
  const isPaidPlan = planId !== "free";
+
+ // --- Soft plan_intent pre-highlight (read-only, no checkout side effects) ---
+ // planIntent = the validated cookie value captured at signup; highlightedPlan =
+ // the card we actually ring. highlightedPlan is gated on the plan being known +
+ // the user being unpaid, so paid users never see a flash before suppression.
+ const [planIntent, setPlanIntent] = useState<string | null>(null);
+ const [highlightedPlan, setHighlightedPlan] = useState<string | null>(null);
+ const highlightRef = useRef<HTMLDivElement | null>(null);
+
+ // Read the plan_intent cookie once on mount; ignore anything not in the signup
+ // set (e.g. plan_intent=hacker is dropped here).
+ useEffect(() => {
+ const match = document.cookie.match(/(?:^|;\s*)plan_intent=([^;]+)/);
+ const value = match ? decodeURIComponent(match[1]) : null;
+ if (value && PLAN_INTENT_KEYS.has(value)) {
+ setPlanIntent(value);
+ }
+ }, []);
+
+ // Resolve the highlight only once the current plan is known. Suppress entirely
+ // for paid users — the nudge is only for trial/free users who haven't
+ // subscribed yet. Reuses isPaidPlan (no refetch).
+ useEffect(() => {
+ if (isLoading) return;
+ setHighlightedPlan(planIntent && !isPaidPlan ? planIntent : null);
+ }, [isLoading, isPaidPlan, planIntent]);
+
+ // Smooth-scroll the highlighted card into view, respecting reduced-motion.
+ useEffect(() => {
+ if (!highlightedPlan || !highlightRef.current) return;
+ const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+ highlightRef.current.scrollIntoView({
+ behavior: prefersReduced ? "auto" : "smooth",
+ block: "center",
+ });
+ }, [highlightedPlan]);
 
  useEffect(() => {
  async function loadUser() {
@@ -444,18 +485,25 @@ export default function BillingPage() {
  const upgrading = isPaidPlan && !cancellationPending && isUpgrade(planId as string, p.key);
  const downgrading = isPaidPlan && !cancellationPending && isDowngrade(planId as string, p.key);
  const isResubscribe = cancellationPending && planId === p.key;
+ const isHighlighted = highlightedPlan === p.key;
 
  return (
  <Card
  key={p.key}
+ ref={isHighlighted ? highlightRef : undefined}
  className={cn(
  "relative",
  p.popular && !isCurrent && "border-accent/40 shadow-lg",
  isCurrent && "ring-2 ring-accent/30",
+ // Intent pre-highlight: a distinct, stronger ring (full-opacity accent +
+ // offset) so "you chose this" never reads the same as the current-plan ring.
+ isHighlighted && "ring-2 ring-accent ring-offset-2 ring-offset-background",
  downgrading && "opacity-75"
  )}
  >
- {p.popular && !isCurrent && (
+ {/* Suppress Most Popular on the intent-highlighted card so we show one clean
+ label instead of stacking two badges. */}
+ {p.popular && !isCurrent && !isHighlighted && (
  <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-accent px-3 py-0.5 text-[10px] font-medium text-white">
  Most Popular
  </div>
@@ -463,6 +511,11 @@ export default function BillingPage() {
  {isCurrent && (
  <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-accent px-3 py-0.5 text-[10px] font-medium text-white">
  Current Plan
+ </div>
+ )}
+ {isHighlighted && (
+ <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-accent px-3 py-0.5 text-[10px] font-medium text-white whitespace-nowrap">
+ You chose this at signup
  </div>
  )}
  <CardContent className="p-6">
