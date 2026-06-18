@@ -74,6 +74,10 @@ const COLUMNS: { heading: string; links: { label: string; href: string }[] }[] =
         label: "App Rating Calculator",
         href: "/tools/app-rating-calculator",
       },
+      {
+        label: "Play Store app reports",
+        href: "/insights",
+      },
     ],
   },
   {

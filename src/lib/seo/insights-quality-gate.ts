@@ -6,22 +6,16 @@
 // robots noindex so thin/templated pages never enter the search index. We keep
 // follow:true so internal crawl equity still flows through these pages.
 //
-// These floors are the SINGLE source of truth — adjust them here, not inline.
-// Both generateMetadata and any future consumer (e.g. the Step 3 sitemap) must
-// call passesInsightsQualityGate so the indexing decision can never drift.
+// The threshold numbers live in ./insights-gate-constants.js — a plain-CJS
+// module shared with next-sitemap.config.js so the build-time sitemap query and
+// this runtime gate can never drift. Adjust the numbers there; the predicate
+// below is the single behavioural source of truth (hub, robots, and sitemap all
+// derive their decision from it).
 
 import type { AnalysisResult } from "@/lib/analyzer/pipeline";
+import { INSIGHTS_GATE } from "./insights-gate-constants";
 
-export const INSIGHTS_GATE = {
-  /** Total Play Store ratings behind the displayed score. Filters brand-new /
-   *  no-name apps that have effectively no public signal. */
-  minRatingCount: 50,
-  /** Reviews actually analyzed for this report (drives every metric on-page). */
-  minReviewCount: 30,
-  /** Complaint + praise clusters combined; at least one is required so the page
-   *  has genuine, non-boilerplate content. */
-  minThemeCount: 1,
-} as const;
+export { INSIGHTS_GATE };
 
 /** Indexable: substantive page that can rank on its own merits. */
 export const INSIGHTS_INDEXABLE = { index: true, follow: true } as const;

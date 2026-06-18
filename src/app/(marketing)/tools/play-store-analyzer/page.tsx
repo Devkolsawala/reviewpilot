@@ -237,7 +237,12 @@ export default function PlayStoreAnalyzerPage() {
               <Link href="/tools/app-rating-calculator" className="tool-link">
                 App Rating Calculator
               </Link>{" "}
-              to model the impact on your overall score.
+              to model the impact on your overall score. You can also browse
+              existing{" "}
+              <Link href="/insights" className="tool-link">
+                Play Store app review reports
+              </Link>{" "}
+              for apps others have already analyzed.
             </p>
           </section>
 

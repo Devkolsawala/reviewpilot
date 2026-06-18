@@ -1,3 +1,8 @@
+// Shared with the runtime quality gate (src/lib/seo/insights-quality-gate.ts)
+// so the build-time sitemap query and the per-page robots decision use the same
+// thresholds and can never silently drift.
+const { INSIGHTS_GATE } = require('./src/lib/seo/insights-gate-constants');
+
 /** @type {import('next-sitemap').IConfig} */
 module.exports = {
   siteUrl: 'https://reviewpilot.co.in',
@@ -34,6 +39,62 @@ module.exports = {
       },
     ],
   },
+  // Per-app /insights report URLs. The route is force-dynamic with no static
+  // params, so next-sitemap can't discover it — we enumerate the indexable set
+  // here. Only gated + live rows are emitted; thin/expired/clusteringFailed rows
+  // are never advertised (the page's own robots meta stays authoritative either
+  // way). lastmod = scraped_at to advertise honest freshness.
+  additionalPaths: async () => {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!url || !key) {
+      console.warn('[next-sitemap] Supabase env missing; skipping /insights pages');
+      return [];
+    }
+
+    const { createClient } = require('@supabase/supabase-js');
+    const supabase = createClient(url, key, { auth: { persistSession: false } });
+
+    const { data, error } = await supabase
+      .from('public_app_analyses')
+      .select('package_id, rating, rating_count, analysis, scraped_at')
+      .gt('expires_at', new Date().toISOString())
+      .not('analysis', 'is', null)
+      .limit(5000);
+
+    if (error || !data) {
+      console.warn(
+        '[next-sitemap] /insights query failed; skipping',
+        error && error.message
+      );
+      return [];
+    }
+
+    // Mirrors passesInsightsQualityGate. Thresholds come from the shared
+    // INSIGHTS_GATE module (cannot drift); the boolean checks (rating > 0,
+    // !clusteringFailed) mirror the gate predicate.
+    return data
+      .filter((row) => {
+        const a = row.analysis;
+        if (!a || a.clusteringFailed) return false;
+        const themeCount =
+          ((a.complaints && a.complaints.length) || 0) +
+          ((a.praises && a.praises.length) || 0);
+        return (
+          Number(row.rating) > 0 &&
+          (Number(row.rating_count) || 0) >= INSIGHTS_GATE.minRatingCount &&
+          (Number(a.reviewCount) || 0) >= INSIGHTS_GATE.minReviewCount &&
+          themeCount >= INSIGHTS_GATE.minThemeCount
+        );
+      })
+      .map((row) => ({
+        loc: `/insights/${row.package_id}`,
+        changefreq: 'weekly',
+        priority: 0.6,
+        lastmod: new Date(row.scraped_at).toISOString(),
+      }));
+  },
+
   // Custom priority per path
   transform: async (config, path) => {
     const priorities = {
@@ -70,6 +131,8 @@ module.exports = {
       '/about': 0.7,
       '/demo': 0.8,
       '/blog': 0.8,
+      // Insights hub (per-app report URLs are added via additionalPaths below)
+      '/insights': 0.7,
       '/play-store-reviews-guide': { priority: 1.0, changefreq: 'monthly' },
       // Phase 2 SEO blog posts
       '/blog/play-store-review-response-examples-2026': 0.7,
