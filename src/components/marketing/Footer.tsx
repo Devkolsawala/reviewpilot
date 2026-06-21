@@ -130,13 +130,13 @@ export function Footer() {
               >
                 Monthly product letter
               </label>
-              <div className="mt-2 flex max-w-sm items-center gap-2 rounded-full border border-border/60 bg-background/60 p-1 backdrop-blur-sm focus-within:border-accent/50">
+              <div className="mt-2 flex max-w-sm flex-wrap items-center gap-2 rounded-full border border-border/60 bg-background/60 p-1 backdrop-blur-sm focus-within:border-accent/50 lg:flex-nowrap">
                 <Mail className="ml-3 h-4 w-4 shrink-0 text-muted-foreground" />
                 <input
                   id="footer-newsletter"
                   type="email"
                   placeholder="you@company.in"
-                  className="flex-1 bg-transparent px-1 py-1.5 text-sm outline-none placeholder:text-muted-foreground"
+                  className="min-w-0 flex-1 bg-transparent px-1 py-1.5 text-sm outline-none placeholder:text-muted-foreground lg:min-w-[auto]"
                 />
                 {/* TODO(marketing): wire to newsletter endpoint */}
                 <button
