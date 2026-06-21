@@ -1,4 +1,4 @@
-import { Check, Minus } from "lucide-react";
+import { Check, Minus, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   PLANS as P,
@@ -252,8 +252,64 @@ export function PricingComparison() {
         </h2>
       </div>
 
+      {/* Mobile (below sm): no side-scroll. One card per plan, each listing its
+          feature values. Avoids the 640px min-width that pans the page and the
+          sticky-column overlap that breaks on real phones. */}
+      <div className="mt-12 space-y-4 sm:hidden">
+        {COLUMNS.map((col, colIndex) => (
+          <details
+            key={col.key}
+            open
+            className={cn(
+              "group overflow-hidden rounded-2xl border bg-card",
+              col.key === "growth" ? "border-accent/40" : "border-border/60",
+            )}
+          >
+            <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3.5 [&::-webkit-details-marker]:hidden">
+              <span
+                className={cn(
+                  "text-base font-semibold tracking-tight",
+                  col.key === "growth" && "text-accent",
+                )}
+              >
+                {col.name}
+              </span>
+              <ChevronDown
+                className="h-4 w-4 text-muted-foreground transition-transform duration-200 group-open:rotate-180"
+                aria-hidden
+              />
+            </summary>
+            <div className="border-t border-border/50 px-4 pb-2 pt-1">
+              {SECTIONS.map((section) => (
+                <div key={section.title} className="py-2">
+                  <p className="py-1.5 text-[11px] font-semibold uppercase tracking-wider text-foreground/60">
+                    {section.title}
+                  </p>
+                  <dl className="divide-y divide-border/50">
+                    {section.rows.map((row) => (
+                      <div
+                        key={row.label}
+                        className="flex items-center justify-between gap-4 py-2.5"
+                      >
+                        <dt className="text-sm text-foreground/90">
+                          {row.label}
+                        </dt>
+                        <dd className="shrink-0 text-right text-sm">
+                          <CellValue value={row.cells[colIndex]} />
+                        </dd>
+                      </div>
+                    ))}
+                  </dl>
+                </div>
+              ))}
+            </div>
+          </details>
+        ))}
+      </div>
+
+      {/* Desktop (sm and up): semantic comparison table — unchanged. */}
       <div
-        className="mt-12 overflow-x-auto rounded-2xl border border-border/60"
+        className="mt-12 hidden overflow-x-auto rounded-2xl border border-border/60 sm:block"
         role="region"
         aria-label="Plan feature comparison"
         tabIndex={0}
