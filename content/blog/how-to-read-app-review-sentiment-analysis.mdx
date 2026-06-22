@@ -20,6 +20,12 @@ faqs:
     a: "By itself, no. Sentiment percentages tell you the size of the problem. The topic or theme clustering tells you what the problem is. The combination tells you what to fix first. Always read both layers together — a sentiment number without the theme breakdown is too abstract to act on."
   - q: "How often should sentiment numbers be reviewed?"
     a: "Weekly for a directional check, monthly for a serious read with theme comparison to the previous month. Daily checks waste time because the underlying sample changes too slowly to produce meaningful day-to-day deltas, unless you are in active crisis recovery from a bad release."
+  - q: "Can sentiment analysis predict churn?"
+    a: "Not user-level churn, but cohort-level risk yes. Sentiment dropping among users who reviewed in the last 30 days predicts higher uninstall rates 3 to 5 weeks later. The chain is review sentiment drops, then uninstalls rise, then MAU drops, then revenue drops — sentiment is the earliest signal in it."
+  - q: "Is AI sentiment analysis accurate enough for production decisions, including Hinglish?"
+    a: "Modern transformer-based models score roughly 89 to 93 percent on polarity for Indian app reviews including Hinglish and regional code-mixing, and around 84 percent on topic clustering. That is reliable for aggregate roadmap trends. Individual auto-tags can still err, so do not make user-level decisions from a single classification."
+  - q: "Does sentiment analysis work for non-English Indian languages?"
+    a: "Yes, for Hindi, Tamil, Telugu, Marathi, Bengali, Kannada, Malayalam, and most major Indian languages, plus their Roman-script code-mixed forms. Hindi is best supported; smaller language pairs have slightly lower accuracy, so pilot with your own review sample before committing to a tool."
 ---
 
 You ran the sentiment analysis. You got back a chart that said "62 percent positive, 14 percent neutral, 24 percent negative." Now you are looking at it and wondering whether 62 percent is good or bad, whether 24 percent negative is alarming or normal, and what to actually do next.
@@ -45,6 +51,22 @@ Two things to watch for that the percentages themselves do not tell you:
 **Sample skew.** If you only have 25 recent reviews and 15 of them are 5-star prompts your in-app review flow generated this week, your sentiment percentages look amazing and mean very little. Always cross-check against the total review count in the analyzer output.
 
 **Time skew.** Sentiment usually analyzes the most recent 100 to 300 reviews. If your displayed rating has not moved in months but your sentiment looks excellent, your *recent* product is probably better than your historical average. That is good news — the rating will follow if you sustain the improvement.
+
+## Beyond positive/negative: the five streams a good analyzer extracts
+
+A single positive/negative score is the least useful layer. Modern review analyzers pull five streams from each review, and the last four are where the roadmap signal lives:
+
+- **Sentiment with intensity.** Not just polarity but a −1 to +1 score with confidence. A rage-delete ("literally the worst app, deleting") at −0.95 correlates with refunds and social venting far more than a mild "decent but slow" at +0.1.
+- **Topic clusters.** Recurring themes auto-tagged — "OTP not received," "UI redesign hate," "battery drain." "47 reviews mention OTP this week, up from 12" is a deployable engineering signal.
+- **Feature requests.** "Wish it had," "please add," "missing" phrases clustered. A 500-review-a-month app usually surfaces 8–15 distinct requests, with the top 3 covering ~60% of volume.
+- **Bug reports.** Reviews naming crashes, version numbers, or device models — ideally with the device/OS parsed from metadata and routed straight to engineering.
+- **Competitor mentions.** "PhonePe does this better" appearing 23 times a month is a positioning signal your competitive narrative needs to answer.
+
+## Why sentiment leads your rating by weeks
+
+Star ratings are a lagging indicator. Users who hate a release usually uninstall first and review later, and Google's recency-weighted average smooths short-term spikes — so by the time the displayed rating slides from 4.3 to 4.0, the underlying problem has been live for 4–6 weeks. Review *text* moves far faster: the bug's topic cluster spikes within 48 hours, sentiment on reviews mentioning the new version turns negative within 5–7 days, and churn cohorts form within two weeks.
+
+One Indian fintech app slid from 4.4★ to 3.7★ over six weeks in early 2026. By the time the founders noticed, their primary-keyword rank had fallen from #4 to #19 and paid install costs had spiked 38% — all of it visible in the review text a month earlier. A weekly read of the numbers in this guide buys that month back.
 
 ## The response rate number — what's good, what's bad
 
@@ -102,6 +124,12 @@ A cluster of 4 reviews in a sample of 200 is noise. A cluster of 30 reviews in a
 
 A cluster that is product-tagged, persistent, and 20-percent-plus of the sample is the highest-priority item in your roadmap, regardless of what else the team had planned this sprint.
 
+### Sizing a 1-star cluster by impact
+
+For the 1-star clusters specifically, turn them into a backlog ranking: pull every 1★ from the last 30 days, cluster them (5–10 clusters usually cover 80%+ of complaints), estimate affected users per cluster (roughly 1 review per 50–200 affected users depending on category), multiply by MAU for a rough impact size, then divide by engineering effort. Highest impact-to-effort ratio goes to the top of the sprint.
+
+The payoff is concrete: a Tier-2 Indian e-commerce app found 38% of March 1★ reviews mentioned "address not saving" — a silent state bug that never showed in crashlytics. The fix took six hours; that cluster's 1★ volume dropped to zero in the next release and the displayed rating recovered 0.4★ over six weeks.
+
 ## When sentiment numbers lie
 
 Three situations where the percentages will mislead you.
@@ -111,6 +139,14 @@ Three situations where the percentages will mislead you.
 **Review brigading or gaming.** Sudden spikes in either direction from a coordinated group. If you see 80 percent positive sentiment one week after a competitor relaunch, but no fundamental change in your product, look at the actual review bodies — coordinated positive reviews tend to use very similar language across many reviewers in a short window.
 
 **Category-specific tone bias.** Fintech reviews are angrier than reading-app reviews. Food delivery reviews are angrier than language-learning reviews. Comparing your absolute positive percentage to a different category's number is misleading. Compare to category benchmarks, not global averages.
+
+## Reading code-mixed Hindi-English reviews
+
+Indian reviews are mostly code-mixed — Hinglish, Tanglish, Mar-glish. "App accha hai but payment fail ho rahi hai bar bar, please fix it bhai" carries Hindi, English, and script choices in one sentence. Pre-2023 rule-based tools mislabeled these as neutral or split them wrong; modern transformer- and LLM-based analyzers handle them natively. When evaluating a tool for the Indian market, check that it auto-detects script and language (Devanagari vs Roman Hindi), handles code-mixing without splitting sentences, clusters Hinglish equivalents together (e.g. "payment fail" and "paisa nahi gaya" in one cluster), and returns summaries in your preferred language. A weekly digest in English with insights extracted from Hindi reviews is the standard format — if a tool can't do it, walk away.
+
+## Rule-based vs transformer vs LLM analyzers
+
+Three generations show up in tooling pitches. **Rule-based** (lexicon lookups) is cheap, fast, and useless on code-mixed text or sarcasm — don't pay for it in 2026. **Transformer-based** (fine-tuned BERT/XLM-RoBERTa) scores ~92% on polarity for Indian app reviews, handles code-mixing, and is the practical workhorse for high-volume classification. **LLM-based** (GPT- or Gemini-class) gives the best quality for the harder extraction — feature requests, bug parsing, competitor mentions, summaries — but is slowest and 3–5× more expensive. At the Indian SMB price point, expect a transformer core with an LLM extraction layer for the digest.
 
 ## Turning your sentiment breakdown into a one-week action plan
 

@@ -442,6 +442,20 @@ export default function PlayStoreReviewsGuidePage() {
                 </Link>{" "}
                 when you need the business case for review investment.
               </li>
+              <li>
+                Track the new{" "}
+                <Link className="text-accent hover:underline" href="/blog/play-store-trusted-contributor-review-badges-2026">
+                  Play Store Trusted Contributor review badges
+                </Link>{" "}
+                Google rolled out to surface authentic feedback.
+              </li>
+              <li>
+                Optimize for{" "}
+                <Link className="text-accent hover:underline" href="/blog/ask-play-ai-app-discovery-review-sentiment-2026">
+                  Ask Play, the Play Store&apos;s conversational AI discovery
+                </Link>{" "}
+                where review sentiment and themes shape what gets recommended.
+              </li>
             </ul>
           </section>
 

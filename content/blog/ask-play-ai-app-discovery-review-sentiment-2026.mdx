@@ -1,0 +1,82 @@
+---
+title: "Ask Play: How AI App Discovery Runs on Review Sentiment in 2026"
+metaTitle: "Ask Play AI App Discovery & Review Sentiment (2026)"
+metaDescription: "Ask Play, the Play Store's conversational Gemini search, now shapes app discovery — and review sentiment and themes decide what it recommends. How developers optimize."
+author: "Dev Kolsawala"
+datePublished: "2026-07-09"
+dateDisplay: "July 9, 2026"
+readTime: "11 min read"
+tags: ["AI", "App Discovery", "Gemini"]
+faqs:
+  - q: "What is Ask Play on the Google Play Store?"
+    a: "Ask Play is the Play Store's full-screen conversational AI search, powered by Gemini. Instead of typing a keyword and scanning a list, users describe what they want in natural language and ask follow-up questions, and the assistant recommends specific apps with reasons drawn from app data and reviews."
+  - q: "How does Ask Play decide which apps to recommend?"
+    a: "It grounds recommendations in app metadata and, critically, in review content — the sentiment and recurring themes across an app's reviews. An app whose reviews consistently and specifically praise the exact thing a user asked for is far more likely to be surfaced than one with a high average but vague feedback."
+  - q: "Can developers optimize for Ask Play?"
+    a: "Yes, indirectly. You cannot edit what the AI says, but you control its inputs: your reviews, their themes, your owner replies, and your listing. Building a review corpus that is specific, recent, themed around your real strengths, and well-answered gives the assistant clear material to recommend you on."
+  - q: "Does review sentiment matter more than star rating for AI discovery?"
+    a: "Above a quality floor, yes. A conversational assistant needs to explain why it recommends an app, and it draws that explanation from review themes and sentiment, not from the star number alone. Specific, themed reviews give it something to say; a bare average does not."
+---
+
+App discovery on the Play Store is being rebuilt around conversation. With **Ask Play** — the store's full-screen, Gemini-powered conversational search — users no longer just type a keyword and scan a ranked list. They describe what they need ("a budgeting app that works offline and supports UPI"), ask follow-ups, and get specific app recommendations with reasons. And the reasons, increasingly, come from your reviews.
+
+This is a structural change in how apps get found, and it rewards a different thing than classic ASO did. Keyword matching still matters, but on top of it sits a model that has to **justify** its recommendations in natural language — and to justify them, it reads the sentiment and themes in your reviews. For developers, that means review quality is no longer just a conversion and ranking factor. It is now a discovery factor. This post explains how Ask Play works and how to make your reviews feed it in your favour.
+
+## What Ask Play is
+
+Ask Play replaces the keyword-box-and-list model with a conversational one. The user opens a full-screen assistant, states a need in plain language, and the assistant responds with recommended apps and short explanations of why each fits — then handles follow-up questions to narrow things down. It is the Play Store's answer to the same shift happening across Google: from retrieval (here is a list, you decide) to synthesis (here is a recommendation, with reasons).
+
+The important part for developers is the "with reasons" bit. A ranked list never had to explain itself. A conversational assistant does. Every recommendation it makes is accompanied by a justification, and that justification has to be grounded in something real about the app. The richest, most specific, most current source of that something is your review corpus.
+
+## How AI app discovery actually works
+
+Under the conversation, the flow looks roughly like this:
+
+1. **Interpret the need.** The model parses the user's natural-language request into intent and constraints — the job to be done, plus filters like offline support, language, price, or platform.
+2. **Retrieve candidates.** It pulls a set of plausible apps using metadata, category, and relevance signals — the classic ASO layer.
+3. **Ground and rank with evidence.** This is the new layer. To recommend and explain, the model leans on review content: does this app's feedback actually confirm the thing the user asked for? It reads sentiment and recurring themes to decide which candidates to surface and what to say about them.
+4. **Recommend with reasons, then refine.** It presents a short list with justifications and adjusts as the user asks follow-ups.
+
+Step three is where reviews become a discovery input. Two apps can clear the same metadata and rating bar, but the one whose reviews specifically and repeatedly confirm the user's exact need is the one the assistant can confidently recommend — because it has the evidence to explain the choice.
+
+## Why review sentiment and themes decide recommendations
+
+A conversational assistant cannot recommend on a number alone. "4.5 stars" tells it the app is generally liked; it does not tell it *what for*. To match an app to a specific natural-language need, the model has to know what the app is actually good at — and that lives in the themes and sentiment of its reviews.
+
+Consider a user asking for "a note app that's great for handwriting on a tablet." Among several 4.5-star note apps, the assistant favours the one whose reviews cluster around "handwriting feels natural," "great with the stylus," "best for tablet note-taking." Those themes are the evidence that lets it both choose and explain. An app with the same rating but generic reviews ("good app," "works fine") gives the model nothing to match against that specific request, so it loses the recommendation despite an identical average.
+
+This is why, above a quality floor, **sentiment and theme specificity beat raw rating** for AI discovery. The number gets you into the candidate set; the themes get you recommended. Understanding and managing those themes is now core ASO work, and the method for surfacing them is in [how to read app review sentiment analysis](/blog/how-to-read-app-review-sentiment-analysis).
+
+## How to optimize for Ask Play
+
+You cannot write the assistant's output, but you own its inputs. Four moves do most of the work.
+
+### 1. Engineer themed, specific reviews
+
+Generic reviews are invisible to a model trying to match a specific need. When you prompt engaged users for reviews — via the In-App Review API at genuine success moments — you can nudge specificity without scripting: invite them to mention what they used the app for. A review that names the use case ("perfect for splitting rent with flatmates") is a review the assistant can match to a query. Aim your collection at the themes that represent your real strengths, so your review corpus says clearly what you are best at.
+
+### 2. Manage themes deliberately
+
+Know which themes dominate your reviews and which are thin. If the thing you want to be discovered for is underrepresented in your reviews, the assistant has no evidence to surface you for it. Track your theme distribution over time and direct collection toward the gaps. The "Users are saying" AI summaries on your own listing are a useful read on how Google is already clustering your feedback — the developer's guide to those is [Play Store AI review summaries](/blog/play-store-ai-review-summaries-developer-guide-2026).
+
+### 3. Use owner replies as discovery content
+
+Owner replies are part of the review thread the model can read. A reply that confirms a fix, names a feature, or clarifies a use case adds matchable evidence — especially valuable when the original review was vague or negative. Replying also keeps your review surface fresh and engaged, which compounds with the ranking benefits reviews already carry.
+
+### 4. Run reviews and ASO together
+
+Ask Play does not replace ASO; it sits on top of it. Metadata still gets you into the candidate set, and reviews decide whether you are recommended out of it. The two now have to be optimised as one system — your listing tells the model what you claim to be, your reviews tell it whether customers agree. The full picture of how reviews and ASO ranking factors interact is in [Play Store ASO ranking factors and reviews](/blog/play-store-aso-ranking-factors-2026-reviews-impact).
+
+## The India rollout context
+
+For Indian developers, Ask Play arrives in a market with two defining features: enormous language diversity and intense category competition.
+
+**Language is leverage.** Indian users will ask Ask Play in Hindi, Tamil, Telugu, Marathi, and code-mixed Hinglish. A model grounding recommendations in reviews can match those queries best when your review corpus actually contains feedback in those languages. Encouraging and replying to reviews in your users' languages enriches the exact evidence the assistant needs to recommend you to the users searching in them.
+
+**Specificity is a wedge.** In crowded Indian categories — payments, learning, productivity, regional content — many apps compete on the same keywords and similar averages. Conversational discovery rewards the app that can be matched to a precise need, which is decided by review themes, not keyword density. A developer who builds a specific, themed, multilingual review corpus can be recommended for the exact long-tail intents competitors blur past.
+
+## The bottom line
+
+Ask Play turns app discovery into a conversation, and conversations need reasons. The Play Store's AI grounds those reasons in your reviews — their sentiment, their themes, and your replies. That makes review quality a discovery input, not just a conversion or ranking one. The developers who win in this regime are the ones who treat reviews as structured evidence of what their app is genuinely best at: specific, themed, recent, multilingual, and well-answered. Star rating gets you considered; review themes get you recommended.
+
+ReviewPilot's [sentiment analysis suite](/how-it-works) surfaces the themes in your reviews, tracks how they shift release to release, and drafts specific human-approved replies — so the evidence Ask Play reads about your app stays rich, current, and aligned with what you actually do best. [Start a free 7-day trial](/signup) and make your reviews work for AI discovery.

@@ -44,6 +44,8 @@ Three lenses:
 
 Google does not expose your competitors' install bases, but third-party ASO tools estimate them. AppTweak and AppFollow both surface relative velocity comparisons in their dashboards.
 
+Segment your own new reviews by rating and by source as well — in-app prompt vs support issue vs release email. Fifty new reviews aren't healthy if 35 are 1-star after a broken release, and if one source drives high volume but low ratings, fix that trigger before scaling it.
+
 ## The counterintuitive math
 
 Run the math on two competing apps in the same category:
@@ -86,6 +88,8 @@ This is non-negotiable in 2026. The [Android In-App Review API tutorial](/blog/a
 ### 2. Trigger on event-based milestones
 
 Prompt after positive in-app events — completed onboarding, finished a level, successful purchase, reached a milestone. Never time-based. Event-based prompts have 3-4x higher completion rates than "rate us after 5 minutes" patterns because the user is already in a positive state.
+
+Bias toward *retained* value rather than first value: five completed invoices or three return visits in a week is a stronger signal than a single first action. And set a guardrail before any campaign — if your last-7-day rating drops below target or crash complaints spike, pause review asks automatically so you never amplify a bad release.
 
 For [more 5-star reviews on Play Store](/blog/how-to-get-more-5-star-reviews-google-play-store), event timing is the single biggest input.
 
@@ -131,6 +135,18 @@ Two common mistakes:
 
 - **Trusting the Play Console "Average rating over time" chart.** This chart shows raw averages, not the recency-weighted number Google displays publicly. The two will not match. Trust the public-facing rating for marketing decisions and use the Console chart only to spot trend direction.
 - **Optimizing for rating, not velocity.** Indie developers spend weeks trying to nudge a 4.6 to a 4.7 when they should be tripling their weekly review count. The 4.7 will follow once velocity is right.
+
+## Review velocity for Indian apps
+
+India is one of the largest Android markets in the world, and that scale is a velocity advantage. Even niche apps — GST billing, coaching, agriculture, regional-language content, devotional audio, small-business workflows — can find enough active users to build steady weekly review momentum. Indian users also discover apps through category search, WhatsApp recommendations, YouTube demos, and peer groups, so a review spike after a useful release reinforces that discovery loop exactly when new users are comparing alternatives.
+
+Three India-specific adjustments move the needle:
+
+- **Localize the review ask.** If your app serves Hindi, Tamil, Telugu, Marathi, Bengali, Gujarati, Kannada, or Malayalam users, prompt in their language. A user who experiences the app in Hindi should never get an English-only review prompt.
+- **Adapt copy to user behavior.** Hindi-belt users tend to write short reviews and give extreme ratings (1 star when angry, 5 stars when satisfied); metro users in Bengaluru, Mumbai, Pune, Delhi NCR, Hyderabad, and Chennai write longer, feature-specific feedback. Keep the ask simple for the first group ("Was this useful? A Play Store review helps us improve") and milestone-based for the second ("You've exported 10 reports this month — would you share feedback on Play Store?").
+- **Use WhatsApp for B2B apps.** Many Indian customers already receive onboarding, invoices, or support on WhatsApp. A short, honest, post-fix message ("We fixed the report issue you raised — if it's working better now, would you share feedback on Play Store?") converts well. Never bulk-blast inactive users who have no context.
+
+Segment every campaign by relevance: if Marathi invoice export shipped, ask the users who attempted invoice export or selected Marathi — not your whole base.
 
 ## How ReviewPilot fits
 

@@ -38,6 +38,43 @@ const nextConfig = {
         destination: "/vs/birdeye",
         permanent: true,
       },
+      // Blog consolidation: 7 cannibalizing posts redirected to their canonical.
+      // Source files/registry entries are preserved on disk (content merged in).
+      {
+        source: "/blog/how-ai-review-replies-improve-google-maps-ranking",
+        destination: "/blog/ai-review-replies-google-maps-ranking-2026",
+        permanent: true,
+      },
+      {
+        source: "/blog/review-velocity-app-store-ranking-india",
+        destination: "/blog/app-review-velocity-ranking-signal-2026",
+        permanent: true,
+      },
+      {
+        source: "/blog/appfollow-alternative",
+        destination: "/blog/appfollow-alternatives-for-indie-developers-2026",
+        permanent: true,
+      },
+      {
+        source: "/blog/play-store-rating-below-4-stars-recovery-plan",
+        destination: "/blog/how-to-recover-app-rating-2-stars-to-4-stars",
+        permanent: true,
+      },
+      {
+        source: "/blog/how-to-analyze-competitor-play-store-reviews",
+        destination: "/blog/competitive-review-analysis-how-to-mine-competitor-app-reviews-in-2026",
+        permanent: true,
+      },
+      {
+        source: "/blog/ai-sentiment-analysis-app-reviews",
+        destination: "/blog/how-to-read-app-review-sentiment-analysis",
+        permanent: true,
+      },
+      {
+        source: "/blog/how-to-get-more-google-reviews-local-business",
+        destination: "/blog/how-to-get-more-google-reviews-2026",
+        permanent: true,
+      },
     ];
   },
 };

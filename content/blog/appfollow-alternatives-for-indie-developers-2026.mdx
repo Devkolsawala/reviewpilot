@@ -104,7 +104,7 @@ We built ReviewPilot specifically for the indie and SMB segment underserved by A
 
 **Where it shines.** Price-to-value for indie developers is the strongest in the category — ₹1,500/mo undercuts every alternative listed here while including AI reply generation, 24-language support including all major Indian languages, sentiment analysis, and a unified inbox. The AI replies are context-aware — we read the full review, classify intent, and draft in your brand voice. The companion [free 350-character reply tool](/tools/play-store-character-counter) is open to anyone.
 
-**Where it falls short.** We're Android-only today. Apple App Store support is on the 2026 roadmap but not shipped. If you need same-day dual-platform support, AppFollow, AppTweak, or Mobile Action cover both stores. We also don't do ASO keyword tracking — we focus on review reply quality and speed. ASO is a different product category that we don't compete in.
+**Where it falls short.** We're Android-only today. Apple App Store support is on the 2026 roadmap but not shipped. If you need same-day dual-platform support, AppFollow, AppTweak, or Mobile Action cover both stores. We also don't do ASO keyword tracking — we focus on review reply quality and speed. ASO is a different product category that we don't compete in. For the same reason we deliberately skip screenshot or icon A/B testing (use SplitMetrics or Storemaven), paid UA campaign management (Adjust, Singular, or AppsFlyer), and app-store featuring monitoring (AppFollow's specialty). If you need those, the broader suites earn their price; if you don't, you'd be subsidising features other customers use.
 
 **Verdict.** Right pick if you're an indie or SMB Play Store developer (especially in India), care about AI reply quality, and don't need iOS support yet.
 
@@ -122,7 +122,7 @@ The hidden cost most developers miss: time saved on reply drafting. A tool that 
 
 Your reviews aren't locked into AppFollow or any other tool. They live in Google Play Console. When you switch tools, the new platform connects to Play Console via the Reviews API and pulls historical reviews. Reply history may not transfer perfectly (each tool tracks its own reply log), but the reviews themselves are always portable.
 
-The actual switching cost is small: reconnect Google Play Console, point notifications at the new tool, archive the old subscription. Most teams complete this in under an hour.
+The actual switching cost is small: reconnect Google Play Console, point notifications at the new tool, archive the old subscription. Most teams complete this in under an hour. The one connection that occasionally trips people up is Play Console access — the [Play Console permissions guide for replying to reviews](/blog/google-play-console-permissions-reply-reviews-guide) walks through the Service Account setup so the API can pull and post on your behalf.
 
 ## What we recommend by stage
 

@@ -13,6 +13,10 @@ export type BlogPost = {
   readTime: string;
   tags: string[];
   faqs?: BlogFaq[];
+  // When set, this post has been consolidated into the canonical slug. It stays in
+  // the registry and on disk but is hidden from all live surfaces (index, static
+  // params, related module) and 308-redirected at the edge via next.config.mjs.
+  redirectTo?: string;
   content: string; // simple markdown
 };
 
@@ -66,6 +70,12 @@ const MDX_POST_SLUGS = [
   "cost-of-low-play-store-rating-2026",
   "top-complaints-indian-apps-2026",
   "how-to-read-app-review-sentiment-analysis",
+  // Phase C — 2026 news-led posts
+  "whatsapp-replacing-google-business-chat-2026",
+  "google-reviews-ai-overviews-source-of-truth-2026",
+  "inactive-google-business-profile-ranking-decay-2026",
+  "play-store-trusted-contributor-review-badges-2026",
+  "ask-play-ai-app-discovery-review-sentiment-2026",
 ] as const;
 
 function unquote(value: string): string {
@@ -171,6 +181,7 @@ function parseFrontmatter(raw: string, slug: string): BlogPost {
     readTime: data.readTime!,
     tags: data.tags!,
     faqs: data.faqs,
+    redirectTo: data.redirectTo,
     content: match[2].trim(),
   };
 }
@@ -203,7 +214,7 @@ Google's local search has doubled down on reviews as a primary ranking signal. T
 - **Map pack ranking tightened.** The top-3 "map pack" results increasingly reward businesses with both high rating AND high review velocity. A steady trickle of new reviews beats a one-time burst.
 - **Consumer expectations shifted post-COVID.** Indian consumers now check reviews before calling a dentist, a biryani place, a coaching center, a plumber. 88% trust reviews as much as personal recommendations.
 
-If you have fewer reviews than your nearest competitor, you are leaving customers on the table every single day.
+A 2025 BrightLocal analysis of 60,000 Google Business Profile listings found businesses with 100+ reviews get 4.2× more Maps direction requests than those with under 25 — and for sub-₹200 local services the average consumer reads about 7 reviews before calling. If you have fewer reviews than your nearest competitor, you are leaving customers on the table every single day.
 
 ## The #1 mistake: waiting for reviews to come naturally
 
@@ -238,13 +249,21 @@ Many Indian SMBs communicate with customers primarily on WhatsApp. A templated W
 
 ## Method 4: The verbal ask, at the right moment
 
-Sometimes the simplest thing works best: ask at the peak emotional moment. For a restaurant, that's when the customer compliments the food. For a dentist, that's right after a painless procedure. For a plumber, that's right after the leak stops. Hand them your phone with the review form already loaded. Walk them through one sentence. Done.
+Sometimes the simplest thing works best: ask at the peak emotional moment. For a restaurant, that's when the customer compliments the food. For a dentist, that's right after a painless procedure. For a plumber, that's right after the leak stops. Hand them your phone with the review form already loaded. Walk them through one sentence. Done. This is the highest-converting ask of all — 40–60% when timed to the peak moment — but the hardest to scale. (Email, by contrast, lands at just 2–4% for local-business asks; use it only when you have no phone number.)
 
 ## The timing that matters: 15 minutes to 24 hours
 
 Requests sent within 24 hours of a positive interaction convert 5× better than requests sent after 48+ hours. Memory fades, gratitude fades, goodwill fades. The sweet spot is 15 minutes to 6 hours — long enough that they've paid and left, short enough that the experience is fresh.
 
 Automate this with a review collection tool. Don't try to remember to text every customer manually; you will forget, and the best customers will slip through.
+
+Industry-specific timing we've benchmarked:
+
+- **Restaurants:** 2–6 hours after the bill is paid
+- **Dentists and clinics:** 4–24 hours after the appointment
+- **Salons and spas:** same day, 2–4 hours after service
+- **Home services (plumber, electrician):** within 1 hour of job completion, while satisfaction is fresh
+- **Hotels:** 24–48 hours after checkout, to account for travel-day fatigue
 
 ## What to do with the reviews you DO get
 
@@ -913,7 +932,7 @@ ReviewPilot's [unified inbox](/unified-inbox) lets you set this per category, so
 
 ## How this fits with Google reviews and Play Store reviews
 
-The big unlock in 2026 is realizing that WhatsApp messages, Google reviews, and Play Store reviews are *the same problem*: a customer is reaching out, and your reply latency directly affects your reputation. A unified inbox lets one AI engine and one App Context Profile handle all three. You stop tab-hopping between Play Console, Google Business, and WhatsApp Business.
+The big unlock in 2026 is realizing that WhatsApp messages, Google reviews, and Play Store reviews are *the same problem*: a customer is reaching out, and your reply latency directly affects your reputation. A unified inbox lets one AI engine and one App Context Profile handle all three. You stop tab-hopping between Play Console, Google Business, and WhatsApp Business. This convergence is accelerating: [Google is retiring Business Profile chat and routing messaging to WhatsApp](/blog/whatsapp-replacing-google-business-chat-2026), which makes the WhatsApp channel you set up here the primary inbound path for your Google listing too.
 
 We wrote a separate piece on [the unified review inbox](/blog/unified-review-inbox) if you want to go deeper.
 
@@ -1114,7 +1133,7 @@ Related reading: [ReviewPilot vs Birdeye](/vs/birdeye), [best review management 
 Three trends compounded over 2024–2026 to make GBP reviews more valuable than they've ever been:
 
 - **AI Overviews source from reviews.** Google's AI summary box at the top of search now quotes review snippets directly. If your latest review was from 2024, the AI cites your competitor's 2026 reviews instead.
-- **Local pack ranking weights review velocity.** Map pack (the top-3 results on Maps) increasingly favours businesses with both a high rating AND a steady stream of new reviews. A burst of 50 reviews in 1 week is worse than 5 new reviews per week for 10 weeks.
+- **Local pack ranking weights review velocity.** Map pack (the top-3 results on Maps) increasingly favours businesses with both a high rating AND a steady stream of new reviews. A burst of 50 reviews in 1 week is worse than 5 new reviews per week for 10 weeks. Google's 2026 weighting shift toward live engagement takes this further — a profile that goes quiet for around 30 days starts losing impressions outright, which is why [inactive Google Business Profiles are losing rank](/blog/inactive-google-business-profile-ranking-decay-2026).
 - **Reply rate is now a soft ranking signal.** Google has confirmed that responding to reviews "shows you value your customers." Anecdotally, businesses that go from 0% reply rate to 95%+ reply rate see Map Pack ranking improvements within 60–90 days.
 
 For a salon in Indiranagar competing against six other salons within 1 km, GBP reviews are the single biggest controllable lever for walk-in traffic.
@@ -1311,6 +1330,7 @@ Related reading: [WhatsApp Business automation 2026 guide](/blog/whatsapp-busine
   },
 
   "how-to-get-more-google-reviews-local-business": {
+    redirectTo: "how-to-get-more-google-reviews-2026",
     title:
       "How to Get More Google Reviews for Your Local Business (2026 Playbook)",
     metaTitle: "How to Get More Google Reviews | ReviewPilot",
@@ -1413,7 +1433,7 @@ The minimum bar:
 
 If you're managing 30+ reviews a month, replying manually is a 6–8 hour per week job. This is why [AI-powered review management tools](/features) exist. ReviewPilot reads every review, understands context, drafts a reply in your brand voice, and lets you approve with one click — 8 hours becomes 20 minutes.
 
-For deep-dives on reply technique, see our [negative review reply guide](/blog/how-to-reply-to-negative-google-reviews) and [Google review response templates](/blog/google-review-response-templates).
+For deep-dives on reply technique, see our [negative review reply guide with 15 templates](/blog/how-to-reply-to-negative-google-reviews).
 
 ## What Should You Never Do When Asking for Reviews?
 
@@ -1452,11 +1472,12 @@ Automating SMS asks, smart routing for unhappy customers, AI replies in your bra
 
 [Start your free 7-day ReviewPilot trial](/signup) — no credit card required. Plans start at $16/month after the trial. See exact pricing on the [pricing page](/pricing).
 
-Related reading: [Why your Google rating dropped and how to fix it](/blog/why-google-rating-dropped-fix), [Google Business Profile review management for Indian SMBs](/blog/google-business-profile-review-management-india-2026), [Google review response templates](/blog/google-review-response-templates).
+Related reading: [how to recover a low rating](/blog/how-to-recover-app-rating-2-stars-to-4-stars), [Google Business Profile review management for Indian SMBs](/blog/google-business-profile-review-management-india-2026), [how to reply to negative Google reviews](/blog/how-to-reply-to-negative-google-reviews).
 `,
   },
 
   "appfollow-alternative": {
+    redirectTo: "appfollow-alternatives-for-indie-developers-2026",
     title: "AppFollow Alternative: ReviewPilot vs AppFollow (2026 Honest Comparison)",
     metaTitle: "AppFollow Alternative | ReviewPilot vs AppFollow",
     metaDescription:
@@ -1574,7 +1595,7 @@ If two or more of these apply, ReviewPilot is almost certainly the better fit.
 
 Most teams complete the migration in under 60 minutes:
 
-1. **Connect Google Play Console.** OAuth flow with the same Service Account JSON you use today. We have a [step-by-step setup guide](/blog/service-account-json-play-console-setup).
+1. **Connect Google Play Console.** OAuth flow with the same Service Account JSON you use today. We have a [step-by-step Play Console permissions guide](/blog/google-play-console-permissions-reply-reviews-guide).
 2. **Connect Google Business Profile (coming soon).** OAuth connection is launching soon for local businesses.
 3. **Import your reply templates.** Copy-paste your top 10–20 templates into ReviewPilot's prompt library, or let our AI auto-generate brand-voice replies from your existing approved responses.
 4. **Set up Slack notifications.** Same flow as AppFollow — webhook URL, channel mapping, severity rules.
@@ -1734,6 +1755,7 @@ Related reading: [Google Business Profile review management 2026 playbook](/blog
   },
 
   "how-ai-review-replies-improve-google-maps-ranking": {
+    redirectTo: "ai-review-replies-google-maps-ranking-2026",
     title:
       "Do Google Review Replies Help Maps Ranking? (The 2026 Data-Driven Answer)",
     metaTitle: "Do Google Review Replies Help Maps Ranking? | ReviewPilot",
@@ -1876,11 +1898,12 @@ That's typically ₹1.5–5 lakh per month in additional revenue, at a tooling c
 
 If you want to capture the reply-driven ranking lift without becoming a part-time review responder, [start a free 7-day ReviewPilot trial](/signup) — AI replies in your brand voice, multi-language support, Review Recovery workflow, all on a single dashboard. From ₹1,500/month after the trial.
 
-Related reading: [How to reply to negative Google reviews — 15 templates](/blog/how-to-reply-to-negative-google-reviews), [Google review response templates](/blog/google-review-response-templates), [Why your Google rating dropped and how to fix it](/blog/why-google-rating-dropped-fix).
+Related reading: [How to reply to negative Google reviews — 15 templates](/blog/how-to-reply-to-negative-google-reviews), [Google Business Profile review management](/blog/google-business-profile-review-management-india-2026), [how to recover a low rating](/blog/how-to-recover-app-rating-2-stars-to-4-stars).
 `,
   },
 
   "play-store-rating-below-4-stars-recovery-plan": {
+    redirectTo: "how-to-recover-app-rating-2-stars-to-4-stars",
     title:
       "Play Store Rating Below 4.0 Stars? The Recovery Plan That Actually Works",
     metaTitle: "Play Store Rating Recovery: Get Back Above 4.0 | ReviewPilot",
@@ -1917,7 +1940,7 @@ For an app with ~1,000 lifetime reviews currently at 3.4★:
 - If you can also recover (i.e. get existing 1★ reviewers to update their rating) **40 of the recent 1★ reviewers to 4★**, the displayed rating moves to 4.0★ with only ~80 new 5★ reviews needed.
 - The recovery path is roughly 3× faster than the new-reviews-only path.
 
-For an app with 100,000+ reviews, the math is different — older reviews drag less, but the volume of new reviews needed is much higher. In these cases, focus exclusively on the last-30-days window, where Google's weighted rating engine has the most leverage.
+For an app with 100,000+ reviews, the math is different — older reviews drag less, but the volume of new reviews needed is much higher. In these cases, focus exclusively on the last-30-days window, where Google's weighted rating engine has the most leverage. Plug your own review count and target into the free [app rating calculator](/tools/app-rating-calculator) to get your specific numbers.
 
 ## What Is a Review Recovery Engine and Why Is It the Single Most Important Tool Right Now?
 
@@ -2029,7 +2052,7 @@ Five mistakes that make recovery slower or impossible:
 
 If you're below 4.0★ right now, the cost of waiting another week is real and measurable. [Start a free 7-day ReviewPilot trial](/signup) — we'll auto-import the last 90 days of your Play Store reviews, categorise them by complaint type, draft recovery replies, and surface the bugs that are driving your 1★s. Most teams see the first measurable rating lift within 14 days. Plans start at $16/month after trial.
 
-Related reading: [Play Store Developer Reply API guide](/blog/play-store-developer-reply-api-guide), [Service Account JSON Play Console setup](/blog/service-account-json-play-console-setup), [Play Store review management 2026](/blog/play-store-review-management-2026).
+Related reading: [Play Console permissions for replying to reviews](/blog/google-play-console-permissions-reply-reviews-guide), [Play Console review management guide](/blog/google-play-console-review-management-guide), [Play Store review management 2026](/blog/play-store-review-management-2026).
 `,
   },
 };
@@ -2038,3 +2061,11 @@ export const BLOG_POSTS: Record<string, BlogPost> = {
   ...INLINE_BLOG_POSTS,
   ...Object.fromEntries(MDX_POST_SLUGS.map((slug) => [slug, loadMdxPost(slug)])),
 };
+
+// Single source of truth for "is this post live?" — shared by the index grid,
+// generateStaticParams, and the related-posts module so all three hide the same
+// consolidated (redirectTo) posts. Consolidated posts remain in BLOG_POSTS for
+// content preservation; they are just not surfaced or statically generated.
+export function isLivePost(post: BlogPost): boolean {
+  return !post.redirectTo;
+}

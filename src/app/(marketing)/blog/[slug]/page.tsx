@@ -19,10 +19,14 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { BLOG_POSTS, type BlogPost } from "./posts";
+import { BLOG_POSTS, isLivePost, type BlogPost } from "./posts";
 
 export function generateStaticParams() {
-  return Object.keys(BLOG_POSTS).map((slug) => ({ slug }));
+  // Consolidated posts (redirectTo set) are not statically generated — they are
+  // 308-redirected to their canonical at the edge. Their files/entries persist.
+  return Object.keys(BLOG_POSTS)
+    .filter((slug) => isLivePost(BLOG_POSTS[slug]))
+    .map((slug) => ({ slug }));
 }
 
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
@@ -205,6 +209,52 @@ function renderMarkdown(md: string): React.ReactNode {
   return nodes;
 }
 
+type RelatedPost = {
+  slug: string;
+  title: string;
+  category: ReturnType<typeof getBlogCategory>;
+  date: string;
+  readTime: string;
+};
+
+// Up to 3 related posts: same category first (newest first), backfilled with the
+// most-recent posts overall. Computed at build time so the /blog/<slug> hrefs are
+// statically rendered and crawlable.
+function getRelatedPosts(currentSlug: string): RelatedPost[] {
+  const current = BLOG_POSTS[currentSlug];
+  if (!current) return [];
+  const currentCategory = getBlogCategory(current.tags);
+
+  const all = Object.entries(BLOG_POSTS)
+    .filter(([slug, post]) => slug !== currentSlug && isLivePost(post))
+    .map(([slug, post]) => ({
+      slug,
+      title: post.title,
+      category: getBlogCategory(post.tags),
+      date: post.dateDisplay,
+      readTime: post.readTime,
+      datePublished: post.datePublished,
+    }))
+    .sort(
+      (a, b) =>
+        new Date(b.datePublished).getTime() - new Date(a.datePublished).getTime()
+    );
+
+  const related = all.filter((post) => post.category === currentCategory);
+  for (const post of all) {
+    if (related.length >= 3) break;
+    if (!related.some((r) => r.slug === post.slug)) related.push(post);
+  }
+
+  return related.slice(0, 3).map((post) => ({
+    slug: post.slug,
+    title: post.title,
+    category: post.category,
+    date: post.date,
+    readTime: post.readTime,
+  }));
+}
+
 export default function BlogPostPage({ params }: { params: { slug: string } }) {
   const post: BlogPost | undefined = BLOG_POSTS[params.slug];
   if (!post) notFound();
@@ -226,6 +276,7 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
   ]);
 
   const faqs = post.faqs ?? [];
+  const related = getRelatedPosts(params.slug);
 
   return (
     <div className="py-24 sm:py-28">
@@ -311,6 +362,40 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
             </div>
           </div>
         </div>
+
+        {related.length > 0 && (
+          <section className="mt-16">
+            <h2 className="font-sans text-2xl font-semibold tracking-tight mb-6">
+              Related reading
+            </h2>
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {related.map((rp) => {
+                const rpStyle = CATEGORY_STYLES[rp.category];
+                return (
+                  <Link
+                    key={rp.slug}
+                    href={`/blog/${rp.slug}`}
+                    className="group relative flex flex-col rounded-xl border border-border/60 bg-card/40 p-5 backdrop-blur-sm transition-colors hover:border-accent/50"
+                  >
+                    <span
+                      className={`inline-flex min-h-6 w-fit items-center rounded-full border px-2.5 py-1 font-mono text-xs uppercase tracking-wider ${rpStyle.badge}`}
+                    >
+                      {rp.category}
+                    </span>
+                    <h3 className="mt-4 font-sans text-lg font-semibold tracking-tight text-foreground decoration-transparent decoration-2 underline-offset-4 transition-[text-decoration-color] duration-200 group-hover:underline group-hover:decoration-accent">
+                      {rp.title}
+                    </h3>
+                    <div className="mt-auto flex items-center gap-2 pt-6 font-mono text-xs text-muted-foreground">
+                      <span>{rp.date}</span>
+                      <span aria-hidden="true">/</span>
+                      <span>{rp.readTime}</span>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </section>
+        )}
       </article>
     </div>
   );

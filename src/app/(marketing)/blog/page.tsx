@@ -4,7 +4,7 @@ import { JsonLd, SITE_URL } from "@/components/marketing/JsonLd";
 import { BlogGrid, type BlogGridPost } from "@/components/blog/BlogGrid";
 import { BlogHero } from "@/components/blog/BlogHero";
 import { getBlogCategory } from "@/components/blog/category";
-import { BLOG_POSTS } from "./[slug]/posts";
+import { BLOG_POSTS, isLivePost } from "./[slug]/posts";
 
 export const metadata: Metadata = {
   title: "Review Management Blog - Guides for Indian Businesses | ReviewPilot",
@@ -60,6 +60,7 @@ function getExcerpt(content: string, metaDescription: string) {
 
 export default function BlogPage() {
   const posts: BlogGridPost[] = Object.entries(BLOG_POSTS)
+    .filter(([, post]) => isLivePost(post))
     .map(([slug, post]) => ({
       slug,
       title: post.title,
